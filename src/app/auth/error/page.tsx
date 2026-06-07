@@ -1,40 +1,37 @@
 'use client'
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import Link from 'next/link'
 
-const errors: Record<string, { title: string; desc: string }> = {
-  not_in_guild: {
-    title: 'Nu ai acces',
-    desc:  'Nu ești pe serverul Discord Mafia Grove. Cere o invitație unui admin.',
-  },
-  bot_error: {
-    title: 'Eroare verificare',
-    desc:  'Nu s-a putut verifica apartenența la server. Încearcă din nou.',
-  },
-  default: {
-    title: 'Eroare autentificare',
-    desc:  'A apărut o eroare la autentificare. Încearcă din nou.',
-  },
-}
-
-export default function AuthErrorPage() {
+function ErrorContent() {
   const params = useSearchParams()
-  const errKey = params.get('error') || 'default'
-  const err    = errors[errKey] || errors.default
+  const error = params.get('error')
+
+  const messages: Record<string, string> = {
+    not_in_guild: 'Nu ești pe serverul Discord Mafia Grove.',
+    bot_error:    'Eroare la verificarea serverului. Încearcă din nou.',
+    default:      'A apărut o eroare la autentificare.',
+  }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-center px-6 animate-slide-up">
-        <div className="text-6xl mb-6">🚫</div>
-        <h1 className="text-3xl font-black text-red-500 mb-3">{err.title}</h1>
-        <p className="text-zinc-400 mb-8 max-w-sm mx-auto">{err.desc}</p>
-        <Link href="/auth/login"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl
-                     border border-dark-border text-zinc-400 hover:text-white
-                     hover:border-grove-border transition-all duration-200">
-          ← Înapoi la login
-        </Link>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'100vh', background:'#000', color:'#fff', fontFamily:'sans-serif' }}>
+      <div style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:'12px', padding:'40px', maxWidth:'400px', textAlign:'center' }}>
+        <div style={{ fontSize:'48px', marginBottom:'16px' }}>🚫</div>
+        <h1 style={{ color:'#00ff66', marginBottom:'16px' }}>Acces Refuzat</h1>
+        <p style={{ color:'#888', marginBottom:'24px' }}>
+          {messages[error || 'default'] || messages.default}
+        </p>
+        <a href="/auth/login" style={{ background:'#00ff66', color:'#000', padding:'12px 24px', borderRadius:'8px', textDecoration:'none', fontWeight:'bold' }}>
+          Înapoi la Login
+        </a>
       </div>
     </div>
+  )
+}
+
+export default function AuthError() {
+  return (
+    <Suspense fallback={<div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh',background:'#000',color:'#00ff66'}}>Se încarcă...</div>}>
+      <ErrorContent />
+    </Suspense>
   )
 }
