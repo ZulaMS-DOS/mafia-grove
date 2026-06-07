@@ -89,3 +89,10 @@ enum ResignationStatus {
   ACCEPTED
   REJECTED
 }
+model Whitelist {
+  id        String   @id @default(cuid())
+  discordId String   @unique
+  username  String?
+  addedBy   String
+  createdAt DateTime @default(now())
+}
