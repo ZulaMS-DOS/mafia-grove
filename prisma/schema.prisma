@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  discordId   String   @unique
+  username    String
+  avatar      String?
+  roleIds     String[] // rolurile Discord ale userului
+  points      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sessions      WorkSession[]
+  leaveRequests LeaveRequest[]
+  resignations  Resignation[]
+  pointsGiven   PointHistory[] @relation("ModeratorPoints")
+  pointsReceived PointHistory[] @relation("UserPoints")
+
+  approvedLeaves    LeaveRequest[] @relation("ApprovedLeaves")
+  approvedResigns   Resignation[]  @relation("ApprovedResigns")
+}
+
+model WorkSession {
+  id           String    @id @default(cuid())
+  userId       String
+  clockIn      DateTime
+  clockOut     DateTime?
+  totalMinutes Int?
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LeaveRequest {
+  id         String      @id @default(cuid())
+  userId     String
+  reason     String
+  startDate  DateTime
+  endDate    DateTime
+  status     LeaveStatus @default(PENDING)
+  approvedBy String?
+  approvedAt DateTime?
+  createdAt  DateTime    @default(now())
+
+  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approver User? @relation("ApprovedLeaves", fields: [approvedBy], references: [id])
+}
+
+model Resignation {
+  id         String           @id @default(cuid())
+  userId     String
+  reason     String
+  status     ResignationStatus @default(PENDING)
+  approvedBy String?
+  approvedAt DateTime?
+  createdAt  DateTime         @default(now())
+
+  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approver User? @relation("ApprovedResigns", fields: [approvedBy], references: [id])
+}
+
+model PointHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  moderatorId String
+  amount      Int
+  reason      String
+  createdAt   DateTime @default(now())
+
+  user      User @relation("UserPoints",     fields: [userId],      references: [id], onDelete: Cascade)
+  moderator User @relation("ModeratorPoints",fields: [moderatorId], references: [id], onDelete: Cascade)
+}
+
+enum LeaveStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ResignationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}

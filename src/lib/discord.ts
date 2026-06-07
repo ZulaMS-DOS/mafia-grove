@@ -1,0 +1,35 @@
+export const DISCORD_GUILD_ID    = process.env.DISCORD_GUILD_ID!
+export const DISCORD_BOT_TOKEN   = process.env.DISCORD_BOT_TOKEN!
+export const LEADERSHIP_ROLE_IDS = (process.env.DISCORD_LEADERSHIP_ROLES || '').split(',').map(s => s.trim())
+
+/** Verifică dacă userul e pe server și returnează membrul */
+export async function getGuildMember(discordId: string) {
+  const res = await fetch(
+    `https://discord.com/api/guilds/${DISCORD_GUILD_ID}/members/${discordId}`,
+    { headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` }, next: { revalidate: 0 } }
+  )
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error('Discord API error: ' + res.status)
+  return res.json()
+}
+
+/** Returnează toate rolurile serverului */
+export async function getGuildRoles() {
+  const res = await fetch(
+    `https://discord.com/api/guilds/${DISCORD_GUILD_ID}/roles`,
+    { headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` }, next: { revalidate: 60 } }
+  )
+  if (!res.ok) return []
+  return res.json()
+}
+
+/** Verifică dacă un array de role IDs conține un rol de leadership */
+export function isLeadership(roleIds: string[]): boolean {
+  return roleIds.some(id => LEADERSHIP_ROLE_IDS.includes(id))
+}
+
+/** Construiește URL-ul avatarului Discord */
+export function discordAvatar(userId: string, hash: string | null) {
+  if (!hash) return `https://cdn.discordapp.com/embed/avatars/${parseInt(userId) % 5}.png`
+  return `https://cdn.discordapp.com/avatars/${userId}/${hash}.png?size=128`
+}
