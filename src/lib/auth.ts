@@ -11,44 +11,36 @@ export const authOptions: AuthOptions = {
       authorization: { params: { scope: 'identify guilds guilds.members.read' } },
     }),
   ],
-
   callbacks: {
     async signIn({ account, profile }) {
       if (!account || !profile) return false
-      const discordId = profile.id as string
-
-      // 1. Verificare server
+      const discordId = (profile as any).id as string
       let member
       try { member = await getGuildMember(discordId) } catch { return '/auth/error?error=bot_error' }
       if (!member) return '/auth/error?error=not_in_guild'
-
-      // 2. Upsert user în DB
       const roleIds: string[] = member.roles || []
       await prisma.user.upsert({
         where:  { discordId },
         update: { username: (profile as any).username, avatar: (profile as any).avatar, roleIds },
         create: { discordId, username: (profile as any).username, avatar: (profile as any).avatar, roleIds },
       })
-
       return true
     },
-
     async jwt({ token, account, profile }) {
       if (account && profile) {
-        const discordId = profile.id as string
+        const discordId = (profile as any).id as string
         const user = await prisma.user.findUnique({ where: { discordId } })
         if (user) {
-          token.userId      = user.id
-          token.discordId   = discordId
-          token.roleIds     = user.roleIds
+          token.userId       = user.id
+          token.discordId    = discordId
+          token.roleIds      = user.roleIds
           token.isLeadership = isLeadership(user.roleIds)
-          token.avatar      = discordAvatar(discordId, (profile as any).avatar)
-          token.username    = user.username
+          token.avatar       = discordAvatar(discordId, (profile as any).avatar)
+          token.username     = user.username
         }
       }
       return token
     },
-
     async session({ session, token }) {
       session.user.id           = token.userId as string
       session.user.discordId    = token.discordId as string
@@ -59,12 +51,10 @@ export const authOptions: AuthOptions = {
       return session
     },
   },
-
   pages: {
-    signIn:  '/auth/login',
-    error:   '/auth/error',
+    signIn: '/auth/login',
+    error:  '/auth/error',
   },
-
   session: { strategy: 'jwt', maxAge: 24 * 60 * 60 },
   secret:  process.env.NEXTAUTH_SECRET,
 }
