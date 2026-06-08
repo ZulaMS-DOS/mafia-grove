@@ -11,9 +11,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="flex h-screen bg-black overflow-hidden">
       <Sidebar isLeadership={session.user.isLeadership} />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <Topbar user={session.user} />
-        <main className="flex-1 overflow-y-auto p-6 animate-fade-in">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 animate-fade-in">
+          {/* Spatiu extra pe mobil pentru butonul hamburger */}
+          <div className="md:hidden h-8" />
           {children}
         </main>
       </div>
