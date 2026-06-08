@@ -4,17 +4,24 @@ import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/dashboard/Sidebar'
 import { Topbar }  from '@/components/dashboard/Topbar'
 
+// Role IDs
+const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
+const MEMBRU_ROLES     = ['1501319885488390184']
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
   if (!session) redirect('/auth/login')
 
+  const roleIds    = session.user.roleIds || []
+  const isLeadership = roleIds.some(r => LEADERSHIP_ROLES.includes(r))
+  const isMembru     = roleIds.some(r => MEMBRU_ROLES.includes(r))
+
   return (
     <div className="flex h-screen bg-black overflow-hidden">
-      <Sidebar isLeadership={session.user.isLeadership} />
+      <Sidebar isLeadership={isLeadership} isMembru={isMembru} />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <Topbar user={session.user} />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 animate-fade-in">
-          {/* Spatiu extra pe mobil pentru butonul hamburger */}
           <div className="md:hidden h-8" />
           {children}
         </main>
