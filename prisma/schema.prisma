@@ -96,3 +96,13 @@ model Whitelist {
   addedBy   String
   createdAt DateTime @default(now())
 }
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  important Boolean  @default(false)
+  author    String
+  authorId  String
+  createdAt DateTime @default(now())
+}
+
