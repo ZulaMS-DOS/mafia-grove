@@ -4,9 +4,16 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { Users, Clock, FileText, Star } from 'lucide-react'
 
+const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
+
 export default async function LiderPage() {
   const session = await getServerSession(authOptions)
-  if (!session?.user.isLeadership) redirect('/dashboard')
+  if (!session) redirect('/auth/login')
+
+  const roleIds = session.user.roleIds || []
+  if (!roleIds.some((r: string) => LEADERSHIP_ROLES.includes(r))) {
+    redirect('/dashboard')
+  }
 
   const [totalMembers, totalPoints, totalClocks, pendingLeaves, pendingResigns, activeSessions] = await Promise.all([
     prisma.user.count(),
@@ -18,12 +25,12 @@ export default async function LiderPage() {
   ])
 
   const stats = [
-    { icon: Users,    label: 'Total Membri',         value: totalMembers,                   color: 'text-grove-green' },
+    { icon: Users,    label: 'Total Membri',          value: totalMembers,                  color: 'text-grove-green' },
     { icon: Star,     label: 'Total Puncte Acordate', value: totalPoints._sum.points ?? 0,  color: 'text-yellow-400'  },
-    { icon: Clock,    label: 'Total Clock-In-uri',    value: totalClocks,                    color: 'text-blue-400'    },
-    { icon: FileText, label: 'Invoiri Pending',       value: pendingLeaves,                  color: 'text-orange-400'  },
-    { icon: FileText, label: 'Demisii Pending',       value: pendingResigns,                 color: 'text-red-400'     },
-    { icon: Users,    label: 'Membri Activi Acum',    value: activeSessions,                 color: 'text-green-400'   },
+    { icon: Clock,    label: 'Total Clock-In-uri',    value: totalClocks,                   color: 'text-blue-400'    },
+    { icon: FileText, label: 'Invoiri Pending',       value: pendingLeaves,                 color: 'text-orange-400'  },
+    { icon: FileText, label: 'Demisii Pending',       value: pendingResigns,                color: 'text-red-400'     },
+    { icon: Users,    label: 'Membri Activi Acum',    value: activeSessions,                color: 'text-green-400'   },
   ]
 
   return (
@@ -42,7 +49,7 @@ export default async function LiderPage() {
         ))}
       </div>
       <div className="grove-card border-grove-border">
-        <h2 className="text-sm font-semibold text-grove-green uppercase tracking-widest mb-3">⭐ Panou Lider</h2>
+        <h2 className="text-sm font-semibold text-grove-green uppercase tracking-widest mb-2">⭐ Panou Lider</h2>
         <p className="text-zinc-500 text-sm">Folosește meniul din stânga pentru a gestiona grade, invoiri, demisii și puncte.</p>
       </div>
     </div>
