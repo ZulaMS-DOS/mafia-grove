@@ -19,6 +19,7 @@ model User {
 
   sessions      WorkSession[]
   leaveRequests LeaveRequest[]
+  taxPayments  TaxPayment[]
   resignations  Resignation[]
   pointsGiven   PointHistory[] @relation("ModeratorPoints")
   pointsReceived PointHistory[] @relation("UserPoints")
