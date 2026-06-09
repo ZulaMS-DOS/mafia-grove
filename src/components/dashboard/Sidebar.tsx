@@ -22,6 +22,7 @@ const baseNav = [
 // Nav extra pentru Young G + Lider
 const membruNav = [
   { href: '/dashboard/anunturi', icon: Megaphone, label: 'Anunțuri' },
+  { href: '/dashboard/taxa', icon: Coins, label: 'Taxa Sindicat' },
 ]
 
 // Nav doar pentru Lider
@@ -32,6 +33,7 @@ const liderNav = [
   { href: '/dashboard/lider/members',          icon: Users,   label: 'Membri'            },
   { href: '/dashboard/lider/whitelist',        icon: Shield,  label: 'Whitelist'         },
   { href: '/dashboard/lider/anunturi',         icon: Megaphone, label: 'Postează Anunț'  },
+  { href: '/dashboard/lider/taxa', icon: Coins, label: 'Taxa Sindicat' },
 ]
 
 interface SidebarProps {
