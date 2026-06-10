@@ -4,10 +4,15 @@ import { requireAuth, requireLeadership } from '@/lib/middleware'
 
 // GET — toate invoirile (publice)
 export async function GET() {
-  const { error } = await requireAuth()
+  const { session, error } = await requireAuth()
   if (error) return error
 
+  const where = session!.user.isLeadership
+    ? {}
+    : { userId: session!.user.id }
+
   const invoiri = await prisma.leaveRequest.findMany({
+    where,
     orderBy: { createdAt: 'desc' },
     include: {
       user:     { select: { username: true, avatar: true, discordId: true } },
