@@ -2,16 +2,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ..., ShoppingCart } from 'lucide-react'
 import {
-  Clock, FileText, LogOut, Star,
-  Users, Coins, Shield, Menu, X,
-  UserCog, Megaphone, LayoutDashboard
+  Clock, FileText, LogOut, Star, Users, Coins,
+  Shield, Menu, X, UserCog, Megaphone,
+  LayoutDashboard, ShoppingCart
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import clsx from 'clsx'
 
-// Nav pentru TOTI (Runner + Young G + Lider)
 const baseNav = [
   { href: '/dashboard',         icon: LayoutDashboard, label: 'Dashboard'    },
   { href: '/dashboard/clock',   icon: Clock,           label: 'Clock In/Out' },
@@ -20,22 +18,20 @@ const baseNav = [
   { href: '/dashboard/shop',    icon: ShoppingCart,    label: 'Shop'         },
 ]
 
-// Nav extra pentru Young G + Lider
 const membruNav = [
-  { href: '/dashboard/anunturi', icon: Megaphone, label: 'Anunțuri' },
-  { href: '/dashboard/taxa', icon: Coins, label: 'Taxa Sindicat' },
+  { href: '/dashboard/anunturi', icon: Megaphone, label: 'Anunțuri'      },
+  { href: '/dashboard/taxa',     icon: Coins,     label: 'Taxa Sindicat' },
 ]
 
-// Nav doar pentru Lider
 const liderNav = [
-  { href: '/dashboard/lider',                  icon: Star,    label: 'Lider Panel'       },
-  { href: '/dashboard/lider/grade',            icon: UserCog, label: 'Grade Membri'      },
-  { href: '/dashboard/lider/shop', icon: ShoppingCart, label: 'Gestionare Shop' },
-  { href: '/dashboard/lider/puncte',           icon: Coins,   label: 'Gestionare Puncte' },
-  { href: '/dashboard/lider/members',          icon: Users,   label: 'Membri'            },
-  { href: '/dashboard/lider/whitelist',        icon: Shield,  label: 'Whitelist'         },
-  { href: '/dashboard/lider/anunturi',         icon: Megaphone, label: 'Postează Anunț'  },
-  { href: '/dashboard/lider/taxa', icon: Coins, label: 'Taxa Sindicat' },
+  { href: '/dashboard/lider',              icon: Star,          label: 'Lider Panel'       },
+  { href: '/dashboard/lider/grade',        icon: UserCog,       label: 'Grade Membri'      },
+  { href: '/dashboard/lider/shop',         icon: ShoppingCart,  label: 'Gestionare Shop'   },
+  { href: '/dashboard/lider/puncte',       icon: Coins,         label: 'Gestionare Puncte' },
+  { href: '/dashboard/lider/members',      icon: Users,         label: 'Membri'            },
+  { href: '/dashboard/lider/whitelist',    icon: Shield,        label: 'Whitelist'         },
+  { href: '/dashboard/lider/anunturi',     icon: Megaphone,     label: 'Postează Anunț'    },
+  { href: '/dashboard/lider/taxa',         icon: Coins,         label: 'Taxa Sindicat'     },
 ]
 
 interface SidebarProps {
@@ -80,11 +76,9 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {/* Toți văd asta */}
         <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2">General</div>
         {baseNav.map(item => <NavItem key={item.href} {...item} />)}
 
-        {/* Young G + Lider văd Anunțuri */}
         {(isMembru || isLeadership) && (
           <>
             <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2 mt-3">Comunitate</div>
@@ -92,7 +86,6 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
           </>
         )}
 
-        {/* Doar Lider */}
         {isLeadership && (
           <>
             <div className="text-xs text-grove-green/50 uppercase tracking-widest px-4 py-2 mt-3">⭐ Lider</div>
