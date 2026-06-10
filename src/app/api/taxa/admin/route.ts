@@ -12,7 +12,6 @@ function getWeekStart() {
   return monday
 }
 
-// GET — toate platile + membrii (lider)
 export async function GET() {
   const { error } = await requireLeadership()
   if (error) return error
@@ -21,7 +20,7 @@ export async function GET() {
   const [items, payments, members] = await Promise.all([
     (prisma as any).taxItem.findMany({ where: { weekStart }, orderBy: { createdAt: 'asc' } }),
     (prisma as any).taxPayment.findMany({
-      where:   { weekStart },
+      where: { weekStart },
       include: { user: { select: { username: true, avatar: true, discordId: true } } },
     }),
     prisma.user.findMany({ select: { id: true, username: true, avatar: true, discordId: true } }),
@@ -30,37 +29,47 @@ export async function GET() {
   return NextResponse.json({ items, payments, members, weekStart: weekStart.toISOString() })
 }
 
-// POST — seteaza materialele saptamanii
 export async function POST(req: NextRequest) {
   const { session, error } = await requireLeadership()
   if (error) return error
 
-  const { items } = await req.json()
-  if (!items || !Array.isArray(items)) {
+  const body = await req.json()
+  const items = body.items
+
+  if (!Array.isArray(items)) {
     return NextResponse.json({ error: 'Items invalid' }, { status: 400 })
   }
 
   const weekStart = getWeekStart()
+
+  // Sterge TOATE itemele existente pentru saptamana curenta
   await (prisma as any).taxItem.deleteMany({ where: { weekStart } })
 
+  // Daca lista e goala, returneaza imediat
+  if (items.length === 0) {
+    return NextResponse.json({ items: [] })
+  }
+
+  // Creeaza itemele noi
   const created = await Promise.all(
-    items.map((item: { name: string; bucati: number; termen: string }) =>
-      (prisma as any).taxItem.create({
-        data: {
-          name:      item.name,
-          bucati:    item.bucati   || 0,
-          termen:    item.termen   || '',
-          weekStart,
-          createdBy: session!.user.id,
-        },
-      })
-    )
+    items
+      .filter((item: any) => item.name && item.name.trim() !== '')
+      .map((item: any) =>
+        (prisma as any).taxItem.create({
+          data: {
+            name:      item.name.trim(),
+            bucati:    parseInt(item.bucati)  || 0,
+            termen:    item.termen?.trim()    || '',
+            weekStart,
+            createdBy: session!.user.id,
+          },
+        })
+      )
   )
 
   return NextResponse.json({ items: created })
 }
 
-// PATCH — marcheaza taxa unui membru ca platita/neplatita (doar lider)
 export async function PATCH(req: NextRequest) {
   const { error } = await requireLeadership()
   if (error) return error
