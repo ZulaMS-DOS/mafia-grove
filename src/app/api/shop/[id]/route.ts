@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, requireLeadership } from '@/lib/middleware'
 
-// POST /api/shop/[id]/buy — cumpara produs
+// POST — cumpara produs
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -10,11 +10,12 @@ export async function POST(
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const { id }     = await context.params
-  const { quantity } = await req.json().catch(() => ({ quantity: 1 }))
-  const qty        = parseInt(quantity) || 1
-  const userId     = session!.user.id
+  const { id }       = await context.params
+  const body         = await req.json().catch(() => ({}))
+  const qty          = Math.max(1, parseInt(body.quantity) || 1)
+  const userId       = session!.user.id
 
+  // Gasim produsul
   const item = await (prisma as any).shopItem.findUnique({ where: { id } })
   if (!item || !item.active) {
     return NextResponse.json({ error: 'Produs inexistent' }, { status: 404 })
@@ -22,42 +23,46 @@ export async function POST(
 
   // Verifica stoc
   if (item.stock !== -1 && item.stock < qty) {
-    return NextResponse.json({ error: 'Stoc insuficient' }, { status: 400 })
+    return NextResponse.json({ error: `Stoc insuficient (disponibil: ${item.stock})` }, { status: 400 })
   }
 
   // Verifica puncte
-  const user = await prisma.user.findUnique({ where: { id: userId } })
+  const user  = await prisma.user.findUnique({ where: { id: userId } })
   const total = item.price * qty
   if (!user || user.points < total) {
-    return NextResponse.json({ error: 'Puncte insuficiente' }, { status: 400 })
+    return NextResponse.json({
+      error: `Puncte insuficiente (ai ${user?.points ?? 0}, ai nevoie de ${total})`
+    }, { status: 400 })
   }
 
-  // Tranzactie: scade puncte + scade stoc + creeaza comanda
-  const [updatedUser, order] = await prisma.$transaction([
-    prisma.user.update({
-      where: { id: userId },
-      data:  { points: { decrement: total } },
-      select: { points: true },
-    }),
-    (prisma as any).shopOrder.create({
-      data: { userId, itemId: id, quantity: qty },
-    }),
-    ...(item.stock !== -1 ? [
-      (prisma as any).shopItem.update({
-        where: { id },
-        data:  { stock: { decrement: qty } },
-      })
-    ] : []),
-  ])
+  // Update puncte user
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data:  { points: { decrement: total } },
+    select: { points: true },
+  })
+
+  // Creeaza comanda
+  const order = await (prisma as any).shopOrder.create({
+    data: { userId, itemId: id, quantity: qty },
+  })
+
+  // Scade stoc daca nu e infinit
+  if (item.stock !== -1) {
+    await (prisma as any).shopItem.update({
+      where: { id },
+      data:  { stock: { decrement: qty } },
+    })
+  }
 
   return NextResponse.json({
-    success: true,
+    success:    true,
     pointsLeft: updatedUser.points,
     order,
   })
 }
 
-// PATCH — editeaza produs (Lider only)
+// PATCH — editeaza produs
 export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -71,18 +76,18 @@ export async function PATCH(
   const item = await (prisma as any).shopItem.update({
     where: { id },
     data: {
-      ...(data.name        !== undefined && { name:        data.name }),
-      ...(data.description !== undefined && { description: data.description }),
-      ...(data.imageUrl    !== undefined && { imageUrl:    data.imageUrl }),
+      ...(data.name        !== undefined && { name:        String(data.name) }),
+      ...(data.description !== undefined && { description: data.description || null }),
+      ...(data.imageUrl    !== undefined && { imageUrl:    data.imageUrl    || null }),
       ...(data.price       !== undefined && { price:       parseInt(data.price) }),
       ...(data.stock       !== undefined && { stock:       parseInt(data.stock) }),
-      ...(data.active      !== undefined && { active:      data.active }),
+      ...(data.active      !== undefined && { active:      Boolean(data.active) }),
     },
   })
   return NextResponse.json({ item })
 }
 
-// DELETE — sterge produs (Lider only)
+// DELETE — dezactiveaza produs
 export async function DELETE(
   _req: NextRequest,
   context: { params: Promise<{ id: string }> }
