@@ -26,6 +26,7 @@ model User {
   approvedLeaves    LeaveRequest[] @relation("ApprovedLeaves")
   approvedResigns   Resignation[]  @relation("ApprovedResigns")
   taxPayments  TaxPayment[]
+  shopOrders  ShopOrder[]
 }
 
 model WorkSession {
