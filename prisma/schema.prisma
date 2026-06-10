@@ -107,15 +107,14 @@ model Announcement {
   createdAt DateTime @default(now())
 }
 model TaxItem {
-  id          String   @id @default(cuid())
-  name        String
-  neoficial   Int      @default(0)
-  oficial     Int      @default(0)
-  weekStart   DateTime
-  createdBy   String
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  name      String
+  bucati    Int      @default(0)
+  termen    String   @default("")
+  weekStart DateTime
+  createdBy String
+  createdAt DateTime @default(now())
 }
-
 model TaxPayment {
   id        String    @id @default(cuid())
   userId    String
@@ -128,4 +127,3 @@ model TaxPayment {
 
   @@unique([userId, weekStart])
 }
-
