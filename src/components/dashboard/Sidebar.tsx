@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { ..., ShoppingCart } from 'lucide-react'
 import {
   Clock, FileText, LogOut, Star,
   Users, Coins, Shield, Menu, X,
@@ -16,7 +17,7 @@ const baseNav = [
   { href: '/dashboard/clock',   icon: Clock,           label: 'Clock In/Out' },
   { href: '/dashboard/invoiri', icon: FileText,        label: 'Invoiri'      },
   { href: '/dashboard/demisii', icon: LogOut,          label: 'Demisii'      },
-  { href: '/dashboard/puncte',  icon: Coins,           label: 'Puncte'       },
+  { href: '/dashboard/shop',    icon: ShoppingCart,    label: 'Shop'         },
 ]
 
 // Nav extra pentru Young G + Lider
@@ -29,6 +30,7 @@ const membruNav = [
 const liderNav = [
   { href: '/dashboard/lider',                  icon: Star,    label: 'Lider Panel'       },
   { href: '/dashboard/lider/grade',            icon: UserCog, label: 'Grade Membri'      },
+  { href: '/dashboard/lider/shop', icon: ShoppingCart, label: 'Gestionare Shop' },
   { href: '/dashboard/lider/puncte',           icon: Coins,   label: 'Gestionare Puncte' },
   { href: '/dashboard/lider/members',          icon: Users,   label: 'Membri'            },
   { href: '/dashboard/lider/whitelist',        icon: Shield,  label: 'Whitelist'         },
