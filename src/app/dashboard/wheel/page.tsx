@@ -1,28 +1,28 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { RotateCcw } from 'lucide-react'
+import { RotateCcw, Sparkles } from 'lucide-react'
 
 interface Prize {
   id: string; label: string; type: string
   value: number; chance: number; color: string
+  itemId: string | null
+  item?: { name: string; imageUrl: string | null }
 }
 
-const COLORS = [
-  '#00ff66','#ffd600','#ef5350','#29b6f6',
-  '#ab47bc','#ff7043','#26c6da','#d4e157',
-]
-
 export default function WheelPage() {
-  const canvasRef                   = useRef<HTMLCanvasElement>(null)
-  const [prizes, setPrizes]         = useState<Prize[]>([])
-  const [spinCost, setSpinCost]     = useState(10)
-  const [myPoints, setMyPoints]     = useState(0)
-  const [spinning, setSpinning]     = useState(false)
-  const [result, setResult]         = useState<{ label: string; detail: string; pointsAfter: number } | null>(null)
-  const [loading, setLoading]       = useState(true)
-  const [angle, setAngle]           = useState(0)
-  const [targetAngle, setTarget]    = useState(0)
-  const animRef                     = useRef<number>()
+  const canvasRef               = useRef<HTMLCanvasElement>(null)
+  const [prizes, setPrizes]     = useState<Prize[]>([])
+  const [spinCost, setSpinCost] = useState(10)
+  const [myPoints, setMyPoints] = useState(0)
+  const [spinning, setSpinning] = useState(false)
+  const [result, setResult]     = useState<{
+    prize: Prize; detail: string; pointsAfter: number; imageUrl?: string | null
+  } | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [rotation, setRotation] = useState(0)
+  const rotRef                  = useRef(0)
+  const animRef                 = useRef<number>()
+  const spinDataRef             = useRef<any>(null)
 
   const load = useCallback(async () => {
     const [wRes, pRes] = await Promise.all([
@@ -39,63 +39,101 @@ export default function WheelPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Deseneaza roata
+  // ── Desenează roata ──────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !prizes.length) return
-    const ctx    = canvas.getContext('2d')!
-    const cx     = canvas.width  / 2
-    const cy     = canvas.height / 2
-    const r      = Math.min(cx, cy) - 10
-    const total  = prizes.reduce((a, p) => a + p.chance, 0)
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    const ctx = canvas.getContext('2d')!
+    const W   = canvas.width
+    const H   = canvas.height
+    const cx  = W / 2
+    const cy  = H / 2
+    const R   = Math.min(cx, cy) - 8
 
-    let startAngle = angle * Math.PI / 180
+    ctx.clearRect(0, 0, W, H)
+
+    // Glow exterior
+    const glow = ctx.createRadialGradient(cx, cy, R - 20, cx, cy, R + 8)
+    glow.addColorStop(0, 'rgba(0,255,102,0)')
+    glow.addColorStop(1, 'rgba(0,255,102,0.15)')
+    ctx.beginPath()
+    ctx.arc(cx, cy, R + 8, 0, Math.PI * 2)
+    ctx.fillStyle = glow
+    ctx.fill()
+
+    // Sectoare egale ca dimensiune vizuala
+    const n          = prizes.length
+    const sliceAngle = (2 * Math.PI) / n
+    const startOff   = (rotation * Math.PI) / 180
 
     prizes.forEach((prize, i) => {
-      const slice = (prize.chance / total) * 2 * Math.PI
+      const start = startOff + i * sliceAngle
+      const end   = start + sliceAngle
 
       // Sector
       ctx.beginPath()
       ctx.moveTo(cx, cy)
-      ctx.arc(cx, cy, r, startAngle, startAngle + slice)
+      ctx.arc(cx, cy, R, start, end)
       ctx.closePath()
-      ctx.fillStyle   = prize.color || COLORS[i % COLORS.length]
+
+      // Gradient pe sector
+      const midAngle = start + sliceAngle / 2
+      const gx = cx + (R * 0.5) * Math.cos(midAngle)
+      const gy = cy + (R * 0.5) * Math.sin(midAngle)
+      const sg = ctx.createRadialGradient(gx, gy, 0, cx, cy, R)
+      sg.addColorStop(0, prize.color + 'ff')
+      sg.addColorStop(1, prize.color + '99')
+      ctx.fillStyle   = sg
       ctx.fill()
-      ctx.strokeStyle = '#000'
-      ctx.lineWidth   = 2
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)'
+      ctx.lineWidth   = 1.5
       ctx.stroke()
 
       // Text
       ctx.save()
       ctx.translate(cx, cy)
-      ctx.rotate(startAngle + slice / 2)
+      ctx.rotate(start + sliceAngle / 2)
       ctx.textAlign    = 'right'
       ctx.fillStyle    = '#000'
-      ctx.font         = `bold ${Math.min(14, 120 / prizes.length)}px Inter`
-      ctx.shadowColor  = 'rgba(0,0,0,0.3)'
-      ctx.shadowBlur   = 3
-      const maxLen = 12
-      const label  = prize.label.length > maxLen ? prize.label.slice(0, maxLen) + '…' : prize.label
-      ctx.fillText(label, r - 12, 5)
+      ctx.font         = `bold ${Math.max(10, Math.min(13, 200 / n))}px Inter,sans-serif`
+      ctx.shadowColor  = 'rgba(255,255,255,0.4)'
+      ctx.shadowBlur   = 2
+      const maxLen = Math.max(6, Math.floor(20 / (n / 4)))
+      const lbl    = prize.label.length > maxLen ? prize.label.slice(0, maxLen) + '…' : prize.label
+      ctx.fillText(lbl, R - 14, 4)
       ctx.restore()
-
-      startAngle += slice
     })
 
-    // Centru
+    // Inel exterior
     ctx.beginPath()
-    ctx.arc(cx, cy, 22, 0, 2 * Math.PI)
-    ctx.fillStyle = '#000'
+    ctx.arc(cx, cy, R, 0, Math.PI * 2)
+    ctx.strokeStyle = '#00ff6660'
+    ctx.lineWidth   = 3
+    ctx.stroke()
+
+    // Centru
+    const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 28)
+    cg.addColorStop(0, '#1a1a1a')
+    cg.addColorStop(1, '#000')
+    ctx.beginPath()
+    ctx.arc(cx, cy, 28, 0, Math.PI * 2)
+    ctx.fillStyle   = cg
     ctx.fill()
     ctx.strokeStyle = '#00ff66'
     ctx.lineWidth   = 3
     ctx.stroke()
 
-  }, [prizes, angle])
+    // Logo in centru
+    ctx.fillStyle = '#00ff66'
+    ctx.font      = 'bold 11px Inter,sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('GROVE', cx, cy + 4)
 
+  }, [prizes, rotation])
+
+  // ── Spin ─────────────────────────────────────────────────
   const spin = async () => {
-    if (spinning || myPoints < spinCost) return
+    if (spinning || myPoints < spinCost || !prizes.length) return
     setSpinning(true)
     setResult(null)
 
@@ -103,51 +141,50 @@ export default function WheelPage() {
     const d = await r.json()
 
     if (!r.ok) {
-      setResult({ label: '❌ Eroare', detail: d.error, pointsAfter: myPoints })
+      alert(d.error || 'Eroare')
       setSpinning(false)
       return
     }
 
-    // Calculeaza unghiul final bazat pe premiu
-    const total = prizes.reduce((a, p) => a + p.chance, 0)
-    let prizeAngle = 0
-    let acc = 0
-    for (const p of prizes) {
-      if (p.id === d.prize.id) {
-        prizeAngle = ((acc + p.chance / 2) / total) * 360
-        break
-      }
-      acc += p.chance
-    }
+    spinDataRef.current = d
 
-    // Roata se invarte 5-8 ture + ajunge la premiu
-    const spins   = 5 + Math.floor(Math.random() * 3)
-    const newTarget = targetAngle + spins * 360 + (360 - prizeAngle - angle % 360)
+    // Unghi final — sectorul castigator ajunge sus (la indicator)
+    const n          = prizes.length
+    const sliceAngle = 360 / n
+    const prizeIdx   = prizes.findIndex(p => p.id === d.prize.id)
+    const idx        = prizeIdx >= 0 ? prizeIdx : 0
 
-    setTarget(newTarget)
+    // Sectorul idx trebuie sa fie la 0° (sus) → rotim astfel incat mijlocul lui sa fie la 270° (sus pe canvas)
+    const targetSectorMid = idx * sliceAngle + sliceAngle / 2
+    const needed          = (270 - targetSectorMid + 720) % 360
+    const totalRotation   = rotRef.current + 360 * (5 + Math.floor(Math.random() * 3)) + needed
 
-    // Animatie
-    const duration  = 4000
+    const startRot  = rotRef.current
     const startTime = Date.now()
-    const startAng  = angle
+    const duration  = 4500
 
     const animate = () => {
       const elapsed  = Date.now() - startTime
-      const progress = Math.min(elapsed / duration, 1)
-      // Ease out cubic
-      const eased    = 1 - Math.pow(1 - progress, 3)
-      const current  = startAng + (newTarget - startAng) * eased
-      setAngle(current)
+      const t        = Math.min(elapsed / duration, 1)
+      // Ease out quart
+      const eased    = 1 - Math.pow(1 - t, 4)
+      const current  = startRot + (totalRotation - startRot) * eased
+      rotRef.current = current
+      setRotation(current % 360)
 
-      if (progress < 1) {
+      if (t < 1) {
         animRef.current = requestAnimationFrame(animate)
       } else {
-        setAngle(newTarget)
-        setMyPoints(d.pointsAfter)
+        rotRef.current = totalRotation % 360
+        setRotation(totalRotation % 360)
+
+        const sd = spinDataRef.current
+        setMyPoints(sd.pointsAfter)
         setResult({
-          label:      d.prize.label,
-          detail:     d.prizeResult,
-          pointsAfter: d.pointsAfter,
+          prize:      sd.prize,
+          detail:     sd.prizeResult,
+          pointsAfter: sd.pointsAfter,
+          imageUrl:   sd.prize.type === 'item' ? sd.itemImageUrl : null,
         })
         setSpinning(false)
       }
@@ -157,92 +194,113 @@ export default function WheelPage() {
 
   useEffect(() => () => { if (animRef.current) cancelAnimationFrame(animRef.current) }, [])
 
-  const canSpin = myPoints >= spinCost && !spinning
+  const canSpin = !spinning && myPoints >= spinCost && prizes.length > 0
 
   return (
-    <div className="space-y-5 animate-slide-up">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 animate-slide-up">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-black text-white flex items-center gap-3">
             🎰 Fortune Wheel
           </h1>
           <p className="text-zinc-500 text-sm mt-1">Învârte roata și câștigă premii!</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-dark-card border border-grove-border rounded-xl">
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-dark-card border border-grove-border rounded-xl">
           <span className="text-xs text-zinc-500 uppercase tracking-wider">Punctele tale</span>
-          <span className="text-grove-green font-black text-lg">{myPoints}</span>
+          <span className="text-grove-green font-black text-xl">{myPoints}</span>
         </div>
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-zinc-600">Se încarcă...</div>
+        <div className="text-center py-20 text-zinc-600">Se încarcă...</div>
       ) : prizes.length === 0 ? (
-        <div className="grove-card text-center py-12">
-          <div className="text-5xl mb-3">🎰</div>
-          <p className="text-zinc-600">Niciun premiu configurat momentan.</p>
+        <div className="grove-card text-center py-16">
+          <div className="text-6xl mb-4">🎰</div>
+          <p className="text-zinc-500 font-semibold">Niciun premiu configurat momentan.</p>
           <p className="text-zinc-700 text-sm mt-1">Liderul va adăuga premii în curând.</p>
         </div>
       ) : (
-        <div className="flex flex-col lg:flex-row gap-6 items-center lg:items-start">
-          {/* Roata */}
-          <div className="flex flex-col items-center gap-4">
-            {/* Indicator */}
+        <div className="flex flex-col xl:flex-row gap-8 items-center xl:items-start">
+
+          {/* ── Roata ── */}
+          <div className="flex flex-col items-center gap-5 shrink-0">
             <div className="relative">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10">
-                <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-t-[24px] border-l-transparent border-r-transparent border-t-grove-green drop-shadow-lg" />
+              {/* Indicator */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 z-20 drop-shadow-[0_0_8px_#00ff66]">
+                <div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[28px] border-l-transparent border-r-transparent border-t-grove-green" />
               </div>
+
+              {/* Shadow glow */}
+              <div className="absolute inset-0 rounded-full blur-xl opacity-20" style={{ background: 'radial-gradient(circle, #00ff66 0%, transparent 70%)' }} />
+
               <canvas
                 ref={canvasRef}
-                width={320}
-                height={320}
-                className="rounded-full shadow-[0_0_40px_#00ff6620]"
+                width={420}
+                height={420}
+                className="relative z-10 rounded-full"
+                style={{ filter: spinning ? 'drop-shadow(0 0 20px #00ff6640)' : 'drop-shadow(0 0 8px #00ff6620)' }}
               />
             </div>
 
-            {/* Buton spin */}
-            <button
-              onClick={spin}
-              disabled={!canSpin}
-              className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-lg transition-all ${
+            {/* Buton */}
+            <button onClick={spin} disabled={!canSpin}
+              className={`flex items-center gap-3 px-10 py-4 rounded-2xl font-black text-lg transition-all duration-200 ${
                 canSpin
-                  ? 'bg-grove-green text-black hover:bg-grove-dark hover:shadow-[0_0_24px_#00ff6650] active:scale-95'
+                  ? 'bg-grove-green text-black hover:bg-grove-dark hover:shadow-[0_0_32px_#00ff6660] active:scale-95'
                   : 'bg-dark-muted text-zinc-600 cursor-not-allowed border border-dark-border'
-              }`}
-            >
-              <RotateCcw size={22} className={spinning ? 'animate-spin' : ''} />
-              {spinning ? 'Se învârte...' : `Învârte — ${spinCost} pts`}
+              }`}>
+              {spinning
+                ? <><RotateCcw size={22} className="animate-spin" /> Se învârte...</>
+                : <><Sparkles size={22} /> Învârte — {spinCost} pts</>
+              }
             </button>
 
-            {!canSpin && !spinning && (
-              <p className="text-red-400 text-sm">
-                Ai nevoie de {spinCost} pts (ai {myPoints})
+            {!canSpin && !spinning && prizes.length > 0 && (
+              <p className="text-red-400 text-sm text-center">
+                Ai nevoie de {spinCost} pts · ai {myPoints} pts
               </p>
             )}
           </div>
 
-          {/* Rezultat + Lista premii */}
-          <div className="flex-1 w-full space-y-4">
+          {/* ── Dreapta: Rezultat + Lista ── */}
+          <div className="flex-1 w-full max-w-md space-y-4">
+
             {/* Rezultat */}
             {result && (
-              <div className="grove-card border-grove-border bg-grove-dim/30 animate-slide-up">
-                <div className="text-center">
-                  <div className="text-4xl mb-2">🎉</div>
-                  <div className="text-white font-black text-xl mb-1">{result.label}</div>
-                  <div className="text-grove-green font-bold">{result.detail}</div>
-                  <div className="text-zinc-500 text-sm mt-2">Puncte rămase: {result.pointsAfter}</div>
+              <div className="grove-card border-grove-border animate-slide-up overflow-hidden">
+                <div className="text-center space-y-3 py-2">
+                  <div className="text-3xl">🎉</div>
+                  <div className="text-white font-black text-2xl">{result.prize.label}</div>
+
+                  {/* Poza item daca e din shop */}
+                  {result.imageUrl && (
+                    <div className="flex justify-center">
+                      <img src={result.imageUrl} alt={result.prize.label}
+                        className="h-32 object-contain rounded-xl"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    </div>
+                  )}
+
+                  <div className="text-grove-green font-bold text-lg">{result.detail}</div>
+                  <div className="text-zinc-500 text-sm">Puncte rămase: <strong className="text-white">{result.pointsAfter}</strong></div>
                 </div>
               </div>
             )}
 
             {/* Lista premii */}
             <div className="grove-card">
-              <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-widest mb-3">🏆 Premii Disponibile</h2>
-              <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">
+                🏆 Premii pe Roată
+              </h2>
+              <div className="space-y-1.5">
                 {prizes.map(p => (
                   <div key={p.id} className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-dark-hover transition-colors">
-                    <div className="w-3 h-3 rounded-full shrink-0" style={{ background: p.color }} />
-                    <span className="text-white text-sm flex-1">{p.label}</span>
-                    <span className="text-xs text-zinc-500">{p.chance}% șansă</span>
+                    <div className="w-3 h-3 rounded-full shrink-0 ring-1 ring-black/20" style={{ background: p.color }} />
+                    <span className="text-white text-sm flex-1 font-medium">{p.label}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-dark-hover text-zinc-400 border border-dark-border">
+                      {p.chance}%
+                    </span>
                   </div>
                 ))}
               </div>
