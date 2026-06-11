@@ -27,6 +27,7 @@ model User {
   approvedResigns   Resignation[]  @relation("ApprovedResigns")
   taxPayments  TaxPayment[]
   shopOrders  ShopOrder[]
+  wheelSpins  WheelSpin[]
 }
 
 model WorkSession {
