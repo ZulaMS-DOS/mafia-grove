@@ -153,4 +153,33 @@ model ShopOrder {
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   item ShopItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
+model WheelPrize {
+  id        String   @id @default(cuid())
+  label     String
+  type      String   @default("points") // "points" sau "item"
+  value     Int      @default(0)        // puncte acordate sau itemId daca e item
+  itemId    String?                     // optional - daca e item din shop
+  chance    Int      @default(10)       // sansa in procente (toate trebuie sa dea 100)
+  color     String   @default("#00ff66")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model WheelSpin {
+  id        String   @id @default(cuid())
+  userId    String
+  prizeId   String
+  prizeLabel String
+  cost      Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WheelConfig {
+  id        String   @id @default(cuid())
+  spinCost  Int      @default(10)
+  updatedAt DateTime @updatedAt
+}
+
 
