@@ -65,7 +65,9 @@ export default function WheelPage() {
     const n          = prizes.length
     const slice = (2 * Math.PI) / n
     const startOff   = (rotation * Math.PI) / 180
+    const sliceAngle = (2 * Math.PI) / prizes.length
 
+    
     prizes.forEach((prize, i) => {
       const start = startOff + i * sliceAngle
       const end   = start + sliceAngle
