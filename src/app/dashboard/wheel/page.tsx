@@ -63,7 +63,7 @@ export default function WheelPage() {
 
     // Sectoare egale ca dimensiune vizuala
     const n          = prizes.length
-    const sliceAngle = (2 * Math.PI) / n
+    const slice = (2 * Math.PI) / n
     const startOff   = (rotation * Math.PI) / 180
 
     prizes.forEach((prize, i) => {
