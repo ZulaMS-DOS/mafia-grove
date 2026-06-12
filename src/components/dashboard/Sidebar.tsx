@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   Clock, FileText, LogOut, Star, Users, Coins,
   Shield, Menu, X, UserCog, Megaphone,
-  LayoutDashboard, ShoppingCart, Dices
+  LayoutDashboard, ShoppingCart, Dices, ListTodo
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import clsx from 'clsx'
@@ -17,6 +17,7 @@ const baseNav = [
   { href: '/dashboard/demisii', icon: LogOut,          label: 'Demisii'      },
   { href: '/dashboard/shop',    icon: ShoppingCart,    label: 'Shop'         },
   { href: '/dashboard/wheel',   icon: Dices,           label: 'Fortune Wheel'},
+  { href: '/dashboard/tasks',   icon: ListTodo,        label: 'Tasks'        },
 ]
 
 const membruNav = [
@@ -29,6 +30,7 @@ const liderNav = [
   { href: '/dashboard/lider/grade',        icon: UserCog,      label: 'Grade Membri'      },
   { href: '/dashboard/lider/shop',         icon: ShoppingCart, label: 'Gestionare Shop'   },
   { href: '/dashboard/lider/wheel',        icon: Dices,        label: 'Fortune Wheel'     },
+  { href: '/dashboard/lider/tasks',        icon: ListTodo,     label: 'Tasks'             },
   { href: '/dashboard/lider/puncte',       icon: Coins,        label: 'Gestionare Puncte' },
   { href: '/dashboard/lider/members',      icon: Users,        label: 'Membri'            },
   { href: '/dashboard/lider/whitelist',    icon: Shield,       label: 'Whitelist'         },
@@ -81,7 +83,7 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
         {baseNav.map(item => <NavItem key={item.href} {...item} />)}
         {(isMembru || isLeadership) && (
           <>
-            <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2 mt-3">IMPORTANT</div>
+            <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2 mt-3">Important</div>
             {membruNav.map(item => <NavItem key={item.href} {...item} />)}
           </>
         )}
