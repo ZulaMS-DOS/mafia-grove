@@ -28,6 +28,7 @@ model User {
   taxPayments  TaxPayment[]
   shopOrders  ShopOrder[]
   wheelSpins  WheelSpin[]
+  taskClaims  TaskClaim[]
 }
 
 model WorkSession {
@@ -182,5 +183,38 @@ model WheelConfig {
   spinCost  Int      @default(10)
   updatedAt DateTime @updatedAt
 }
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  points      Int
+  stock       Int      @default(-1) // -1 = nelimitat
+  active      Boolean  @default(true)
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  claims TaskClaim[]
+}
+model TaskClaim {
+  id        String      @id @default(cuid())
+  taskId    String
+  userId    String
+  status    ClaimStatus @default(PENDING)
+  claimedAt DateTime    @default(now())
+  reviewedBy String?
+  reviewedAt DateTime?
+
+  task Task @relation(fields: [taskId],  references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId],  references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 
 
