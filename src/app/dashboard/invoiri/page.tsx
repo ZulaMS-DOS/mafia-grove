@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
@@ -12,6 +12,20 @@ interface Invoire {
   approver: { username: string } | null
 }
 
+type StatusTab = 'PENDING' | 'ACCEPTED' | 'REJECTED'
+
+const TAB_LABELS: Record<StatusTab, string> = {
+  PENDING:  'Pending',
+  ACCEPTED: 'Acceptate',
+  REJECTED: 'Respinse',
+}
+
+const EMPTY_LABELS: Record<StatusTab, string> = {
+  PENDING:  'Nicio cerere în așteptare',
+  ACCEPTED: 'Nicio cerere acceptată',
+  REJECTED: 'Nicio cerere respinsă',
+}
+
 export default function InvoiriPage() {
   const { data: session } = useSession()
   const [invoiri, setInvoiri]   = useState<Invoire[]>([])
@@ -19,6 +33,7 @@ export default function InvoiriPage() {
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSub]    = useState(false)
   const [form, setForm]         = useState({ reason: '', startDate: '', endDate: '' })
+  const [tab, setTab]           = useState<StatusTab>('PENDING')
 
   const load = useCallback(async () => {
     const r = await fetch('/api/invoiri')
@@ -50,12 +65,22 @@ export default function InvoiriPage() {
     REJECTED: <span className="badge-rejected">Respins</span>,
   }[s] ?? null)
 
+  const counts = useMemo(() => ({
+    PENDING:  invoiri.filter(i => i.status === 'PENDING').length,
+    ACCEPTED: invoiri.filter(i => i.status === 'ACCEPTED').length,
+    REJECTED: invoiri.filter(i => i.status === 'REJECTED').length,
+  }), [invoiri])
+
+  const filtered = useMemo(() => invoiri.filter(i => i.status === tab), [invoiri, tab])
+
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black text-white">Invoiri</h1>
-          <p className="text-zinc-500 text-sm mt-1">Cererile de invoire — vizibile pentru toți membrii</p>
+          <p className="text-zinc-500 text-sm mt-1">
+            {session?.user.isLeadership ? 'Toate cererile de invoire ale membrilor' : 'Cererile tale de invoire'}
+          </p>
         </div>
         <button onClick={() => setShowForm(!showForm)} className="grove-btn flex items-center gap-2">
           <Plus size={16} /> Cerere Nouă
@@ -88,11 +113,30 @@ export default function InvoiriPage() {
         </div>
       )}
 
+      {/* Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {(['PENDING', 'ACCEPTED', 'REJECTED'] as StatusTab[]).map(s => (
+          <button
+            key={s}
+            onClick={() => setTab(s)}
+            className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+              tab === s
+                ? 'bg-grove-green text-black border-grove-green'
+                : 'bg-dark-card text-zinc-400 border-dark-border hover:text-white hover:border-grove-border'
+            }`}
+          >
+            {TAB_LABELS[s]} <span className="opacity-60">({counts[s]})</span>
+          </button>
+        ))}
+      </div>
+
       {/* List */}
       <div className="space-y-3">
         {loading && <div className="grove-card text-center text-zinc-600 py-8">Se încarcă...</div>}
-        {!loading && invoiri.length === 0 && <div className="grove-card text-center text-zinc-600 py-8">Nicio cerere de invoire</div>}
-        {invoiri.map(inv => (
+        {!loading && filtered.length === 0 && (
+          <div className="grove-card text-center text-zinc-600 py-8">{EMPTY_LABELS[tab]}</div>
+        )}
+        {filtered.map(inv => (
           <div key={inv.id} className="grove-card">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
