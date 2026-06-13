@@ -3,15 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/middleware'
 
 export async function GET() {
-  const { session, error } = await requireAuth()
+  const { error } = await requireAuth()
   if (error) return error
-
-  const where = session!.user.isLeadership
-    ? {}
-    : { userId: session!.user.id }
-
   const demisii = await prisma.resignation.findMany({
-    where,
     orderBy: { createdAt: 'desc' },
     include: {
       user:     { select: { username: true, avatar: true, discordId: true } },
