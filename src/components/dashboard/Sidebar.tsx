@@ -48,7 +48,9 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
   const [open, setOpen] = useState(false)
 
   const NavItem = ({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) => {
-    const active = path === href || (href !== '/dashboard' && href !== '/dashboard/lider' && path.startsWith(href))
+    // Fix: lider panel nu se aprinde la sub-pagini
+    const active = path === href
+
     return (
       <Link href={href} onClick={() => setOpen(false)}
         className={clsx(
