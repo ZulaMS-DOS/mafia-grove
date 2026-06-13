@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireLeadership } from '@/lib/middleware'
 
-// GET — toate taskurile + claim-urile pending
 export async function GET() {
   const { error } = await requireLeadership()
   if (error) return error
@@ -10,9 +9,7 @@ export async function GET() {
   const [tasks, pending] = await Promise.all([
     (prisma as any).task.findMany({
       orderBy: { createdAt: 'desc' },
-      include: {
-        _count: { select: { claims: true } },
-      },
+      include: { _count: { select: { claims: true } } },
     }),
     (prisma as any).taskClaim.findMany({
       where:   { status: 'PENDING' },
@@ -27,7 +24,6 @@ export async function GET() {
   return NextResponse.json({ tasks, pending })
 }
 
-// POST — creeaza task nou
 export async function POST(req: NextRequest) {
   const { session, error } = await requireLeadership()
   if (error) return error
@@ -49,7 +45,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ task })
 }
 
-// PATCH — aproba / respinge claim
 export async function PATCH(req: NextRequest) {
   const { session, error } = await requireLeadership()
   if (error) return error
@@ -72,7 +67,6 @@ export async function PATCH(req: NextRequest) {
     },
   })
 
-  // Daca e aprobat, acorda punctele
   if (status === 'APPROVED') {
     await prisma.user.update({
       where: { id: claim.user.id },
@@ -91,12 +85,16 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json({ claim })
 }
 
-// DELETE — dezactiveaza task
 export async function DELETE(req: NextRequest) {
   const { error } = await requireLeadership()
   if (error) return error
 
   const { id } = await req.json()
-  await (prisma as any).task.update({ where: { id }, data: { active: false } })
+  if (!id) return NextResponse.json({ error: 'ID lipsa' }, { status: 400 })
+
+  await (prisma as any).task.update({
+    where: { id },
+    data:  { active: false },
+  })
   return NextResponse.json({ success: true })
 }
