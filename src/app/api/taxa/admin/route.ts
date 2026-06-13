@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireLeadership } from '@/lib/middleware'
+import { notifyAll } from '@/lib/notifications'
 
 function getWeekStart() {
   const now = new Date()
@@ -15,7 +16,6 @@ function getWeekStart() {
 export async function GET() {
   const { error } = await requireLeadership()
   if (error) return error
-
   const weekStart = getWeekStart()
   const [items, payments, members] = await Promise.all([
     (prisma as any).taxItem.findMany({ where: { weekStart }, orderBy: { createdAt: 'asc' } }),
@@ -25,41 +25,26 @@ export async function GET() {
     }),
     prisma.user.findMany({ select: { id: true, username: true, avatar: true, discordId: true } }),
   ])
-
   return NextResponse.json({ items, payments, members, weekStart: weekStart.toISOString() })
 }
 
 export async function POST(req: NextRequest) {
   const { session, error } = await requireLeadership()
   if (error) return error
-
-  const body = await req.json()
-  const items = body.items
-
-  if (!Array.isArray(items)) {
-    return NextResponse.json({ error: 'Items invalid' }, { status: 400 })
-  }
-
+  const { items } = await req.json()
+  if (!Array.isArray(items)) return NextResponse.json({ error: 'Items invalid' }, { status: 400 })
   const weekStart = getWeekStart()
-
-  // Sterge TOATE itemele existente pentru saptamana curenta
   await (prisma as any).taxItem.deleteMany({ where: { weekStart } })
-
-  // Daca lista e goala, returneaza imediat
-  if (items.length === 0) {
-    return NextResponse.json({ items: [] })
-  }
-
-  // Creeaza itemele noi
+  if (items.length === 0) return NextResponse.json({ items: [] })
   const created = await Promise.all(
     items
       .filter((item: any) => item.name && item.name.trim() !== '')
       .map((item: any) =>
         (prisma as any).taxItem.create({
           data: {
-            name:      item.name.trim(),
-            bucati:    parseInt(item.bucati)  || 0,
-            termen:    item.termen?.trim()    || '',
+            name: item.name.trim(),
+            bucati: parseInt(item.bucati) || 0,
+            termen: item.termen?.trim() || '',
             weekStart,
             createdBy: session!.user.id,
           },
@@ -67,23 +52,26 @@ export async function POST(req: NextRequest) {
       )
   )
 
+  // Notifica toti membrii
+  await notifyAll({
+    type:    'tax',
+    title:   '💰 Taxă Sindicat Nouă',
+    message: `Taxa pentru săptămâna aceasta a fost setată. Verifică materialele de predat!`,
+  })
+
   return NextResponse.json({ items: created })
 }
 
 export async function PATCH(req: NextRequest) {
   const { error } = await requireLeadership()
   if (error) return error
-
   const { userId, paid } = await req.json()
   if (!userId) return NextResponse.json({ error: 'userId lipsa' }, { status: 400 })
-
   const weekStart = getWeekStart()
-
   const payment = await (prisma as any).taxPayment.upsert({
-    where:  { userId_weekStart: { userId, weekStart } },
+    where: { userId_weekStart: { userId, weekStart } },
     update: { paid, paidAt: paid ? new Date() : null },
     create: { userId, weekStart, paid, paidAt: paid ? new Date() : null },
   })
-
   return NextResponse.json({ payment })
 }
