@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, requireLeadership } from '@/lib/middleware'
+import { notifyAll } from '@/lib/notifications'
 
 export async function GET() {
   const { error } = await requireAuth()
   if (error) return error
-
   const anunturi = await (prisma as any).announcement.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 50,
+    orderBy: { createdAt: 'desc' }, take: 50,
   })
   return NextResponse.json({ anunturi })
 }
@@ -23,13 +22,15 @@ export async function POST(req: NextRequest) {
   }
 
   const anunt = await (prisma as any).announcement.create({
-    data: {
-      title,
-      content,
-      important: important ?? false,
-      author: session!.user.name,
-      authorId: session!.user.id,
-    },
+    data: { title, content, important: important ?? false, author: session!.user.name, authorId: session!.user.id },
   })
+
+  // Notifica toti membrii
+  await notifyAll({
+    type:    'announcement',
+    title:   important ? `⚠️ Anunț Important: ${title}` : `📢 Anunț Nou: ${title}`,
+    message: content.length > 100 ? content.slice(0, 100) + '...' : content,
+  })
+
   return NextResponse.json({ anunt })
 }
