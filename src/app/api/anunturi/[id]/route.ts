@@ -8,6 +8,7 @@ export async function DELETE(
 ) {
   const { error } = await requireLeadership()
   if (error) return error
+
   const { id } = await context.params
   await (prisma as any).announcement.delete({ where: { id } })
   return NextResponse.json({ success: true })
