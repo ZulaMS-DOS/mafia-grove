@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
@@ -10,6 +10,20 @@ interface Demisie {
   user: { username: string }; approver: { username: string } | null
 }
 
+type StatusTab = 'PENDING' | 'ACCEPTED' | 'REJECTED'
+
+const TAB_LABELS: Record<StatusTab, string> = {
+  PENDING:  'Pending',
+  ACCEPTED: 'Acceptate',
+  REJECTED: 'Respinse',
+}
+
+const EMPTY_LABELS: Record<StatusTab, string> = {
+  PENDING:  'Nicio cerere în așteptare',
+  ACCEPTED: 'Nicio cerere acceptată',
+  REJECTED: 'Nicio cerere respinsă',
+}
+
 export default function DemisiiPage() {
   const { data: session } = useSession()
   const [demisii, setDemisii]   = useState<Demisie[]>([])
@@ -17,6 +31,7 @@ export default function DemisiiPage() {
   const [showForm, setShowForm] = useState(false)
   const [reason, setReason]     = useState('')
   const [submitting, setSub]    = useState(false)
+  const [tab, setTab]           = useState<StatusTab>('PENDING')
 
   const load = useCallback(async () => {
     const r = await fetch('/api/demisii')
@@ -39,12 +54,29 @@ export default function DemisiiPage() {
     await load()
   }
 
-  const statusBadge = (s: string) => ({ PENDING: <span className="badge-pending">Pending</span>, ACCEPTED: <span className="badge-accepted">Acceptat</span>, REJECTED: <span className="badge-rejected">Respins</span> }[s])
+  const statusBadge = (s: string) => ({
+    PENDING:  <span className="badge-pending">Pending</span>,
+    ACCEPTED: <span className="badge-accepted">Acceptat</span>,
+    REJECTED: <span className="badge-rejected">Respins</span>,
+  }[s] ?? null)
+
+  const counts = useMemo(() => ({
+    PENDING:  demisii.filter(d => d.status === 'PENDING').length,
+    ACCEPTED: demisii.filter(d => d.status === 'ACCEPTED').length,
+    REJECTED: demisii.filter(d => d.status === 'REJECTED').length,
+  }), [demisii])
+
+  const filtered = useMemo(() => demisii.filter(d => d.status === tab), [demisii, tab])
 
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-black text-white">Demisii</h1><p className="text-zinc-500 text-sm mt-1">Cererile de demisie — vizibile pentru toți</p></div>
+        <div>
+          <h1 className="text-3xl font-black text-white">Demisii</h1>
+          <p className="text-zinc-500 text-sm mt-1">
+            {session?.user.isLeadership ? 'Toate cererile de demisie ale membrilor' : 'Cererile tale de demisie'}
+          </p>
+        </div>
         <button onClick={() => setShowForm(!showForm)} className="grove-btn-danger flex items-center gap-2"><Plus size={16} /> Demisie</button>
       </div>
 
@@ -66,10 +98,29 @@ export default function DemisiiPage() {
         </div>
       )}
 
+      {/* Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {(['PENDING', 'ACCEPTED', 'REJECTED'] as StatusTab[]).map(s => (
+          <button
+            key={s}
+            onClick={() => setTab(s)}
+            className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+              tab === s
+                ? 'bg-grove-green text-black border-grove-green'
+                : 'bg-dark-card text-zinc-400 border-dark-border hover:text-white hover:border-grove-border'
+            }`}
+          >
+            {TAB_LABELS[s]} <span className="opacity-60">({counts[s]})</span>
+          </button>
+        ))}
+      </div>
+
       <div className="space-y-3">
         {loading && <div className="grove-card text-center text-zinc-600 py-8">Se încarcă...</div>}
-        {!loading && demisii.length === 0 && <div className="grove-card text-center text-zinc-600 py-8">Nicio cerere de demisie</div>}
-        {demisii.map(d => (
+        {!loading && filtered.length === 0 && (
+          <div className="grove-card text-center text-zinc-600 py-8">{EMPTY_LABELS[tab]}</div>
+        )}
+        {filtered.map(d => (
           <div key={d.id} className="grove-card">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
