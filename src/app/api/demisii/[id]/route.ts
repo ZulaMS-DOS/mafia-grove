@@ -3,16 +3,27 @@ import { prisma } from '@/lib/prisma'
 import { requireLeadership } from '@/lib/middleware'
 import { notify } from '@/lib/notifications'
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   const { session, error } = await requireLeadership()
   if (error) return error
+
   const { status } = await req.json()
-  if (!['ACCEPTED', 'REJECTED'].includes(status)) return NextResponse.json({ error: 'Status invalid' }, { status: 400 })
+  if (!['ACCEPTED', 'REJECTED'].includes(status)) {
+    return NextResponse.json({ error: 'Status invalid' }, { status: 400 })
+  }
+
+  const { id } = await context.params
 
   const demisie = await prisma.resignation.update({
-    where: { id: params.id },
+    where: { id },
     data:  { status, approvedBy: session!.user.id, approvedAt: new Date() },
-    include: { user: { select: { id: true, username: true } }, approver: { select: { username: true } } },
+    include: {
+      user:     { select: { id: true, username: true } },
+      approver: { select: { username: true } },
+    },
   })
 
   await notify({
