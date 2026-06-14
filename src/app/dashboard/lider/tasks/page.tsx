@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, Check, X, ListTodo, Clock } from 'lucide-react'
+import { Plus, Trash2, Check, X, ListTodo, Clock, AlertTriangle } from 'lucide-react'
 import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
 import Image from 'next/image'
@@ -13,19 +13,19 @@ interface Claim {
 }
 
 export default function LiderTasksPage() {
-  const [tasks, setTasks]     = useState<Task[]>([])
-  const [pending, setPending] = useState<Claim[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving]   = useState(false)
-  const [reviewing, setReview] = useState<string | null>(null)
-  const [msg, setMsg]         = useState('')
-  const [tab, setTab]         = useState<'taskuri' | 'pending'>('taskuri')
+  const [tasks, setTasks]       = useState<Task[]>([])
+  const [pending, setPending]   = useState<Claim[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [saving, setSaving]     = useState(false)
+  const [reviewing, setReview]  = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)  // id-ul care așteaptă confirmare
+  const [msg, setMsg]           = useState('')
+  const [tab, setTab]           = useState<'taskuri' | 'pending'>('taskuri')
 
-  // Form
-  const [title, setTitle]       = useState('')
-  const [description, setDesc]  = useState('')
-  const [points, setPoints]     = useState('10')
-  const [stock, setStock]       = useState('-1')
+  const [title, setTitle]      = useState('')
+  const [description, setDesc] = useState('')
+  const [points, setPoints]    = useState('10')
+  const [stock, setStock]      = useState('-1')
 
   const resetForm = () => { setTitle(''); setDesc(''); setPoints('10'); setStock('-1') }
 
@@ -50,18 +50,22 @@ export default function LiderTasksPage() {
       body:    JSON.stringify({ title, description, points: parseInt(points), stock: parseInt(stock) }),
     })
     if (r.ok) { showMsg('✅ Task creat!'); resetForm(); await load() }
-    else       { showMsg('❌ Eroare') }
+    else       { showMsg('❌ Eroare la creare') }
     setSaving(false)
   }
 
   const deleteTask = async (id: string) => {
-    if (!confirm('Ștergi taskul?')) return
-    await fetch('/api/tasks/admin', {
+    const r = await fetch('/api/tasks/admin', {
       method:  'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ id }),
     })
-    showMsg('🗑️ Task șters!')
+    if (r.ok) { showMsg('🗑️ Task șters!') }
+    else {
+      const d = await r.json().catch(() => ({}))
+      showMsg(`❌ Eroare (${r.status}): ${d.error || 'necunoscută'}`)
+    }
+    setDeleting(null)
     await load()
   }
 
@@ -73,6 +77,7 @@ export default function LiderTasksPage() {
       body:    JSON.stringify({ claimId, status }),
     })
     if (r.ok) showMsg(status === 'APPROVED' ? '✅ Task aprobat! Punctele au fost acordate.' : '❌ Task respins.')
+    else       showMsg('❌ Eroare')
     await load()
     setReview(null)
   }
@@ -84,7 +89,6 @@ export default function LiderTasksPage() {
         <p className="text-zinc-500 text-sm mt-1">Creează taskuri și confirmă completările</p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 border-b border-dark-border">
         {(['taskuri', 'pending'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
@@ -107,10 +111,8 @@ export default function LiderTasksPage() {
 
       {msg && <div className="p-3 bg-dark-hover rounded-xl text-sm text-grove-green border border-grove-border">{msg}</div>}
 
-      {/* Tab Taskuri */}
       {tab === 'taskuri' && (
         <div className="space-y-4">
-          {/* Form */}
           <div className="grove-card space-y-3">
             <h2 className="text-sm font-semibold text-grove-green uppercase tracking-widest">+ Task Nou</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -122,7 +124,7 @@ export default function LiderTasksPage() {
               <div className="md:col-span-2">
                 <label className="grove-label">Descriere *</label>
                 <textarea className="grove-input text-sm resize-none" rows={3}
-                  placeholder="ex: Taskul constă în aducerea a 9 trabucuri. Aveți timp până duminică."
+                  placeholder="ex: Taskul constă în aducerea a 9 trabucuri."
                   value={description} onChange={e => setDesc(e.target.value)} />
               </div>
               <div>
@@ -141,10 +143,11 @@ export default function LiderTasksPage() {
             </button>
           </div>
 
-          {/* Lista taskuri */}
           <div className="grove-card p-0 overflow-hidden">
             <div className="px-5 py-3 border-b border-dark-border">
-              <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-widest">{tasks.filter(t => t.active).length} Taskuri Active</h2>
+              <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-widest">
+                {tasks.filter(t => t.active).length} Taskuri Active
+              </h2>
             </div>
             {loading ? (
               <div className="text-center py-8 text-zinc-600">Se încarcă...</div>
@@ -153,20 +156,39 @@ export default function LiderTasksPage() {
             ) : (
               <div className="divide-y divide-dark-border/50">
                 {tasks.filter(t => t.active).map(task => (
-                  <div key={task.id} className="flex items-center gap-3 px-5 py-3 hover:bg-dark-hover transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-white font-semibold text-sm">{task.title}</div>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-grove-green text-xs font-bold">+{task.points} pts</span>
-                        <span className="text-zinc-600 text-xs">
-                          Stoc: {task.stock === -1 ? '∞' : task.stock} · {task._count.claims} preluări
-                        </span>
+                  <div key={task.id} className="px-5 py-3 hover:bg-dark-hover transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white font-semibold text-sm">{task.title}</div>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <span className="text-grove-green text-xs font-bold">+{task.points} pts</span>
+                          <span className="text-zinc-600 text-xs">
+                            Stoc: {task.stock === -1 ? '∞' : task.stock} · {task._count.claims} preluări
+                          </span>
+                        </div>
                       </div>
+
+                      {/* Confirmare inline in loc de confirm() */}
+                      {deleting === task.id ? (
+                        <div className="flex items-center gap-2 shrink-0 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2">
+                          <AlertTriangle size={13} className="text-red-400" />
+                          <span className="text-red-400 text-xs font-semibold">Sigur?</span>
+                          <button onClick={() => deleteTask(task.id)}
+                            className="text-xs px-2 py-1 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600">
+                            Da
+                          </button>
+                          <button onClick={() => setDeleting(null)}
+                            className="text-xs px-2 py-1 rounded-lg bg-dark-border text-zinc-400 hover:text-white">
+                            Nu
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setDeleting(task.id)}
+                          className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 shrink-0">
+                          <Trash2 size={13} />
+                        </button>
+                      )}
                     </div>
-                    <button onClick={() => deleteTask(task.id)}
-                      className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20">
-                      <Trash2 size={13} />
-                    </button>
                   </div>
                 ))}
               </div>
@@ -175,7 +197,6 @@ export default function LiderTasksPage() {
         </div>
       )}
 
-      {/* Tab Pending */}
       {tab === 'pending' && (
         <div className="grove-card p-0 overflow-hidden">
           <div className="px-5 py-3 border-b border-dark-border">
