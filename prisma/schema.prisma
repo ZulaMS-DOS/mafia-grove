@@ -31,7 +31,7 @@ model User {
   taskClaims  TaskClaim[]
   notifications Notification[]
   amenziPrimite  Amenda[] @relation("AmendaPrimita")
-  menziDate     Amenda[] @relation("AmendaData")
+  amenziDate     Amenda[] @relation("AmendaData")
 }
 
 model WorkSession {
