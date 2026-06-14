@@ -30,6 +30,8 @@ model User {
   wheelSpins  WheelSpin[]
   taskClaims  TaskClaim[]
   notifications Notification[]
+  amenziPrimite  Amenda[] @relation("AmendaPrimita")
+  menziDate     Amenda[] @relation("AmendaData")
 }
 
 model WorkSession {
@@ -226,6 +228,20 @@ model Notification {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+model Amenda {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation("AmendaPrimita", fields: [userId], references: [id], onDelete: Cascade)
+  issuedById String
+  issuer     User      @relation("AmendaData",    fields: [issuedById], references: [id])
+  reason     String    // motivul amenzii
+  item       String    // ce trebuie adus (ex: trabucuri, capsule, bani)
+  bucati     Int       @default(1)  // cantitatea
+  termen     DateTime  // termenul limita
+  status     String    @default("PENDING") // PENDING | PAID | CANCELLED
+  createdAt  DateTime  @default(now())
+  paidAt     DateTime?
 }
 
 
