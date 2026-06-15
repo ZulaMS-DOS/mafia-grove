@@ -30,6 +30,7 @@ model User {
   wheelSpins  WheelSpin[]
   taskClaims  TaskClaim[]
   notifications Notification[]
+  fines  Fine[]
 }
 
 model WorkSession {
@@ -223,6 +224,19 @@ model Notification {
   title     String
   message   String
   read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+model Fine {
+  id        String   @id @default(cuid())
+  userId    String
+  material  String
+  bucati    Int      @default(0)
+  termen    String   @default("")
+  fwLevel   Int?
+  givenBy   String
+  givenByName String
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
