@@ -5,6 +5,9 @@ import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
 import { Plus, Check, X } from 'lucide-react'
 
+const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
+const TESTER_ROLE      = '1462444900388704317'
+
 interface Demisie {
   id: string; reason: string; status: string; createdAt: string; approvedAt: string | null
   user: { username: string }; approver: { username: string } | null
@@ -32,6 +35,10 @@ export default function DemisiiPage() {
   const [reason, setReason]     = useState('')
   const [submitting, setSub]    = useState(false)
   const [tab, setTab]           = useState<StatusTab>('PENDING')
+
+  const canManage = session?.user.roleIds?.some((r: string) =>
+    [...LEADERSHIP_ROLES, TESTER_ROLE].includes(r)
+  )
 
   const load = useCallback(async () => {
     const r = await fetch('/api/demisii')
@@ -74,7 +81,7 @@ export default function DemisiiPage() {
         <div>
           <h1 className="text-3xl font-black text-white">Demisii</h1>
           <p className="text-zinc-500 text-sm mt-1">
-            {session?.user.isLeadership ? 'Toate cererile de demisie ale membrilor' : 'Cererile tale de demisie'}
+            {canManage ? 'Toate cererile de demisie ale membrilor' : 'Cererile tale de demisie'}
           </p>
         </div>
         <button onClick={() => setShowForm(!showForm)} className="grove-btn-danger flex items-center gap-2"><Plus size={16} /> Demisie</button>
@@ -98,18 +105,14 @@ export default function DemisiiPage() {
         </div>
       )}
 
-      {/* Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {(['PENDING', 'ACCEPTED', 'REJECTED'] as StatusTab[]).map(s => (
-          <button
-            key={s}
-            onClick={() => setTab(s)}
+          <button key={s} onClick={() => setTab(s)}
             className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
               tab === s
                 ? 'bg-grove-green text-black border-grove-green'
                 : 'bg-dark-card text-zinc-400 border-dark-border hover:text-white hover:border-grove-border'
-            }`}
-          >
+            }`}>
             {TAB_LABELS[s]} <span className="opacity-60">({counts[s]})</span>
           </button>
         ))}
@@ -132,7 +135,7 @@ export default function DemisiiPage() {
                 <div className="text-xs text-zinc-600">{format(new Date(d.createdAt), 'dd MMM yyyy HH:mm', { locale: ro })}</div>
                 {d.approver && <div className="mt-2 text-xs text-zinc-600">{d.status === 'ACCEPTED' ? '✅' : '❌'} {d.approver.username} — {d.approvedAt ? format(new Date(d.approvedAt), 'dd MMM HH:mm', { locale: ro }) : ''}</div>}
               </div>
-              {session?.user.isLeadership && d.status === 'PENDING' && (
+              {canManage && d.status === 'PENDING' && (
                 <div className="flex gap-2 shrink-0">
                   <button onClick={() => review(d.id, 'ACCEPTED')} className="p-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20"><Check size={14} /></button>
                   <button onClick={() => review(d.id, 'REJECTED')} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"><X size={14} /></button>
