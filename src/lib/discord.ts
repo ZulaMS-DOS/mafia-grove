@@ -33,3 +33,22 @@ export function discordAvatar(userId: string, hash: string | null) {
   if (!hash) return `https://cdn.discordapp.com/embed/avatars/${parseInt(userId) % 5}.png`
   return `https://cdn.discordapp.com/avatars/${userId}/${hash}.png?size=128`
 }
+
+export const CO_LIDER_ROLE_ID = '955126890472022066'
+export const TESTER_ROLE_ID   = '1462444900388704317'
+
+export function isFullLeadership(roleIds: string[]): boolean {
+  return roleIds.some(id => LEADERSHIP_ROLE_IDS.includes(id))
+}
+
+export function isTester(roleIds: string[]): boolean {
+  return roleIds.includes(TESTER_ROLE_ID)
+}
+
+export function canGiveFines(roleIds: string[]): boolean {
+  return isFullLeadership(roleIds) || isTester(roleIds)
+}
+
+export function canManageRequests(roleIds: string[]): boolean {
+  return isFullLeadership(roleIds) || isTester(roleIds)
+}
