@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/dashboard/Sidebar'
 import { Topbar }  from '@/components/dashboard/Topbar'
 
-// Role IDs
 const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
 const MEMBRU_ROLES     = ['1501319885488390184']
 
@@ -12,9 +11,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const session = await getServerSession(authOptions)
   if (!session) redirect('/auth/login')
 
-  const roleIds    = session.user.roleIds || []
-  const isLeadership = roleIds.some(r => LEADERSHIP_ROLES.includes(r))
-  const isMembru     = roleIds.some(r => MEMBRU_ROLES.includes(r))
+  const roleIds      = session.user.roleIds || []
+  const isLeadership = roleIds.some((r: string) => LEADERSHIP_ROLES.includes(r))
+  const isMembru     = roleIds.some((r: string) => MEMBRU_ROLES.includes(r))
 
   return (
     <div className="flex h-screen bg-black overflow-hidden">
