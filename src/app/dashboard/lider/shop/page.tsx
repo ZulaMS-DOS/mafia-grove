@@ -5,6 +5,15 @@ import { Plus, Trash2, Edit3, Save, X, Package } from 'lucide-react'
 interface ShopItem {
   id: string; name: string; description: string | null
   imageUrl: string | null; price: number; stock: number; active: boolean
+  requirementType: string | null
+}
+
+const REQUIREMENT_LABELS: Record<string, string> = {
+  '':               'Fără cerință',
+  taxa_neplatita:   'Taxă neplătită săptămâna curentă',
+  fw_remove_1:      'Scade Faction Warn cu 1 nivel',
+  fw_remove_2:      'Scade Faction Warn cu 2 niveluri',
+  fw_remove_3:      'Scade Faction Warn cu 3 niveluri (șterge complet)',
 }
 
 export default function LiderShopPage() {
@@ -14,15 +23,15 @@ export default function LiderShopPage() {
   const [msg, setMsg]         = useState('')
   const [editing, setEditing] = useState<string | null>(null)
 
-  // Form state — definit la nivel de componenta, nu in interiorul ei
-  const [name, setName]           = useState('')
-  const [description, setDesc]    = useState('')
-  const [imageUrl, setImageUrl]   = useState('')
-  const [price, setPrice]         = useState('')
-  const [stock, setStock]         = useState('-1')
+  const [name, setName]               = useState('')
+  const [description, setDesc]        = useState('')
+  const [imageUrl, setImageUrl]       = useState('')
+  const [price, setPrice]             = useState('')
+  const [stock, setStock]             = useState('-1')
+  const [requirementType, setReqType] = useState('')
 
   const resetForm = () => {
-    setName(''); setDesc(''); setImageUrl(''); setPrice(''); setStock('-1')
+    setName(''); setDesc(''); setImageUrl(''); setPrice(''); setStock('-1'); setReqType('')
     setEditing(null)
   }
 
@@ -46,7 +55,11 @@ export default function LiderShopPage() {
     const r = await fetch('/api/shop', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ name, description, imageUrl, price: parseInt(price), stock: parseInt(stock) }),
+      body:    JSON.stringify({
+        name, description, imageUrl,
+        price: parseInt(price), stock: parseInt(stock),
+        requirementType: requirementType || null,
+      }),
     })
     if (r.ok) { showMsg('✅ Produs adăugat!'); resetForm(); await load() }
     else       { showMsg('❌ Eroare la adăugare') }
@@ -59,7 +72,11 @@ export default function LiderShopPage() {
     await fetch(`/api/shop/${editing}`, {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ name, description, imageUrl, price: parseInt(price), stock: parseInt(stock) }),
+      body:    JSON.stringify({
+        name, description, imageUrl,
+        price: parseInt(price), stock: parseInt(stock),
+        requirementType: requirementType || null,
+      }),
     })
     showMsg('✅ Produs actualizat!')
     resetForm()
@@ -74,6 +91,7 @@ export default function LiderShopPage() {
     setImageUrl(item.imageUrl || '')
     setPrice(String(item.price))
     setStock(String(item.stock))
+    setReqType(item.requirementType || '')
   }
 
   const deleteItem = async (id: string) => {
@@ -96,7 +114,6 @@ export default function LiderShopPage() {
         </div>
       )}
 
-      {/* Form */}
       <div className="grove-card">
         <h2 className="text-sm font-semibold text-grove-green uppercase tracking-widest mb-4">
           {editing ? '✏️ Editează Produs' : '+ Adaugă Produs Nou'}
@@ -127,9 +144,16 @@ export default function LiderShopPage() {
             <input className="grove-input text-sm" placeholder="ex: 20 de injectii cu adrenalina..."
               value={description} onChange={e => setDesc(e.target.value)} />
           </div>
+          <div className="md:col-span-2">
+            <label className="grove-label">Cerință Specială (opțional)</label>
+            <select className="grove-select text-sm" value={requirementType} onChange={e => setReqType(e.target.value)}>
+              {Object.entries(REQUIREMENT_LABELS).map(([val, label]) => (
+                <option key={val} value={val}>{label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Preview imagine */}
         {imageUrl && (
           <div className="mt-3 p-3 bg-dark-hover rounded-xl border border-dark-border">
             <div className="text-xs text-zinc-600 mb-2">Preview:</div>
@@ -156,7 +180,6 @@ export default function LiderShopPage() {
         </div>
       </div>
 
-      {/* Lista */}
       <div className="grove-card p-0 overflow-hidden">
         <div className="px-5 py-3 border-b border-dark-border">
           <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-widest">
@@ -183,9 +206,14 @@ export default function LiderShopPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-white font-semibold text-sm truncate">{item.name}</div>
-                  <div className="flex items-center gap-3 mt-0.5">
+                  <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                     <span className="text-grove-green text-xs font-bold">{item.price} pts</span>
                     <span className="text-zinc-600 text-xs">Stoc: {item.stock === -1 ? '∞' : item.stock}</span>
+                    {item.requirementType && (
+                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                        🔒 Cerință
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2 shrink-0">
