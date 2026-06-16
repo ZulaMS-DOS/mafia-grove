@@ -12,10 +12,13 @@ export async function GET() {
       take:    100,
       include: { user: { select: { username: true, avatar: true, discordId: true } } },
     }),
-    prisma.user.findMany({
-      orderBy: { username: 'asc' },
-      select:  { id: true, username: true, avatar: true, discordId: true },
-    }),
+   prisma.user.findMany({
+  where: {
+    roleIds: { hasSome: ['955126889171804170','955126890472022066','1462444900388704317','1501319885488390184','1342912254542348298'] }
+  },
+  orderBy: { username: 'asc' },
+  select:  { id: true, username: true, avatar: true, discordId: true },
+})
   ])
 
   return NextResponse.json({ fines, members })
