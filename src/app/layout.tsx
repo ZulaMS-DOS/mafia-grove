@@ -4,7 +4,7 @@ import './globals.css'
 import { Providers } from './providers'
 
 const inter = Inter({ subsets: ['latin'] })
-const bangers = Bangers({ subsets: ['latin'], variable: '--font-bangers' })
+const bangers = Bangers({ subsets: ['latin'], weight: '400', variable: '--font-bangers' })
 
 export const metadata: Metadata = {
   title: 'Grove Street — Dashboard',
