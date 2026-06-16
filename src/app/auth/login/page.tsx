@@ -22,16 +22,34 @@ export default function LoginPage() {
       <div className="relative z-10 text-center px-6 animate-slide-up">
         {/* Logo */}
         <div className="mb-8">
-          <div className="w-24 h-24 mx-auto mb-6 rounded-2xl border-2 border-grove-border bg-dark-card
-                          flex items-center justify-center text-5xl
-                          shadow-[0_0_40px_#00ff6630] animate-glow-pulse">
-            🏚️
+          <div className="relative inline-block">
+            <div className="absolute -inset-x-8 -inset-y-4 opacity-20 blur-2xl bg-grove-green rounded-full" />
+
+            <h1
+              className="relative text-7xl sm:text-8xl leading-none tracking-wide select-none"
+              style={{ fontFamily: 'var(--font-bangers), cursive' }}
+            >
+              <span
+                className="block text-white"
+                style={{
+                  WebkitTextStroke: '2px #00ff66',
+                  textShadow: '3px 3px 0px #00ff66, 6px 6px 12px rgba(0,255,102,0.4)',
+                }}
+              >
+                GROVE
+              </span>
+              <span
+                className="block -mt-3 text-grove-green"
+                style={{
+                  WebkitTextStroke: '2px #000',
+                  textShadow: '3px 3px 0px #000, 0 0 30px #00ff6680',
+                }}
+              >
+                STREET
+              </span>
+            </h1>
           </div>
-          <h1 className="text-6xl font-black tracking-tight mb-1">
-            <span className="text-white">MAFIA</span>
-            <span className="text-grove-green"> GROVE</span>
-          </h1>
-          <p className="text-zinc-500 text-sm tracking-[0.3em] uppercase">Organization Dashboard</p>
+          <p className="text-zinc-500 text-sm tracking-[0.3em] uppercase mt-4">Organization Dashboard</p>
         </div>
 
         {/* Card */}
@@ -72,7 +90,7 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-zinc-700 text-xs">
-          Accesul este restricționat la membrii serverului Mafia Grove
+          Accesul este restricționat la membrii serverului Grove Street
         </p>
       </div>
     </div>
