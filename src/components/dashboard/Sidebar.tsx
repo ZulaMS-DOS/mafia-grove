@@ -82,12 +82,8 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
     <aside className="w-64 bg-dark-card flex flex-col h-full">
       <div className="p-5 border-b border-dark-border flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-grove-dim border border-grove-border flex items-center justify-center text-lg shrink-0">🏚️</div>
-          <div>
-            <div className="font-black text-white text-sm leading-none" style={{ fontFamily: 'var(--font-bangers), cursive', letterSpacing: '0.05em' }}>
-  <span style={{ color: '#00ff66' }}>GROVE</span> STREET
-</div>
-            <div className="text-grove-green text-xs mt-0.5">Dashboard</div>
+          <div className="font-black text-white text-lg leading-none" style={{ fontFamily: 'var(--font-bangers), cursive', letterSpacing: '0.05em' }}>
+            <span style={{ color: '#00ff66' }}>GROVE</span> STREET
           </div>
         </div>
         <button onClick={() => setOpen(false)} className="md:hidden p-1.5 rounded-lg text-zinc-600 hover:text-white hover:bg-dark-hover">
