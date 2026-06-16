@@ -1,37 +1,48 @@
 'use client'
-import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 
-function ErrorContent() {
-  const params = useSearchParams()
-  const error = params.get('error')
-
-  const messages: Record<string, string> = {
-    not_in_guild: 'Nu ești pe serverul Discord Mafia Grove.',
-    bot_error:    'Eroare la verificarea serverului. Încearcă din nou.',
-    default:      'A apărut o eroare la autentificare.',
-  }
-
-  return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'100vh', background:'#000', color:'#fff', fontFamily:'sans-serif' }}>
-      <div style={{ background:'#0a0a0a', border:'1px solid #1a1a1a', borderRadius:'12px', padding:'40px', maxWidth:'400px', textAlign:'center' }}>
-        <div style={{ fontSize:'48px', marginBottom:'16px' }}>🚫</div>
-        <h1 style={{ color:'#00ff66', marginBottom:'16px' }}>Acces Refuzat</h1>
-        <p style={{ color:'#888', marginBottom:'24px' }}>
-          {messages[error || 'default'] || messages.default}
-        </p>
-        <a href="/auth/login" style={{ background:'#00ff66', color:'#000', padding:'12px 24px', borderRadius:'8px', textDecoration:'none', fontWeight:'bold' }}>
-          Înapoi la Login
-        </a>
-      </div>
-    </div>
-  )
+const ERRORS: Record<string, { title: string; message: string; emoji: string }> = {
+  banned: {
+    emoji:   '🚫',
+    title:   'Acces Interzis',
+    message: 'Ai fost banat de pe acest site. Contactează un Lider pentru mai multe informații.',
+  },
+  not_in_guild: {
+    emoji:   '❌',
+    title:   'Nu ești pe server',
+    message: 'Trebuie să fii membru al serverului Discord Mafia Grove pentru a accesa acest site.',
+  },
+  bot_error: {
+    emoji:   '🤖',
+    title:   'Eroare Bot',
+    message: 'A apărut o eroare la verificarea membriei. Încearcă din nou.',
+  },
+  default: {
+    emoji:   '⚠️',
+    title:   'Eroare Autentificare',
+    message: 'A apărut o eroare la autentificare. Încearcă din nou.',
+  },
 }
 
-export default function AuthError() {
+export default function ErrorPage() {
+  const params = useSearchParams()
+  const error  = params.get('error') || 'default'
+  const info   = ERRORS[error] || ERRORS.default
+
   return (
-    <Suspense fallback={<div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh',background:'#000',color:'#00ff66'}}>Se încarcă...</div>}>
-      <ErrorContent />
-    </Suspense>
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="max-w-md w-full text-center space-y-6">
+        <div className="text-8xl">{info.emoji}</div>
+        <div>
+          <h1 className="text-3xl font-black text-white mb-2">{info.title}</h1>
+          <p className="text-zinc-500">{info.message}</p>
+        </div>
+        <Link href="/auth/login"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-grove-green text-black font-bold hover:bg-grove-dark transition-colors">
+          ← Înapoi la Login
+        </Link>
+      </div>
+    </div>
   )
 }
