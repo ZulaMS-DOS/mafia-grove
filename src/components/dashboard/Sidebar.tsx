@@ -45,6 +45,7 @@ const liderNav = [
   { href: '/dashboard/lider/whitelist', icon: Shield,        label: 'Whitelist'         },
   { href: '/dashboard/lider/anunturi',  icon: Megaphone,     label: 'Postează Anunț'    },
   { href: '/dashboard/lider/taxa',      icon: Coins,         label: 'Taxa Sindicat'     },
+  { href: '/dashboard/lider/ban',       icon: Shield,        label: 'Gestionare Acces'  },
 ]
 
 interface SidebarProps {
