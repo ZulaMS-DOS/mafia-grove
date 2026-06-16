@@ -148,6 +148,7 @@ model ShopItem {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  requirementType String?
   orders ShopOrder[]
 }
 
