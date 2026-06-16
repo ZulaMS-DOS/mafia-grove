@@ -84,7 +84,9 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-grove-dim border border-grove-border flex items-center justify-center text-lg shrink-0">🏚️</div>
           <div>
-            <div className="font-black text-white text-sm leading-none">MAFIA GROVE</div>
+            <div className="font-black text-white text-sm leading-none" style={{ fontFamily: 'var(--font-bangers), cursive', letterSpacing: '0.05em' }}>
+  <span style={{ color: '#00ff66' }}>GROVE</span> STREET
+</div>
             <div className="text-grove-green text-xs mt-0.5">Dashboard</div>
           </div>
         </div>
