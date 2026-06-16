@@ -23,7 +23,12 @@ export async function GET() {
       where: { weekStart },
       include: { user: { select: { username: true, avatar: true, discordId: true } } },
     }),
-    prisma.user.findMany({ select: { id: true, username: true, avatar: true, discordId: true } }),
+    prisma.user.findMany({
+  where: {
+    roleIds: { hasSome: ['955126889171804170','955126890472022066','1462444900388704317','1501319885488390184','1342912254542348298'] }
+  },
+  select: { id: true, username: true, avatar: true, discordId: true },
+})
   ])
   return NextResponse.json({ items, payments, members, weekStart: weekStart.toISOString() })
 }
