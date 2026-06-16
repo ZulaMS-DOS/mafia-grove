@@ -1,38 +1,31 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Plus, Trash2, Edit3, Save, X, Package } from 'lucide-react'
 
 interface ShopItem {
   id: string; name: string; description: string | null
   imageUrl: string | null; price: number; stock: number; active: boolean
-  requirementType: string | null
-}
-
-const REQUIREMENT_LABELS: Record<string, string> = {
-  '':               'Fără cerință',
-  taxa_neplatita:   'Taxă neplătită săptămâna curentă',
-  fw_remove_1:      'Scade Faction Warn cu 1 nivel',
-  fw_remove_2:      'Scade Faction Warn cu 2 niveluri',
-  fw_remove_3:      'Scade Faction Warn cu 3 niveluri (șterge complet)',
 }
 
 export default function LiderShopPage() {
   const [items, setItems]     = useState<ShopItem[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [msg, setMsg]         = useState('')
   const [editing, setEditing] = useState<string | null>(null)
+  const fileInputRef          = useRef<HTMLInputElement>(null)
 
-  const [name, setName]               = useState('')
-  const [description, setDesc]        = useState('')
-  const [imageUrl, setImageUrl]       = useState('')
-  const [price, setPrice]             = useState('')
-  const [stock, setStock]             = useState('-1')
-  const [requirementType, setReqType] = useState('')
+  const [name, setName]           = useState('')
+  const [description, setDesc]    = useState('')
+  const [imageUrl, setImageUrl]   = useState('')
+  const [price, setPrice]         = useState('')
+  const [stock, setStock]         = useState('-1')
 
   const resetForm = () => {
-    setName(''); setDesc(''); setImageUrl(''); setPrice(''); setStock('-1'); setReqType('')
+    setName(''); setDesc(''); setImageUrl(''); setPrice(''); setStock('-1')
     setEditing(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const load = useCallback(async () => {
@@ -49,17 +42,33 @@ export default function LiderShopPage() {
     setTimeout(() => setMsg(''), 3000)
   }
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const r = await fetch('/api/upload', { method: 'POST', body: formData })
+    const d = await r.json()
+
+    if (r.ok) {
+      setImageUrl(d.url)
+      showMsg('✅ Poză încărcată!')
+    } else {
+      showMsg(`❌ Eroare: ${d.error}`)
+    }
+    setUploading(false)
+  }
+
   const addItem = async () => {
     if (!name.trim() || !price) { showMsg('⚠️ Completează numele și prețul!'); return }
     setSaving(true)
     const r = await fetch('/api/shop', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        name, description, imageUrl,
-        price: parseInt(price), stock: parseInt(stock),
-        requirementType: requirementType || null,
-      }),
+      body:    JSON.stringify({ name, description, imageUrl, price: parseInt(price), stock: parseInt(stock) }),
     })
     if (r.ok) { showMsg('✅ Produs adăugat!'); resetForm(); await load() }
     else       { showMsg('❌ Eroare la adăugare') }
@@ -72,11 +81,7 @@ export default function LiderShopPage() {
     await fetch(`/api/shop/${editing}`, {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        name, description, imageUrl,
-        price: parseInt(price), stock: parseInt(stock),
-        requirementType: requirementType || null,
-      }),
+      body:    JSON.stringify({ name, description, imageUrl, price: parseInt(price), stock: parseInt(stock) }),
     })
     showMsg('✅ Produs actualizat!')
     resetForm()
@@ -91,7 +96,6 @@ export default function LiderShopPage() {
     setImageUrl(item.imageUrl || '')
     setPrice(String(item.price))
     setStock(String(item.stock))
-    setReqType(item.requirementType || '')
   }
 
   const deleteItem = async (id: string) => {
@@ -130,9 +134,16 @@ export default function LiderShopPage() {
               value={price} onChange={e => setPrice(e.target.value)} />
           </div>
           <div>
-            <label className="grove-label">URL Imagine</label>
-            <input className="grove-input text-sm" placeholder="https://..."
-              value={imageUrl} onChange={e => setImageUrl(e.target.value)} />
+            <label className="grove-label">Imagine Produs</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              disabled={uploading}
+              className="grove-input text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-grove-dim file:text-grove-green file:text-xs file:font-semibold file:cursor-pointer hover:file:bg-grove-dim/70"
+            />
+            {uploading && <p className="text-xs text-zinc-500 mt-1">Se încarcă...</p>}
           </div>
           <div>
             <label className="grove-label">Stoc (-1 = infinit)</label>
@@ -144,21 +155,15 @@ export default function LiderShopPage() {
             <input className="grove-input text-sm" placeholder="ex: 20 de injectii cu adrenalina..."
               value={description} onChange={e => setDesc(e.target.value)} />
           </div>
-          <div className="md:col-span-2">
-            <label className="grove-label">Cerință Specială (opțional)</label>
-            <select className="grove-select text-sm" value={requirementType} onChange={e => setReqType(e.target.value)}>
-              {Object.entries(REQUIREMENT_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
-          </div>
         </div>
 
         {imageUrl && (
           <div className="mt-3 p-3 bg-dark-hover rounded-xl border border-dark-border">
-            <div className="text-xs text-zinc-600 mb-2">Preview:</div>
-            <img src={imageUrl} alt="preview" className="h-24 object-contain rounded-lg"
-              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-zinc-600">Preview:</div>
+              <button onClick={() => setImageUrl('')} className="text-xs text-red-400 hover:underline">Șterge poza</button>
+            </div>
+            <img src={imageUrl} alt="preview" className="h-24 object-contain rounded-lg" />
           </div>
         )}
 
@@ -199,21 +204,15 @@ export default function LiderShopPage() {
               <div key={item.id} className="flex items-center gap-3 px-5 py-3 hover:bg-dark-hover transition-colors">
                 <div className="w-12 h-12 rounded-xl bg-dark-muted border border-dark-border flex items-center justify-center shrink-0 overflow-hidden">
                   {item.imageUrl
-                    ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain p-1"
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain p-1" />
                     : <Package size={20} className="text-zinc-600" />
                   }
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-white font-semibold text-sm truncate">{item.name}</div>
-                  <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                  <div className="flex items-center gap-3 mt-0.5">
                     <span className="text-grove-green text-xs font-bold">{item.price} pts</span>
                     <span className="text-zinc-600 text-xs">Stoc: {item.stock === -1 ? '∞' : item.stock}</span>
-                    {item.requirementType && (
-                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                        🔒 Cerință
-                      </span>
-                    )}
                   </div>
                 </div>
                 <div className="flex gap-2 shrink-0">
