@@ -14,22 +14,34 @@ export const authOptions: AuthOptions = {
   callbacks: {
     async signIn({ account, profile }) {
       if (!account || !profile) return false
+
       const discordId = (profile as any).id as string
+
       let member
       try { member = await getGuildMember(discordId) } catch { return '/auth/error?error=bot_error' }
       if (!member) return '/auth/error?error=not_in_guild'
+
       const roleIds: string[] = member.roles || []
+
+      // Verifica daca e banat
+      const existingUser = await prisma.user.findUnique({ where: { discordId } })
+      if (existingUser?.banned) {
+        return '/auth/error?error=banned'
+      }
+
       await prisma.user.upsert({
         where:  { discordId },
         update: { username: (profile as any).username, avatar: (profile as any).avatar, roleIds },
         create: { discordId, username: (profile as any).username, avatar: (profile as any).avatar, roleIds },
       })
+
       return true
     },
+
     async jwt({ token, account, profile }) {
       if (account && profile) {
         const discordId = (profile as any).id as string
-        const user = await prisma.user.findUnique({ where: { discordId } })
+        const user      = await prisma.user.findUnique({ where: { discordId } })
         if (user) {
           token.userId       = user.id
           token.discordId    = discordId
@@ -41,13 +53,14 @@ export const authOptions: AuthOptions = {
       }
       return token
     },
+
     async session({ session, token }) {
-      session.user.id           = token.userId as string
-      session.user.discordId    = token.discordId as string
-      session.user.roleIds      = token.roleIds as string[]
+      session.user.id          = token.userId as string
+      session.user.discordId   = token.discordId as string
+      session.user.roleIds     = token.roleIds as string[]
       session.user.isLeadership = token.isLeadership as boolean
-      session.user.image        = token.avatar as string
-      session.user.name         = token.username as string
+      session.user.image       = token.avatar as string
+      session.user.name        = token.username as string
       return session
     },
   },
