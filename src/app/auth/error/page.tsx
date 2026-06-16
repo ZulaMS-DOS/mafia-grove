@@ -1,4 +1,5 @@
 'use client'
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -25,7 +26,7 @@ const ERRORS: Record<string, { title: string; message: string; emoji: string }> 
   },
 }
 
-export default function ErrorPage() {
+function ErrorContent() {
   const params = useSearchParams()
   const error  = params.get('error') || 'default'
   const info   = ERRORS[error] || ERRORS.default
@@ -44,5 +45,17 @@ export default function ErrorPage() {
         </Link>
       </div>
     </div>
+  )
+}
+
+export default function ErrorPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-zinc-600">Se încarcă...</div>
+      </div>
+    }>
+      <ErrorContent />
+    </Suspense>
   )
 }
