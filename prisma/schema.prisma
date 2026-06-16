@@ -31,6 +31,10 @@ model User {
   taskClaims  TaskClaim[]
   notifications Notification[]
   fines  Fine[]
+  banned     Boolean  @default(false)
+  bannedAt   DateTime?
+  bannedBy   String?
+  banReason  String?
 }
 
 model WorkSession {
