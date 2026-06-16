@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
 import { Sidebar } from '@/components/dashboard/Sidebar'
 import { Topbar }  from '@/components/dashboard/Topbar'
 
@@ -10,6 +11,13 @@ const MEMBRU_ROLES     = ['1501319885488390184']
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
   if (!session) redirect('/auth/login')
+
+  // Verifica daca userul e banat
+  const user = await prisma.user.findUnique({
+    where:  { id: session.user.id },
+    select: { banned: true },
+  })
+  if (user?.banned) redirect('/auth/error?error=banned')
 
   const roleIds      = session.user.roleIds || []
   const isLeadership = roleIds.some((r: string) => LEADERSHIP_ROLES.includes(r))
