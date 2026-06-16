@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const { session, error } = await requireLeadership()
   if (error) return error
 
-  const { name, description, imageUrl, price, stock } = await req.json()
+  const { name, description, imageUrl, price, stock, requirementType } = await req.json()
   if (!name || price === undefined) {
     return NextResponse.json({ error: 'Nume si pret obligatorii' }, { status: 400 })
   }
@@ -27,11 +27,12 @@ export async function POST(req: NextRequest) {
   const item = await (prisma as any).shopItem.create({
     data: {
       name,
-      description: description || null,
-      imageUrl:    imageUrl    || null,
-      price:       parseInt(price),
-      stock:       stock !== undefined ? parseInt(stock) : -1,
-      createdBy:   session!.user.id,
+      description:     description || null,
+      imageUrl:        imageUrl    || null,
+      price:           parseInt(price),
+      stock:           stock !== undefined ? parseInt(stock) : -1,
+      requirementType: requirementType || null,
+      createdBy:       session!.user.id,
     },
   })
   return NextResponse.json({ item })
