@@ -14,9 +14,25 @@ export async function GET() {
     description: 'Acordă puncte membrilor pentru un jaf procesat',
     options: [
       {
-        type:        4,
+        type:        3,
+        name:        'tip-jaf',
+        description: 'Tipul jafului procesat',
+        required:    true,
+        choices: [
+          { name: 'Alta',     value: 'alta'     },
+          { name: 'Vinewood', value: 'vinewood' },
+          { name: 'Highway',  value: 'highway'  },
+          { name: 'Desert',   value: 'desert'   },
+          { name: 'Blaine',   value: 'blaine'   },
+          { name: 'Pacific',  value: 'pacific'  },
+          { name: 'ATM',      value: 'atm'      },
+          { name: 'Biju',     value: 'biju'     },
+        ],
+      },
+      {
+        type:        10,
         name:        'puncte',
-        description: 'Câte puncte acorzi',
+        description: 'Câte puncte acorzi (poți pune și zecimale, ex: 2.5)',
         required:    true,
       },
       {
