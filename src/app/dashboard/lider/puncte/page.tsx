@@ -1,18 +1,24 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
+
+const SUPER_ADMIN_DISCORD_ID = '949760812518617138'
 
 interface Member { id: string; username: string; points: number }
 interface HistEntry { id: string; amount: number; reason: string; createdAt: string; user: { username: string }; moderator: { username: string } }
 
 export default function LeaderPunctePage() {
+  const { data: session } = useSession()
   const [members, setMembers]   = useState<Member[]>([])
   const [history, setHistory]   = useState<HistEntry[]>([])
   const [loading, setLoading]   = useState(true)
   const [submitting, setSub]    = useState(false)
   const [form, setForm]         = useState({ targetUserId: '', amount: '', reason: '' })
   const [msg, setMsg]           = useState('')
+
+  const isSuperAdmin = session?.user.discordId === SUPER_ADMIN_DISCORD_ID
 
   const load = useCallback(async () => {
     const [mr, hr] = await Promise.all([fetch('/api/members'), fetch('/api/points?userId=all')])
@@ -29,11 +35,22 @@ export default function LeaderPunctePage() {
     const r = await fetch('/api/points', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
     const d = await r.json()
     if (r.ok) {
-      setMsg(`✅ ${parseInt(form.amount) > 0 ? '+' : ''}${form.amount} puncte acordate lui ${d.user.username}!`)
+      const amountNum = parseFloat(form.amount)
+      setMsg(`✅ ${amountNum > 0 ? '+' : ''}${form.amount} puncte acordate lui ${d.user.username}!`)
       setForm({ targetUserId: '', amount: '', reason: '' })
       await load()
     } else { setMsg('❌ Eroare: ' + d.error) }
     setSub(false)
+  }
+
+  if (!isSuperAdmin) {
+    return (
+      <div className="grove-card text-center py-16 max-w-md mx-auto">
+        <div className="text-5xl mb-4">🔒</div>
+        <h2 className="text-xl font-bold text-white mb-2">Acces Restricționat</h2>
+        <p className="text-zinc-500 text-sm">Gestionarea punctelor este disponibilă doar pentru administratorul principal.</p>
+      </div>
+    )
   }
 
   return (
@@ -44,7 +61,6 @@ export default function LeaderPunctePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Form */}
         <div className="grove-card">
           <h2 className="text-sm font-semibold text-grove-green uppercase tracking-widest mb-4">🪙 Modifică Puncte</h2>
           {msg && <div className="mb-4 p-3 bg-dark-hover rounded-lg text-sm text-grove-green">{msg}</div>}
@@ -57,8 +73,8 @@ export default function LeaderPunctePage() {
               </select>
             </div>
             <div>
-              <label className="grove-label">Puncte (pozitiv = acordă, negativ = retrage)</label>
-              <input type="number" className="grove-input" placeholder="ex: 100 sau -50"
+              <label className="grove-label">Puncte (pozitiv = acordă, negativ = retrage, accepta zecimale)</label>
+              <input type="number" step="0.1" className="grove-input" placeholder="ex: 100, -50, 2.5, -0.5"
                 value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
             </div>
             <div>
@@ -72,7 +88,6 @@ export default function LeaderPunctePage() {
           </div>
         </div>
 
-        {/* Members ranking */}
         <div className="grove-card">
           <h2 className="text-sm font-semibold text-grove-green uppercase tracking-widest mb-4">🏆 Clasament Puncte</h2>
           {loading ? <div className="text-zinc-600 text-center py-6">Se încarcă...</div> : (
