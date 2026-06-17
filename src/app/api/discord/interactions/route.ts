@@ -7,14 +7,13 @@ const PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY!
 const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
 
 const JAF_CONFIG: Record<string, { label: string; points: number }> = {
-  vinewood: { label: '🎬 Vinewood Bank',    points: 1.5 },
-  alta:     { label: '🏦 Alta Bank',        points: 1.5 },
-  desert:   { label: '🏜️ Desert Heist',     points: 1.5 },
-  highway:  { label: '🛣️ Highway Robbery',  points: 1.5 },
-  pacific:  { label: '🌊 Pacific Standard', points: 2   },
-  blaine:   { label: '⛰️ Blaine County Bank', points: 2 },
-  biju:     { label: '💎 Bijuterie',        points: 2   },
-  taxa24h:  { label: '⏰ Taxa 24 Ore',      points: 10  },
+  vinewood: { label: '🎬 Vinewood Bank',      points: 1.5 },
+  alta:     { label: '🏦 Alta Bank',          points: 1.5 },
+  desert:   { label: '🏜️ Desert Heist',       points: 1.5 },
+  highway:  { label: '🛣️ Highway Robbery',    points: 1.5 },
+  pacific:  { label: '🌊 Pacific Standard',   points: 2   },
+  blaine:   { label: '⛰️ Blaine County Bank', points: 2   },
+  biju:     { label: '💎 Bijuterie',          points: 2   },
 }
 
 async function verifySignature(req: NextRequest, rawBody: string) {
@@ -104,10 +103,11 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    const options  = body.data.options || []
+    const useriRaw = options.find((o: any) => o.name === 'useri')?.value as string | undefined
+
     if (commandName === 'jaf-procesat') {
-      const options  = body.data.options || []
-      const useriRaw = options.find((o: any) => o.name === 'useri')?.value as string | undefined
-      const jafType  = options.find((o: any) => o.name === 'tip-jaf')?.value as string | undefined
+      const jafType = options.find((o: any) => o.name === 'tip-jaf')?.value as string | undefined
 
       if (!useriRaw || !jafType || !JAF_CONFIG[jafType]) {
         return NextResponse.json({
@@ -131,11 +131,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ type: 4, data: { content } })
     }
 
-    if (commandName === 'activitate') {
-      const options   = body.data.options || []
-      const puncteRaw = options.find((o: any) => o.name === 'puncte')?.value
-      const useriRaw  = options.find((o: any) => o.name === 'useri')?.value as string | undefined
+    if (commandName === 'taxa24h') {
+      if (!useriRaw) {
+        return NextResponse.json({
+          type: 4,
+          data: { content: '⚠️ Trebuie să specifici useri.', flags: 64 },
+        })
+      }
 
+      const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
+      if (!userIds.length) {
+        return NextResponse.json({
+          type: 4,
+          data: { content: '⚠️ Nicio mențiune validă găsită.', flags: 64 },
+        })
+      }
+
+      const label = '⏰ Taxa 24 Ore'
+      const { successLines, failLines } = await awardPoints(userIds, 10, label, callerName)
+      const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
+
+      return NextResponse.json({ type: 4, data: { content } })
+    }
+
+    if (commandName === 'activitate') {
+      const puncteRaw = options.find((o: any) => o.name === 'puncte')?.value
       const puncte = typeof puncteRaw === 'string' ? parseFloat(puncteRaw) : puncteRaw
 
       if (!puncte || !useriRaw) {
