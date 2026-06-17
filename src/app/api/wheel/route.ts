@@ -14,7 +14,19 @@ export async function GET() {
     (prisma as any).wheelConfig.findFirst(),
   ])
 
-  return NextResponse.json({ prizes, spinCost: config?.spinCost ?? 10 })
+  const itemIds = prizes.filter((p: any) => p.itemId).map((p: any) => p.itemId)
+  const shopItems = itemIds.length
+    ? await (prisma as any).shopItem.findMany({ where: { id: { in: itemIds } } })
+    : []
+  const itemMap = new Map(shopItems.map((i: any) => [i.id, i]))
+
+  const enriched = prizes.map((p: any) => ({
+    ...p,
+    itemImageUrl: p.itemId ? (itemMap.get(p.itemId) as any)?.imageUrl ?? null : null,
+    itemName:     p.itemId ? (itemMap.get(p.itemId) as any)?.name     ?? null : null,
+  }))
+
+  return NextResponse.json({ prizes: enriched, spinCost: config?.spinCost ?? 10 })
 }
 
 export async function POST() {
@@ -41,7 +53,6 @@ export async function POST() {
     }, { status: 400 })
   }
 
-  // Alege premiul random bazat pe sanse
   const totalChance = prizes.reduce((a: number, p: any) => a + p.chance, 0)
   let rand  = Math.random() * totalChance
   let prize = prizes[prizes.length - 1]
@@ -50,7 +61,6 @@ export async function POST() {
     if (rand <= 0) { prize = p; break }
   }
 
-  // Scade punctele pentru spin
   await prisma.user.update({
     where: { id: userId },
     data:  { points: { decrement: spinCost } },
@@ -84,7 +94,6 @@ export async function POST() {
       }
       prizeResult = item.name
     } else {
-      // Stoc epuizat â da puncte bonus
       const bonus = prize.value || 5
       await prisma.user.update({
         where: { id: userId },
