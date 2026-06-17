@@ -6,6 +6,17 @@ import { notify } from '@/lib/notifications'
 const PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY!
 const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
 
+const JAF_LABELS: Record<string, string> = {
+  alta:    '🏦 Alta Bank',
+  vinewood:'🎬 Vinewood Bank',
+  highway: '🛣️ Highway Robbery',
+  desert:  '🏜️ Desert Heist',
+  blaine:  '⛰️ Blaine County Bank',
+  pacific: '🌊 Pacific Standard',
+  atm:     '💳 ATM Run',
+  biju:    '💎 Bijuterie',
+}
+
 async function verifySignature(req: NextRequest, rawBody: string) {
   const signature = req.headers.get('x-signature-ed25519')
   const timestamp  = req.headers.get('x-signature-timestamp')
@@ -36,69 +47,90 @@ export async function POST(req: NextRequest) {
     const commandName = body.data.name
     const memberRoles: string[] = body.member?.roles || []
     const callerId    = body.member?.user?.id
+    const callerName  = body.member?.nick || body.member?.user?.username || 'Necunoscut'
 
     if (commandName === 'jaf-procesat') {
       const isLeader = memberRoles.some(r => LEADERSHIP_ROLES.includes(r))
       if (!isLeader) {
         return NextResponse.json({
           type: 4,
-          data: { content: '❌ Doar Lider sau Co-Lider pot folosi această comandă.', flags: 64 },
+          data: {
+            content: '🚫 **Acces interzis** — doar Lider sau Co-Lider pot procesa jafuri.',
+            flags: 64,
+          },
         })
       }
 
-      const options = body.data.options || []
-      const puncte  = options.find((o: any) => o.name === 'puncte')?.value
-      const useriRaw = options.find((o: any) => o.name === 'useri')?.value as string | undefined
+      const options  = body.data.options || []
+      const puncteRaw = options.find((o: any) => o.name === 'puncte')?.value
+      const useriRaw  = options.find((o: any) => o.name === 'useri')?.value as string | undefined
+      const jafType   = options.find((o: any) => o.name === 'tip-jaf')?.value as string | undefined
 
-      if (!puncte || !useriRaw) {
+      const puncte = typeof puncteRaw === 'string' ? parseFloat(puncteRaw) : puncteRaw
+
+      if (!puncte || !useriRaw || !jafType) {
         return NextResponse.json({
           type: 4,
-          data: { content: '❌ Trebuie să specifici puncte și useri.', flags: 64 },
+          data: { content: '⚠️ Trebuie să specifici toate câmpurile: tip-jaf, puncte, useri.', flags: 64 },
         })
       }
 
-      const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map(m => m[1])
+      const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
 
       if (!userIds.length) {
         return NextResponse.json({
           type: 4,
-          data: { content: '❌ Nicio mențiune validă găsită.', flags: 64 },
+          data: { content: '⚠️ Nicio mențiune validă găsită.', flags: 64 },
         })
       }
 
-      const results: string[] = []
+      const jafLabel = JAF_LABELS[jafType] || jafType
+
+      const successLines: string[] = []
+      const failLines: string[]    = []
+
       for (const discordId of userIds) {
         const user = await prisma.user.findUnique({ where: { discordId } })
         if (!user) {
-          results.push(`⚠️ <@${discordId}> nu este înregistrat pe site`)
+          failLines.push(`> ⚠️ <@${discordId}> — neînregistrat pe site`)
           continue
         }
 
         await prisma.user.update({
           where: { id: user.id },
-          data:  { points: { increment: parseInt(puncte) } },
+          data:  { points: { increment: puncte } },
         })
         await prisma.pointHistory.create({
           data: {
             userId:      user.id,
             moderatorId: user.id,
-            amount:      parseInt(puncte),
-            reason:      `Jaf procesat — acordat de <@${callerId}>`,
+            amount:      Math.round(puncte),
+            reason:      `${jafLabel} — procesat de ${callerName}`,
           },
         })
         await notify({
           userId:  user.id,
           type:    'task',
-          title:   '💰 Jaf Procesat',
+          title:   `💰 ${jafLabel} Procesat`,
           message: `Ai primit +${puncte} Grove Coins pentru participarea la jaf!`,
         })
 
-        results.push(`✅ <@${discordId}> +${puncte} pts`)
+        successLines.push(`> ✅ <@${discordId}> **+${puncte} pts**`)
       }
+
+      const divider = '━━━━━━━━━━━━━━━━━━━━'
+      const content = [
+        `## 🏴 ${jafLabel}`,
+        divider,
+        successLines.length ? successLines.join('\n') : null,
+        failLines.length ? failLines.join('\n') : null,
+        divider,
+        `*Procesat de* **${callerName}** *· ${userIds.length} membri recompensați*`,
+      ].filter(Boolean).join('\n')
 
       return NextResponse.json({
         type: 4,
-        data: { content: `**Jaf Procesat — Rezultate:**\n${results.join('\n')}` },
+        data: { content },
       })
     }
 
