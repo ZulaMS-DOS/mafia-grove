@@ -27,9 +27,20 @@ export async function GET() {
             { name: 'Pacific (2 pts)',    value: 'pacific'  },
             { name: 'Blaine (2 pts)',     value: 'blaine'   },
             { name: 'Biju (2 pts)',       value: 'biju'     },
-            { name: 'Taxa 24 Ore (10 pts)', value: 'taxa24h' },
           ],
         },
+        {
+          type:        3,
+          name:        'useri',
+          description: 'Menționează userii (ex: @user1 @user2)',
+          required:    true,
+        },
+      ],
+    },
+    {
+      name:        'taxa24h',
+      description: 'Acordă 10 puncte fixe pentru Taxa 24 Ore',
+      options: [
         {
           type:        3,
           name:        'useri',
