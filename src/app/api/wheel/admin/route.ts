@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireLeadership } from '@/lib/middleware'
 
-// GET — toate premiile + spins history
+// GET — toate premiile + spins history + lista shop pentru selector
 export async function GET() {
   const { error } = await requireLeadership()
   if (error) return error
 
-  const [prizes, config, spins] = await Promise.all([
+  const [prizes, config, spins, shopItems] = await Promise.all([
     (prisma as any).wheelPrize.findMany({ orderBy: { createdAt: 'asc' } }),
     (prisma as any).wheelConfig.findFirst(),
     (prisma as any).wheelSpin.findMany({
@@ -15,9 +15,13 @@ export async function GET() {
       take:    50,
       include: { user: { select: { username: true } } },
     }),
+    (prisma as any).shopItem.findMany({
+      where:   { active: true },
+      orderBy: { name: 'asc' },
+    }),
   ])
 
-  return NextResponse.json({ prizes, spinCost: config?.spinCost ?? 10, spins })
+  return NextResponse.json({ prizes, spinCost: config?.spinCost ?? 10, spins, shopItems })
 }
 
 // POST — adauga premiu nou
