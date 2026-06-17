@@ -80,7 +80,7 @@ model PointHistory {
   id          String   @id @default(cuid())
   userId      String
   moderatorId String
-  amount      Int
+  amount      Float
   reason      String
   createdAt   DateTime @default(now())
 
