@@ -8,9 +8,10 @@ interface Prize {
   itemId: string | null; itemImageUrl: string | null; itemName: string | null
 }
 
+const SIZE = 440
+
 export default function WheelPage() {
   const canvasRef               = useRef<HTMLCanvasElement>(null)
-  const imgCache                = useRef<Map<string, HTMLImageElement>>(new Map())
   const [prizes, setPrizes]     = useState<Prize[]>([])
   const [spinCost, setSpinCost] = useState(10)
   const [myPoints, setMyPoints] = useState(0)
@@ -19,12 +20,10 @@ export default function WheelPage() {
     prize: Prize; detail: string; pointsAfter: number; imageUrl?: string | null
   } | null>(null)
   const [loading, setLoading]   = useState(true)
-  const [imagesReady, setImagesReady] = useState(false)
   const [rotation, setRotation] = useState(0)
   const rotRef                  = useRef(0)
   const animRef                 = useRef<number>()
   const spinDataRef             = useRef<any>(null)
-  const [, forceRedraw]         = useState(0)
 
   const load = useCallback(async () => {
     const [wRes, pRes] = await Promise.all([
@@ -42,40 +41,8 @@ export default function WheelPage() {
   useEffect(() => { load() }, [load])
 
   useEffect(() => {
-    if (!prizes.length) { setImagesReady(true); return }
-    const urls = Array.from(new Set(prizes.filter(p => p.itemImageUrl).map(p => p.itemImageUrl!)))
-    if (!urls.length) { setImagesReady(true); return }
-
-    let loaded = 0
-    const checkDone = () => { loaded++; if (loaded >= urls.length) setImagesReady(true) }
-
-    urls.forEach(url => {
-      if (imgCache.current.has(url)) { checkDone(); return }
-
-      const tryLoad = (withCors: boolean) => {
-        const img = new Image()
-        if (withCors) img.crossOrigin = 'anonymous'
-        img.onload = () => {
-          imgCache.current.set(url, img)
-          forceRedraw(x => x + 1)
-          checkDone()
-        }
-        img.onerror = () => {
-          if (withCors) {
-            tryLoad(false)
-          } else {
-            checkDone()
-          }
-        }
-        img.src = url
-      }
-      tryLoad(true)
-    })
-  }, [prizes])
-
-  useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas || !prizes.length || !imagesReady) return
+    if (!canvas || !prizes.length) return
     const ctx = canvas.getContext('2d')!
     const W   = canvas.width
     const H   = canvas.height
@@ -116,32 +83,12 @@ export default function WheelPage() {
       ctx.lineWidth   = 1.5
       ctx.stroke()
 
-      const img = prize.itemImageUrl ? imgCache.current.get(prize.itemImageUrl) : null
-      const imgRadius = R * 0.6
-      const imgSize   = Math.max(36, Math.min(62, 300 / n))
-      const ix = cx + imgRadius * Math.cos(mid)
-      const iy = cy + imgRadius * Math.sin(mid)
+      if (!prize.itemImageUrl) {
+        const imgRadius = R * 0.6
+        const imgSize   = Math.max(36, Math.min(62, 300 / n))
+        const ix = cx + imgRadius * Math.cos(mid)
+        const iy = cy + imgRadius * Math.sin(mid)
 
-      if (img && img.complete && img.naturalWidth > 0) {
-        ctx.save()
-        ctx.beginPath()
-        ctx.arc(ix, iy, imgSize / 2, 0, Math.PI * 2)
-        ctx.closePath()
-        ctx.clip()
-        try {
-          ctx.drawImage(img, ix - imgSize / 2, iy - imgSize / 2, imgSize, imgSize)
-        } catch {}
-        ctx.restore()
-
-        ctx.beginPath()
-        ctx.arc(ix, iy, imgSize / 2, 0, Math.PI * 2)
-        ctx.strokeStyle = '#00ff66'
-        ctx.lineWidth   = 3
-        ctx.shadowColor = '#00ff66'
-        ctx.shadowBlur  = 10
-        ctx.stroke()
-        ctx.shadowBlur  = 0
-      } else {
         ctx.save()
         ctx.beginPath()
         ctx.arc(ix, iy, imgSize / 2, 0, Math.PI * 2)
@@ -207,7 +154,7 @@ export default function WheelPage() {
     ctx.textAlign = 'center'
     ctx.fillText('GROVE', cx, cy + 5)
 
-  }, [prizes, rotation, imagesReady])
+  }, [prizes, rotation])
 
   const spin = async () => {
     if (spinning || myPoints < spinCost || !prizes.length) return
@@ -270,6 +217,10 @@ export default function WheelPage() {
 
   const canSpin = !spinning && myPoints >= spinCost && prizes.length > 0
 
+  const n = prizes.length
+  const sliceDeg = n ? 360 / n : 0
+  const R = SIZE / 2 - 8
+
   return (
     <div className="space-y-6 animate-slide-up relative">
       <div className="fixed inset-0 -z-10 opacity-[0.04] pointer-events-none"
@@ -291,7 +242,7 @@ export default function WheelPage() {
         </div>
       </div>
 
-      {loading || !imagesReady ? (
+      {loading ? (
         <div className="text-center py-20 text-zinc-600">Se încarcă...</div>
       ) : prizes.length === 0 ? (
         <div className="grove-card text-center py-16">
@@ -303,20 +254,48 @@ export default function WheelPage() {
         <div className="flex flex-col xl:flex-row gap-8 items-center xl:items-start">
 
           <div className="flex flex-col items-center gap-5 shrink-0">
-            <div className="relative">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 z-20 drop-shadow-[0_0_10px_#00ff66]">
+            <div className="relative" style={{ width: SIZE, height: SIZE }}>
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 z-30 drop-shadow-[0_0_10px_#00ff66]">
                 <div className="w-0 h-0 border-l-[16px] border-r-[16px] border-t-[32px] border-l-transparent border-r-transparent border-t-grove-green" />
               </div>
 
-              <div className="absolute inset-0 rounded-full blur-2xl opacity-35" style={{ background: 'radial-gradient(circle, #00ff66 0%, transparent 70%)' }} />
+              <div className="absolute inset-0 rounded-full blur-2xl opacity-35 pointer-events-none" style={{ background: 'radial-gradient(circle, #00ff66 0%, transparent 70%)' }} />
 
               <canvas
                 ref={canvasRef}
-                width={440}
-                height={440}
-                className="relative z-10 rounded-full bg-black border-4 border-black"
+                width={SIZE}
+                height={SIZE}
+                className="absolute inset-0 z-10 rounded-full bg-black border-4 border-black"
                 style={{ filter: spinning ? 'drop-shadow(0 0 28px #00ff6660)' : 'drop-shadow(0 0 12px #00ff6630)' }}
               />
+
+              <div
+                className="absolute inset-0 z-20 pointer-events-none"
+                style={{ transform: `rotate(${rotation}deg)`, transition: 'none' }}
+              >
+                {prizes.map((p, i) => {
+                  if (!p.itemImageUrl) return null
+                  const midDeg = i * sliceDeg + sliceDeg / 2
+                  const radius = R * 0.6
+                  const imgSize = Math.max(36, Math.min(62, 300 / n))
+                  return (
+                    <div
+                      key={p.id}
+                      className="absolute rounded-full overflow-hidden border-[3px] border-grove-green"
+                      style={{
+                        width:  imgSize,
+                        height: imgSize,
+                        left:   SIZE / 2 - imgSize / 2,
+                        top:    SIZE / 2 - imgSize / 2,
+                        transform: `rotate(${midDeg}deg) translate(${radius}px) rotate(${-midDeg}deg)`,
+                        boxShadow: '0 0 10px #00ff66',
+                      }}
+                    >
+                      <img src={p.itemImageUrl} alt={p.label} className="w-full h-full object-cover" />
+                    </div>
+                  )
+                })}
+              </div>
             </div>
 
             <button onClick={spin} disabled={!canSpin}
