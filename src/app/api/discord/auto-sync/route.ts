@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/middleware'
-import { syncDiscordMembers } from '../members/route'
+import { syncDiscordMembers } from '@/lib/syncMembers'
 
-const SYNC_INTERVAL_MS = 5 * 60 * 1000 // 5 minute
+const SYNC_INTERVAL_MS = 5 * 60 * 1000
 
 let lastSyncTime = 0
 let syncInProgress = false
@@ -19,7 +19,7 @@ export async function GET() {
       await syncDiscordMembers()
       lastSyncTime = now
     } catch (e) {
-      // esecul e silentios, se reincearca la urmatorul request
+      // esecul e silentios
     } finally {
       syncInProgress = false
     }
