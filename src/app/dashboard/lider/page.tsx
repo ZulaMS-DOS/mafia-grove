@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { Users, Clock, FileText, Star } from 'lucide-react'
+import { ActiveClockIns } from '@/components/dashboard/ActiveClockIns'
 
 const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
 
@@ -24,6 +25,13 @@ export default async function LiderPage() {
     prisma.workSession.count({ where: { clockOut: null } }),
   ])
 
+  // Aduce membrii cu clock-in activ
+  const activeClockIns = await prisma.workSession.findMany({
+    where:   { clockOut: null },
+    include: { user: { select: { username: true, avatar: true, discordId: true } } },
+    orderBy: { clockIn: 'asc' },
+  })
+
   const stats = [
     { icon: Users,    label: 'Total Membri',          value: totalMembers,                  color: 'text-grove-green' },
     { icon: Star,     label: 'Total Puncte Acordate', value: totalPoints._sum.points ?? 0,  color: 'text-yellow-400'  },
@@ -39,6 +47,7 @@ export default async function LiderPage() {
         <h1 className="text-3xl font-black text-white">Lider Panel</h1>
         <p className="text-zinc-500 text-sm mt-1">Statistici și gestionare organizație</p>
       </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {stats.map(s => (
           <div key={s.label} className="grove-card text-center">
@@ -48,6 +57,16 @@ export default async function LiderPage() {
           </div>
         ))}
       </div>
+
+      {/* Sectiunea Clock-In Activ */}
+      <ActiveClockIns sessions={activeClockIns.map(s => ({
+        id:        s.id,
+        clockIn:   s.clockIn.toISOString(),
+        username:  s.user.username,
+        avatar:    s.user.avatar,
+        discordId: s.user.discordId,
+      }))} />
+
       <div className="grove-card border-grove-border">
         <h2 className="text-sm font-semibold text-grove-green uppercase tracking-widest mb-2">⭐ Panou Lider</h2>
         <p className="text-zinc-500 text-sm">Folosește meniul din stânga pentru a gestiona grade, invoiri, demisii și puncte.</p>
