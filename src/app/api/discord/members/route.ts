@@ -28,7 +28,7 @@ async function fetchAllDiscordMembers() {
   return allMembers
 }
 
-export async function syncDiscordMembers() {
+export async function GET() {
   const discordMembers = await fetchAllDiscordMembers()
   const discordIds      = new Set(discordMembers.map(m => m.user.id))
 
