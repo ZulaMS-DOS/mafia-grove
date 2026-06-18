@@ -45,7 +45,7 @@ export default function GradePage() {
     const r = await fetch('/api/discord/members')
     const d = await r.json()
     if (r.ok) {
-      setMsg(`✅ Sincronizat! ${d.total} membri găsiți (${d.created} noi, ${d.updated} actualizați)`)
+      setMsg(`✅ Sincronizat! ${d.totalOnServer} membri găsiți, ${d.deleted} șterși`)
       await load()
     } else {
       setMsg(`❌ Eroare: ${d.error}`)
@@ -105,7 +105,7 @@ export default function GradePage() {
                 <div key={m.id} className="grove-card flex items-center gap-3 py-2.5">
                   <div className="w-10 h-10 rounded-full border-2 border-dark-border overflow-hidden shrink-0 bg-dark-muted flex items-center justify-center">
                     {m.avatar
-                      ? <Image src={`https://cdn.discordapp.com/avatars/${m.discordId}/${m.avatar}.png`} alt={m.username} width={40} height={40} className="object-cover" />
+                      ? <Image src={m.avatar} alt={m.username} width={40} height={40} className="object-cover" unoptimized />
                       : <span className="text-lg">👤</span>
                     }
                   </div>
