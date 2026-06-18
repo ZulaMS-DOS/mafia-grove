@@ -28,9 +28,9 @@ async function fetchAllDiscordMembers() {
   return allMembers
 }
 
-export async function GET() {
+export async function syncDiscordMembers() {
   const discordMembers = await fetchAllDiscordMembers()
-  const discordIds      = new Set(discordMembers.map(m => m.user.id))
+  const discordIds      = new Set(discordMembers.map((m: any) => m.user.id))
 
   for (const m of discordMembers) {
     const discordId = m.user.id
@@ -47,19 +47,19 @@ export async function GET() {
     })
   }
 
-  const dbUsers = await prisma.user.findMany({ select: { id: true, discordId: true } })
-  const toDelete = dbUsers.filter(u => !discordIds.has(u.discordId))
+  const dbUsers  = await prisma.user.findMany({ select: { id: true, discordId: true } })
+  const toDelete = dbUsers.filter((u: any) => !discordIds.has(u.discordId))
 
   if (toDelete.length) {
     await prisma.user.deleteMany({
-      where: { id: { in: toDelete.map(u => u.id) } },
+      where: { id: { in: toDelete.map((u: any) => u.id) } },
     })
   }
 
   return {
     totalOnServer: discordMembers.length,
     deleted:       toDelete.length,
-    deletedUsers:  toDelete.map(u => u.discordId),
+    deletedUsers:  toDelete.map((u: any) => u.discordId),
   }
 }
 
