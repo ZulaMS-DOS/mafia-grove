@@ -38,26 +38,26 @@ export default async function MembersPage() {
             </thead>
             <tbody>
               {members.map((m, i) => {
-                const isActive  = m.sessions.length > 0
-                const isLeader  = isLeadership(m.roleIds)
-                const avatarUrl = m.avatar
-                  ? `https://cdn.discordapp.com/avatars/${m.discordId}/${m.avatar}.png`
-                  : null
+                const isActive = m.sessions.length > 0
+                const isLeader = isLeadership(m.roleIds)
 
                 return (
                   <tr key={m.id} className="border-b border-dark-border/50 hover:bg-dark-hover transition-colors">
                     <td className="py-3 px-4 text-zinc-600">{i + 1}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        {avatarUrl
-                          ? <Image src={avatarUrl} alt="" width={28} height={28} className="rounded-full" />
+                        {m.avatar
+                          ? <Image src={m.avatar} alt="" width={28} height={28} className="rounded-full" unoptimized />
                           : <div className="w-7 h-7 rounded-full bg-dark-muted flex items-center justify-center text-xs">👤</div>
                         }
                         <span className="text-white font-medium">{m.username}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      {isLeader ? <span className="badge-leadership">⭐ Leadership</span> : <span className="badge-muted text-xs px-2 py-0.5 rounded-full border border-dark-border text-zinc-500">Membru</span>}
+                      {isLeader
+                        ? <span className="badge-leadership">⭐ Leadership</span>
+                        : <span className="badge-muted text-xs px-2 py-0.5 rounded-full border border-dark-border text-zinc-500">Membru</span>
+                      }
                     </td>
                     <td className="py-3 px-4">
                       <div className={`flex items-center gap-2 text-xs ${isActive ? 'text-grove-green' : 'text-zinc-600'}`}>
