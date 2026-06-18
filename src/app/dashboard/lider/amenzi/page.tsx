@@ -151,7 +151,7 @@ export default function LiderAmenziPage() {
               <div key={f.id} className="flex items-center gap-3 px-5 py-3 hover:bg-dark-hover transition-colors">
                 <div className="w-9 h-9 rounded-full border border-dark-border overflow-hidden bg-dark-muted flex items-center justify-center shrink-0">
                   {f.user.avatar
-                    ? <Image src={`https://cdn.discordapp.com/avatars/${f.user.discordId}/${f.user.avatar}.png`} alt="" width={36} height={36} className="object-cover" />
+                    ? <Image src={f.user.avatar} alt="" width={36} height={36} className="object-cover" unoptimized />
                     : <span className="text-sm">👤</span>
                   }
                 </div>
