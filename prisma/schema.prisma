@@ -31,6 +31,7 @@ model User {
   taskClaims  TaskClaim[]
   notifications Notification[]
   fines  Fine[]
+  bugReports  BugReport[]
   banned     Boolean  @default(false)
   bannedAt   DateTime?
   bannedBy   String?
@@ -246,7 +247,23 @@ model Fine {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+model BugReport {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String
+  mediaUrls   String[] @default([])
+  status      BugStatus @default(OPEN)
+  createdAt   DateTime @default(now())
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum BugStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
 
 
 
