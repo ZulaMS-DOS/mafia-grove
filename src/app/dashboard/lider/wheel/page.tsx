@@ -32,10 +32,10 @@ export default function LiderWheelPage() {
   const load = useCallback(async () => {
     const wRes = await fetch('/api/wheel/admin')
     const wData = await wRes.json()
-    setPrizes(wData.prizes       || [])
-    setSpinCost(wData.spinCost   || 10)
-    setSpins(wData.spins         || [])
-    setShop(wData.shopItems      || [])
+    setPrizes(wData.prizes     || [])
+    setSpinCost(wData.spinCost || 10)
+    setSpins(wData.spins       || [])
+    setShop(wData.shopItems    || [])
     setLoading(false)
   }, [])
 
@@ -43,7 +43,11 @@ export default function LiderWheelPage() {
 
   const showMsg = (text: string) => { setMsg(text); setTimeout(() => setMsg(''), 3000) }
 
-  const totalChance = prizes.reduce((a, p) => a + p.chance, 0)
+  const totalWeight = prizes.reduce((a, p) => a + p.chance, 0)
+
+  // Calculeaza sansa reala procentuala pentru fiecare premiu
+  const getRealChance = (weight: number) =>
+    totalWeight > 0 ? ((weight / totalWeight) * 100).toFixed(1) : '0'
 
   const handleSelectItem = (id: string) => {
     setItemId(id)
@@ -53,8 +57,8 @@ export default function LiderWheelPage() {
 
   const addPrize = async () => {
     if (prizeKind === 'points' && !label.trim()) { showMsg('⚠️ Completează eticheta!'); return }
-    if (prizeKind === 'shop'   && !itemId)        { showMsg('⚠️ Selectează un produs din shop!'); return }
-    if (totalChance + parseInt(chance) > 100) { showMsg(`⚠️ Totalul șanselor depășește 100% (acum: ${totalChance}%)`); return }
+    if (prizeKind === 'shop' && !itemId)          { showMsg('⚠️ Selectează un produs din shop!'); return }
+    if (!chance || parseInt(chance) < 1)          { showMsg('⚠️ Ponderea trebuie să fie cel puțin 1!'); return }
 
     setSaving(true)
     const finalLabel = prizeKind === 'shop' ? (shopItems.find(i => i.id === itemId)?.name || label) : label
@@ -113,9 +117,14 @@ export default function LiderWheelPage() {
 
       {tab === 'premii' && (
         <div className="space-y-4">
-          <div className="grove-card flex items-center justify-between">
-            <span className="text-sm text-zinc-400">Total șanse: <strong className={totalChance === 100 ? 'text-grove-green' : totalChance > 100 ? 'text-red-400' : 'text-yellow-400'}>{totalChance}%</strong></span>
-            <span className="text-xs text-zinc-600">{totalChance === 100 ? '✅ Perfect!' : totalChance > 100 ? '❌ Depășit!' : `⚠️ Mai ai ${100 - totalChance}%`}</span>
+
+          <div className="grove-card">
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              💡 <strong className="text-zinc-300">Sistem de ponderi</strong> — nu mai există limita de 100%.
+              Poți pune oricâte premii cu orice valoare. Șansa reală se calculează automat:
+              dacă ai 3 premii cu ponderile <strong className="text-white">10, 20, 10</strong> → șansele reale vor fi <strong className="text-white">25%, 50%, 25%</strong>.
+              Cu cât ponderea e mai mare, cu atât premiul apare mai des.
+            </p>
           </div>
 
           <div className="grove-card space-y-3">
@@ -165,8 +174,8 @@ export default function LiderWheelPage() {
               )}
 
               <div>
-                <label className="grove-label">Șansă (%)</label>
-                <input type="number" min="1" max="100" className="grove-input text-sm" placeholder="10" value={chance} onChange={e => setChance(e.target.value)} />
+                <label className="grove-label">Pondere (orice număr pozitiv)</label>
+                <input type="number" min="1" className="grove-input text-sm" placeholder="ex: 10 (mai mare = mai des)" value={chance} onChange={e => setChance(e.target.value)} />
               </div>
               <div>
                 <label className="grove-label">Culoare (fallback fără poză)</label>
@@ -185,8 +194,11 @@ export default function LiderWheelPage() {
           </div>
 
           <div className="grove-card p-0 overflow-hidden">
-            <div className="px-5 py-3 border-b border-dark-border">
+            <div className="px-5 py-3 border-b border-dark-border flex items-center justify-between">
               <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-widest">{prizes.length} Premii</h2>
+              {totalWeight > 0 && (
+                <span className="text-xs text-zinc-600">Total pondere: <strong className="text-white">{totalWeight}</strong></span>
+              )}
             </div>
             {prizes.length === 0 ? (
               <div className="text-center py-8 text-zinc-600 text-sm">Niciun premiu adăugat</div>
@@ -201,7 +213,12 @@ export default function LiderWheelPage() {
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="text-white text-sm font-medium">{p.label}</div>
-                      <div className="text-xs text-zinc-600">{p.type === 'points' ? `+${p.value} pts` : 'Item shop'} · {p.chance}% șansă</div>
+                      <div className="text-xs text-zinc-600">
+                        {p.type === 'points' ? `+${p.value} pts` : 'Item shop'}
+                        {' · '}
+                        <span className="text-grove-green font-semibold">{getRealChance(p.chance)}% șansă reală</span>
+                        <span className="text-zinc-700"> (pondere: {p.chance})</span>
+                      </div>
                     </div>
                     <button onClick={() => deletePrize(p.id)}
                       className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20">
