@@ -51,7 +51,6 @@ export async function POST(req: NextRequest) {
     type:    'announcement',
     title:   '🐛 Bug Report Nou',
     message: `${session!.user.name} a raportat: ${title}`,
-    excludeUserId: session!.user.id,
   })
 
   return NextResponse.json({ report })
