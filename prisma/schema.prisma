@@ -100,6 +100,7 @@ enum ResignationStatus {
   ACCEPTED
   REJECTED
 }
+
 model Whitelist {
   id        String   @id @default(cuid())
   discordId String   @unique
@@ -107,6 +108,7 @@ model Whitelist {
   addedBy   String
   createdAt DateTime @default(now())
 }
+
 model Announcement {
   id        String   @id @default(cuid())
   title     String
@@ -115,6 +117,8 @@ model Announcement {
   author    String
   authorId  String
   createdAt DateTime @default(now())
+}
+
 model TaxItem {
   id          String   @id @default(cuid())
   name        String
@@ -125,6 +129,7 @@ model TaxItem {
   createdBy   String
   createdAt   DateTime @default(now())
 }
+
 model TaxPayment {
   id        String    @id @default(cuid())
   userId    String
@@ -137,6 +142,7 @@ model TaxPayment {
 
   @@unique([userId, weekStart])
 }
+
 model ShopItem {
   id          String   @id @default(cuid())
   name        String
@@ -163,6 +169,7 @@ model ShopOrder {
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   item ShopItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
+
 model WheelPrize {
   id        String   @id @default(cuid())
   label     String
@@ -191,6 +198,7 @@ model WheelConfig {
   spinCost  Int      @default(10)
   updatedAt DateTime @updatedAt
 }
+
 model Task {
   id          String   @id @default(cuid())
   title       String
@@ -203,6 +211,7 @@ model Task {
 
   claims TaskClaim[]
 }
+
 model TaskClaim {
   id        String      @id @default(cuid())
   taskId    String
@@ -223,6 +232,7 @@ enum ClaimStatus {
   APPROVED
   REJECTED
 }
+
 model Notification {
   id        String   @id @default(cuid())
   userId    String
@@ -234,6 +244,7 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
 model Fine {
   id        String   @id @default(cuid())
   userId    String
@@ -247,6 +258,7 @@ model Fine {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
 model BugReport {
   id          String   @id @default(cuid())
   userId      String
@@ -264,6 +276,3 @@ enum BugStatus {
   IN_PROGRESS
   RESOLVED
 }
-
-
-
