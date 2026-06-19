@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, requireLeadership } from '@/lib/middleware'
+import { checkRateLimit } from '@/lib/rateLimit'
 
 // POST — cumpara produs
 export async function POST(
@@ -10,50 +11,76 @@ export async function POST(
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const { id }   = await context.params
-  const body     = await req.json().catch(() => ({}))
-  const qty      = Math.max(1, parseInt(body.quantity) || 1)
-  const userId   = session!.user.id
+  const userId = session!.user.id
 
-  const item = await (prisma as any).shopItem.findUnique({ where: { id } })
-  if (!item || !item.active) {
-    return NextResponse.json({ error: 'Produs inexistent' }, { status: 404 })
+  // Limita: max 10 cumparari pe minut (suficient pt utilizare normala)
+  const rl = checkRateLimit(`shop-buy:${userId}`, { windowMs: 60_000, max: 10 })
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `Prea multe cumpărări! Mai încearcă în ${rl.retryAfterSeconds}s.` },
+      { status: 429 }
+    )
   }
 
-  if (item.stock !== -1 && item.stock < qty) {
-    return NextResponse.json({ error: `Stoc insuficient (disponibil: ${item.stock})` }, { status: 400 })
-  }
+  const { id } = await context.params
+  const body   = await req.json().catch(() => ({}))
+  const qty    = Math.max(1, parseInt(body.quantity) || 1)
 
-  const user  = await prisma.user.findUnique({ where: { id: userId } })
-  const total = item.price * qty
-  if (!user || user.points < total) {
-    return NextResponse.json({
-      error: `Puncte insuficiente (ai ${user?.points ?? 0}, ai nevoie de ${total})`
-    }, { status: 400 })
-  }
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const item = await (tx as any).shopItem.findUnique({ where: { id } })
+      if (!item || !item.active) {
+        throw new Error('NOT_FOUND')
+      }
+      if (item.stock !== -1 && item.stock < qty) {
+        throw new Error(`STOCK:${item.stock}`)
+      }
 
-  const updatedUser = await prisma.user.update({
-    where:  { id: userId },
-    data:   { points: { decrement: total } },
-    select: { points: true },
-  })
+      const user  = await tx.user.findUnique({ where: { id: userId } })
+      const total = item.price * qty
+      if (!user || user.points < total) {
+        throw new Error(`POINTS:${user?.points ?? 0}:${total}`)
+      }
 
-  const order = await (prisma as any).shopOrder.create({
-    data: { userId, itemId: id, quantity: qty },
-  })
+      const updatedUser = await tx.user.update({
+        where:  { id: userId },
+        data:   { points: { decrement: total } },
+        select: { points: true },
+      })
 
-  if (item.stock !== -1) {
-    await (prisma as any).shopItem.update({
-      where: { id },
-      data:  { stock: { decrement: qty } },
+      const order = await (tx as any).shopOrder.create({
+        data: { userId, itemId: id, quantity: qty },
+      })
+
+      if (item.stock !== -1) {
+        await (tx as any).shopItem.update({
+          where: { id },
+          data:  { stock: { decrement: qty } },
+        })
+      }
+
+      return { pointsLeft: updatedUser.points, order }
     })
-  }
 
-  return NextResponse.json({
-    success:    true,
-    pointsLeft: updatedUser.points,
-    order,
-  })
+    return NextResponse.json({ success: true, ...result })
+
+  } catch (e: any) {
+    const msg = typeof e.message === 'string' ? e.message : ''
+
+    if (msg === 'NOT_FOUND') {
+      return NextResponse.json({ error: 'Produs inexistent' }, { status: 404 })
+    }
+    if (msg.startsWith('STOCK:')) {
+      const stock = msg.split(':')[1]
+      return NextResponse.json({ error: `Stoc insuficient (disponibil: ${stock})` }, { status: 400 })
+    }
+    if (msg.startsWith('POINTS:')) {
+      const [, have, need] = msg.split(':')
+      return NextResponse.json({ error: `Puncte insuficiente (ai ${have}, ai nevoie de ${need})` }, { status: 400 })
+    }
+
+    throw e
+  }
 }
 
 // PATCH — editeaza produs
