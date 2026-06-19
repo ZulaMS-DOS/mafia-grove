@@ -44,6 +44,9 @@ export async function POST(req: NextRequest) {
 
   const numAmount = parseFloat(amount)
   if (isNaN(numAmount)) return NextResponse.json({ error: 'Amount invalid' }, { status: 400 })
+  if (Math.abs(numAmount) > 100000) {
+    return NextResponse.json({ error: 'Valoare prea mare — verifică din nou suma' }, { status: 400 })
+  }
 
   const [updatedUser, histEntry] = await prisma.$transaction([
     prisma.user.update({
