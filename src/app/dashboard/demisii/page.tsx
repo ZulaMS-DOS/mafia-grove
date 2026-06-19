@@ -37,7 +37,7 @@ export default function DemisiiPage() {
   const [tab, setTab]           = useState<StatusTab>('PENDING')
 
   const canManage = session?.user.roleIds?.some((r: string) =>
-    [...LEADERSHIP_ROLES, TESTER_ROLE].includes(r)
+    LEADERSHIP_ROLES.includes(r)
   )
 
   const load = useCallback(async () => {
