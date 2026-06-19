@@ -13,11 +13,15 @@ const ERRORS: Record<string, { title: string; message: string; emoji: string }> 
     emoji:   '❌',
     title:   'Nu ești pe server',
     message: 'Trebuie să fii membru al serverului Discord Mafia Grove pentru a accesa acest site.',
-  },
-  bot_error: {
+bot_error: {
     emoji:   '🤖',
     title:   'Eroare Bot',
     message: 'A apărut o eroare la verificarea membriei. Încearcă din nou.',
+  },
+  no_grade: {
+    emoji:   '🔒',
+    title:   'Grad Insuficient',
+    message: 'Accesul este permis doar membrilor cu gradul de Muncitor sau superior. Contactează un Lider dacă crezi că este o greșeală.',
   },
   default: {
     emoji:   '⚠️',
