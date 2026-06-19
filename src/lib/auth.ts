@@ -23,13 +23,11 @@ export const authOptions: AuthOptions = {
 
       const roleIds: string[] = member.roles || []
 
-      // Verifica daca e banat
       const existingUser = await prisma.user.findUnique({ where: { discordId } })
       if (existingUser?.banned) {
         return '/auth/error?error=banned'
       }
 
-      // Verifica rol minim — Muncitor sau mai sus, altfel acces refuzat
       if (!hasMinimumAccess(roleIds)) {
         return '/auth/error?error=no_grade'
       }
@@ -44,7 +42,6 @@ export const authOptions: AuthOptions = {
     },
 
     async jwt({ token, account, profile }) {
-      // La login initial, seteaza toate datele
       if (account && profile) {
         const discordId = (profile as any).id as string
         const user      = await prisma.user.findUnique({ where: { discordId } })
@@ -60,25 +57,22 @@ export const authOptions: AuthOptions = {
         return token
       }
 
-      // La fiecare verificare ulterioara a sesiunii (nu doar login),
-      // re-verifica daca userul mai e pe server si daca mai are rol minim
+      // Re-verifica o data pe zi daca userul mai e pe server si mai are gradul minim
       const lastVerified = (token.lastVerified as number) || 0
-      const fiveMinutes  = 5 * 60 * 1000
+      const oneDay        = 24 * 60 * 60 * 1000
 
-      if (Date.now() - lastVerified > fiveMinutes) {
+      if (Date.now() - lastVerified > oneDay) {
         const discordId = token.discordId as string
         if (discordId) {
           let member
           try { member = await getGuildMember(discordId) } catch { member = null }
 
           if (!member) {
-            // Nu mai e pe server -> invalideaza tokenul
             return { ...token, invalid: true }
           }
 
           const roleIds: string[] = member.roles || []
           if (!hasMinimumAccess(roleIds)) {
-            // Nu mai are rol minim -> invalideaza tokenul
             return { ...token, invalid: true }
           }
 
@@ -87,7 +81,6 @@ export const authOptions: AuthOptions = {
             return { ...token, invalid: true }
           }
 
-          // Actualizeaza rolurile in token + DB
           token.roleIds      = roleIds
           token.isLeadership = isLeadership(roleIds)
           token.lastVerified = Date.now()
@@ -105,7 +98,6 @@ export const authOptions: AuthOptions = {
     },
 
     async session({ session, token }) {
-      // Daca tokenul a fost marcat invalid, forteaza sesiune goala (deconectare efectiva)
       if (token.invalid) {
         return { ...session, user: undefined, expires: new Date(0).toISOString() } as any
       }
@@ -125,8 +117,7 @@ export const authOptions: AuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge:   5 * 60,   // sesiunea expira complet dupa 5 minute
-    updateAge: 0,        // re-verifica la fiecare request, nu doar periodic
+    maxAge: 30 * 24 * 60 * 60,  // sesiunea tine normal 30 de zile
   },
   secret: process.env.NEXTAUTH_SECRET,
 }
