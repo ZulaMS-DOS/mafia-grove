@@ -115,15 +115,15 @@ model Announcement {
   author    String
   authorId  String
   createdAt DateTime @default(now())
-}
 model TaxItem {
-  id        String   @id @default(cuid())
-  name      String
-  bucati    Int      @default(0)
-  termen    String   @default("")
-  weekStart DateTime
-  createdBy String
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  name        String
+  bucati      Int      @default(0)
+  termen      String   @default("")
+  targetRoles String[] @default([])
+  weekStart   DateTime
+  createdBy   String
+  createdAt   DateTime @default(now())
 }
 model TaxPayment {
   id        String    @id @default(cuid())
