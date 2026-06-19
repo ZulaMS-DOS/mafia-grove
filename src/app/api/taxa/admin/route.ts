@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { requireLeadership } from '@/lib/middleware'
 import { notifyAll } from '@/lib/notifications'
 
+const ALL_ROLE_IDS = ['955126889171804170','955126890472022066','1462444900388704317','1501319885488390184','1342912254542348298']
+
 function getWeekStart() {
   const now = new Date()
   const day = now.getDay()
@@ -21,14 +23,12 @@ export async function GET() {
     (prisma as any).taxItem.findMany({ where: { weekStart }, orderBy: { createdAt: 'asc' } }),
     (prisma as any).taxPayment.findMany({
       where: { weekStart },
-      include: { user: { select: { username: true, avatar: true, discordId: true } } },
+      include: { user: { select: { username: true, avatar: true, discordId: true, roleIds: true } } },
     }),
     prisma.user.findMany({
-  where: {
-    roleIds: { hasSome: ['955126889171804170','955126890472022066','1462444900388704317','1501319885488390184','1342912254542348298'] }
-  },
-  select: { id: true, username: true, avatar: true, discordId: true },
-})
+      where: { roleIds: { hasSome: ALL_ROLE_IDS } },
+      select: { id: true, username: true, avatar: true, discordId: true, roleIds: true },
+    })
   ])
   return NextResponse.json({ items, payments, members, weekStart: weekStart.toISOString() })
 }
@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
             name: item.name.trim(),
             bucati: parseInt(item.bucati) || 0,
             termen: item.termen?.trim() || '',
+            targetRoles: Array.isArray(item.targetRoles) ? item.targetRoles : [],
             weekStart,
             createdBy: session!.user.id,
           },
