@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/middleware'
+import { checkRateLimit } from '@/lib/rateLimit'
 
 export async function GET() {
   const { error } = await requireAuth()
@@ -35,6 +36,15 @@ export async function POST() {
 
   const userId = session!.user.id
 
+  // Limita specifica: max 6 spinuri pe minut (suficient pentru folosire normala, blocheaza spam-ul)
+  const rl = checkRateLimit(`wheel-spin:${userId}`, { windowMs: 60_000, max: 6 })
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `Învârți prea repede! Mai încearcă în ${rl.retryAfterSeconds}s.` },
+      { status: 429 }
+    )
+  }
+
   const [prizes, config] = await Promise.all([
     (prisma as any).wheelPrize.findMany({ where: { active: true } }),
     (prisma as any).wheelConfig.findFirst(),
@@ -45,13 +55,6 @@ export async function POST() {
   }
 
   const spinCost = config?.spinCost ?? 10
-  const user     = await prisma.user.findUnique({ where: { id: userId } })
-
-  if (!user || user.points < spinCost) {
-    return NextResponse.json({
-      error: `Puncte insuficiente! Ai ${user?.points ?? 0} pts, ai nevoie de ${spinCost} pts.`
-    }, { status: 400 })
-  }
 
   const totalChance = prizes.reduce((a: number, p: any) => a + p.chance, 0)
   let rand  = Math.random() * totalChance
@@ -61,22 +64,41 @@ export async function POST() {
     if (rand <= 0) { prize = p; break }
   }
 
-  await prisma.user.update({
-    where: { id: userId },
-    data:  { points: { decrement: spinCost } },
-  })
+  // Tranzactie atomica: verifica + scade punctele intr-un singur pas,
+  // astfel incat doua request-uri simultane sa nu poata "fenta" verificarea
+  let userAfterDeduction
+  try {
+    userAfterDeduction = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: userId } })
+      if (!user || user.points < spinCost) {
+        throw new Error(`INSUFFICIENT:${user?.points ?? 0}`)
+      }
+      return tx.user.update({
+        where: { id: userId },
+        data:  { points: { decrement: spinCost } },
+      })
+    })
+  } catch (e: any) {
+    if (typeof e.message === 'string' && e.message.startsWith('INSUFFICIENT:')) {
+      const current = e.message.split(':')[1]
+      return NextResponse.json({
+        error: `Puncte insuficiente! Ai ${current} pts, ai nevoie de ${spinCost} pts.`
+      }, { status: 400 })
+    }
+    throw e
+  }
 
-  let pointsAfter  = user.points - spinCost
+  let pointsAfter  = userAfterDeduction.points
   let prizeResult  = ''
   let itemImageUrl = null
 
   if (prize.type === 'points') {
-    await prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: userId },
       data:  { points: { increment: prize.value } },
     })
-    pointsAfter += prize.value
-    prizeResult  = `+${prize.value} Grove Coins`
+    pointsAfter = updated.points
+    prizeResult = `+${prize.value} Grove Coins`
 
   } else if (prize.type === 'item' && prize.itemId) {
     const item = await (prisma as any).shopItem.findUnique({ where: { id: prize.itemId } })
@@ -95,12 +117,12 @@ export async function POST() {
       prizeResult = item.name
     } else {
       const bonus = prize.value || 5
-      await prisma.user.update({
+      const updated = await prisma.user.update({
         where: { id: userId },
         data:  { points: { increment: bonus } },
       })
-      pointsAfter += bonus
-      prizeResult  = `+${bonus} Grove Coins (stoc epuizat)`
+      pointsAfter = updated.points
+      prizeResult = `+${bonus} Grove Coins (stoc epuizat)`
     }
   }
 
