@@ -52,3 +52,17 @@ export function canGiveFines(roleIds: string[]): boolean {
 export function canManageRequests(roleIds: string[]): boolean {
   return isFullLeadership(roleIds) || isTester(roleIds)
 }
+export const MUNCITOR_ROLE_ID = '1342912254542348298'
+export const MEMBRU_ROLE_ID   = '1501319885488390184'
+
+/** Verifica daca userul are cel putin rolul de Muncitor (sau orice rol superior) */
+export function hasMinimumAccess(roleIds: string[]): boolean {
+  const validRoles = [
+    MUNCITOR_ROLE_ID,
+    MEMBRU_ROLE_ID,
+    TESTER_ROLE_ID,
+    CO_LIDER_ROLE_ID,
+    ...LEADERSHIP_ROLE_IDS,
+  ]
+  return roleIds.some(id => validRoles.includes(id))
+}
