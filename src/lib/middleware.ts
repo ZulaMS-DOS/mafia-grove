@@ -2,12 +2,26 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { canGiveFines, canManageRequests, isFullLeadership } from '@/lib/discord'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit'
 
 export async function requireAuth() {
   const session = await getServerSession(authOptions)
   if (!session) {
     return { session: null, error: NextResponse.json({ error: 'Neautentificat' }, { status: 401 }) }
   }
+
+  // Rate limit general — max 30 actiuni pe minut per user
+  const rl = checkRateLimit(`user:${session.user.id}`, RATE_LIMITS.general)
+  if (!rl.allowed) {
+    return {
+      session: null,
+      error: NextResponse.json(
+        { error: `Prea multe cereri! Mai încearcă în ${rl.retryAfterSeconds}s.` },
+        { status: 429 }
+      ),
+    }
+  }
+
   return { session, error: null }
 }
 
