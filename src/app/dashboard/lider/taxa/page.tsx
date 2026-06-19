@@ -5,15 +5,23 @@ import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
 import Image from 'next/image'
 
-interface TaxItem { id?: string; name: string; bucati: number; termen: string }
+const GRADE_OPTIONS = [
+  { id: '955126889171804170',  label: 'Lider',    color: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' },
+  { id: '955126890472022066',  label: 'Co-Lider', color: 'text-orange-400 border-orange-500/30 bg-orange-500/10' },
+  { id: '1462444900388704317', label: 'Tester',   color: 'text-purple-400 border-purple-500/30 bg-purple-500/10' },
+  { id: '1501319885488390184', label: 'Membru',   color: 'text-grove-green border-grove-border bg-grove-dim' },
+  { id: '1342912254542348298', label: 'Muncitor', color: 'text-zinc-400 border-zinc-600/30 bg-zinc-600/10' },
+]
+
+interface TaxItem { id?: string; name: string; bucati: number; termen: string; targetRoles: string[] }
 interface Payment {
   id: string; paid: boolean; paidAt: string | null
-  user: { username: string; avatar: string | null; discordId: string }
+  user: { username: string; avatar: string | null; discordId: string; roleIds: string[] }
 }
-interface Member { id: string; username: string; avatar: string | null; discordId: string }
+interface Member { id: string; username: string; avatar: string | null; discordId: string; roleIds: string[] }
 
 export default function LiderTaxaPage() {
-  const [items, setItems]       = useState<TaxItem[]>([{ name: '', bucati: 0, termen: '' }])
+  const [items, setItems]       = useState<TaxItem[]>([{ name: '', bucati: 0, termen: '', targetRoles: [] }])
   const [payments, setPayments] = useState<Payment[]>([])
   const [members, setMembers]   = useState<Member[]>([])
   const [loading, setLoading]   = useState(true)
@@ -21,8 +29,7 @@ export default function LiderTaxaPage() {
   const [toggling, setToggling] = useState<string | null>(null)
   const [msg, setMsg]           = useState('')
   const [tab, setTab]           = useState<'seteaza' | 'status'>('seteaza')
-  
-  // Folosim ref pentru a avea mereu lista actuala la save
+
   const itemsRef = useRef<TaxItem[]>(items)
   useEffect(() => { itemsRef.current = items }, [items])
 
@@ -30,9 +37,9 @@ export default function LiderTaxaPage() {
     const r = await fetch('/api/taxa/admin')
     const d = await r.json()
     if (d.items?.length) {
-      setItems(d.items.map((i: any) => ({ name: i.name, bucati: i.bucati, termen: i.termen })))
+      setItems(d.items.map((i: any) => ({ name: i.name, bucati: i.bucati, termen: i.termen, targetRoles: i.targetRoles || [] })))
     } else {
-      setItems([{ name: '', bucati: 0, termen: '' }])
+      setItems([{ name: '', bucati: 0, termen: '', targetRoles: [] }])
     }
     setPayments(d.payments || [])
     setMembers(d.members  || [])
@@ -42,7 +49,7 @@ export default function LiderTaxaPage() {
   useEffect(() => { load() }, [load])
 
   const addItem = () => {
-    setItems(prev => [...prev, { name: '', bucati: 0, termen: '' }])
+    setItems(prev => [...prev, { name: '', bucati: 0, termen: '', targetRoles: [] }])
   }
 
   const removeItem = (idx: number) => {
@@ -52,31 +59,40 @@ export default function LiderTaxaPage() {
     })
   }
 
-  const updateItem = (idx: number, field: keyof TaxItem, value: string | number) => {
+  const updateItem = (idx: number, field: keyof TaxItem, value: any) => {
     setItems(prev => prev.map((item, j) => j === idx ? { ...item, [field]: value } : item))
   }
 
+  const toggleRole = (idx: number, roleId: string) => {
+    setItems(prev => prev.map((item, j) => {
+      if (j !== idx) return item
+      const has = item.targetRoles.includes(roleId)
+      return {
+        ...item,
+        targetRoles: has ? item.targetRoles.filter(r => r !== roleId) : [...item.targetRoles, roleId],
+      }
+    }))
+  }
+
   const save = async () => {
-    // Folosim itemsRef.current pentru a fi siguri ca avem lista cea mai recenta
     const currentItems = itemsRef.current
     const valid = currentItems.filter(i => i.name.trim() !== '')
-    
+
     setSaving(true)
-    
+
     const r = await fetch('/api/taxa/admin', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ items: valid }),
     })
-    
+
     if (r.ok) {
       setMsg(`✅ Taxa salvată! ${valid.length} materiale.`)
-      // Reincarca din DB pentru a confirma
       await load()
     } else {
       setMsg('❌ Eroare la salvare')
     }
-    
+
     setSaving(false)
     setTimeout(() => setMsg(''), 4000)
   }
@@ -92,8 +108,14 @@ export default function LiderTaxaPage() {
     setToggling(null)
   }
 
-  const paidCount  = payments.filter(p => p.paid).length
-  const totalCount = members.length
+  // Determina daca un membru e tinta a vreunei taxe (din item-urile salvate)
+  const allTargetRoles = new Set(items.flatMap(i => i.targetRoles))
+  const relevantMembers = allTargetRoles.size === 0
+    ? members
+    : members.filter(m => m.roleIds.some(r => allTargetRoles.has(r)))
+
+  const paidCount  = payments.filter(p => p.paid && relevantMembers.some(m => m.id === (p as any).userId || m.username === p.user.username)).length
+  const totalCount = relevantMembers.length
   const paidMap    = new Map(payments.map(p => [p.user.username, p]))
 
   return (
@@ -108,7 +130,6 @@ export default function LiderTaxaPage() {
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 border-b border-dark-border">
         {(['seteaza', 'status'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
@@ -133,47 +154,65 @@ export default function LiderTaxaPage() {
         </div>
       )}
 
-      {/* Tab Setează */}
       {tab === 'seteaza' && (
-        <div className="grove-card space-y-3">
+        <div className="grove-card space-y-4">
           <h2 className="text-sm font-semibold text-grove-green uppercase tracking-widest mb-2">
             Materiale Săptămâna Curentă
           </h2>
 
-          <div className="grid grid-cols-12 gap-2 text-xs text-zinc-600 uppercase tracking-wider px-1 mb-1">
-            <div className="col-span-5">Material</div>
-            <div className="col-span-3 text-center">Bucăți</div>
-            <div className="col-span-3 text-center">Termen</div>
-            <div className="col-span-1" />
-          </div>
-
           {items.map((item, idx) => (
-            <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-              <input
-                className="grove-input col-span-5 text-sm"
-                placeholder="ex: Monede Sindicat"
-                value={item.name}
-                onChange={e => updateItem(idx, 'name', e.target.value)}
-              />
-              <input
-                type="number" min="0"
-                className="grove-input col-span-3 text-sm text-center"
-                placeholder="0"
-                value={item.bucati || ''}
-                onChange={e => updateItem(idx, 'bucati', parseInt(e.target.value) || 0)}
-              />
-              <input
-                className="grove-input col-span-3 text-sm text-center"
-                placeholder="ex: Duminică"
-                value={item.termen}
-                onChange={e => updateItem(idx, 'termen', e.target.value)}
-              />
-              <button
-                onClick={() => removeItem(idx)}
-                className="col-span-1 p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center"
-              >
-                <Trash2 size={13} />
-              </button>
+            <div key={idx} className="space-y-2 pb-4 border-b border-dark-border/50 last:border-0">
+              <div className="grid grid-cols-12 gap-2 items-center">
+                <input
+                  className="grove-input col-span-5 text-sm"
+                  placeholder="ex: Monede Sindicat"
+                  value={item.name}
+                  onChange={e => updateItem(idx, 'name', e.target.value)}
+                />
+                <input
+                  type="number" min="0"
+                  className="grove-input col-span-3 text-sm text-center"
+                  placeholder="0"
+                  value={item.bucati || ''}
+                  onChange={e => updateItem(idx, 'bucati', parseInt(e.target.value) || 0)}
+                />
+                <input
+                  className="grove-input col-span-3 text-sm text-center"
+                  placeholder="ex: Duminică"
+                  value={item.termen}
+                  onChange={e => updateItem(idx, 'termen', e.target.value)}
+                />
+                <button
+                  onClick={() => removeItem(idx)}
+                  className="col-span-1 p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+
+              <div>
+                <div className="text-xs text-zinc-600 uppercase tracking-wider mb-1.5 px-1">Pentru ce grade?</div>
+                <div className="flex flex-wrap gap-2">
+                  {GRADE_OPTIONS.map(g => {
+                    const checked = item.targetRoles.includes(g.id)
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => toggleRole(idx, g.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                          checked ? g.color : 'text-zinc-600 border-dark-border bg-dark-hover'
+                        }`}
+                      >
+                        {checked ? '✓' : ''} {g.label}
+                      </button>
+                    )
+                  })}
+                </div>
+                {item.targetRoles.length === 0 && (
+                  <p className="text-xs text-zinc-700 mt-1">Niciun grad selectat = se aplică tuturor</p>
+                )}
+              </div>
             </div>
           ))}
 
@@ -194,7 +233,6 @@ export default function LiderTaxaPage() {
         </div>
       )}
 
-      {/* Tab Status */}
       {tab === 'status' && (
         <div className="grove-card p-0 overflow-hidden">
           <div className="px-5 py-3 border-b border-dark-border space-y-2">
@@ -212,7 +250,7 @@ export default function LiderTaxaPage() {
             <div className="text-center py-8 text-zinc-600">Se încarcă...</div>
           ) : (
             <div className="divide-y divide-dark-border/50">
-              {members.map(m => {
+              {relevantMembers.map(m => {
                 const payment    = paidMap.get(m.username)
                 const hasPaid    = payment?.paid ?? false
                 const isToggling = toggling === m.id
@@ -221,7 +259,7 @@ export default function LiderTaxaPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full border border-dark-border overflow-hidden bg-dark-muted flex items-center justify-center shrink-0">
                         {m.avatar
-                          ? <Image src={`https://cdn.discordapp.com/avatars/${m.discordId}/${m.avatar}.png`} alt={m.username} width={36} height={36} className="object-cover" />
+                          ? <Image src={m.avatar} alt={m.username} width={36} height={36} className="object-cover" unoptimized />
                           : <span className="text-sm">👤</span>
                         }
                       </div>
