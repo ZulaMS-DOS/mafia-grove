@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   Clock, FileText, LogOut, Star, Users, Coins,
   Shield, Menu, X, UserCog, Megaphone,
-  LayoutDashboard, ShoppingCart, Dices, ListTodo, AlertTriangle
+  LayoutDashboard, ShoppingCart, Dices, ListTodo, AlertTriangle, Bug
 } from 'lucide-react'
 import { signOut, useSession } from 'next-auth/react'
 import clsx from 'clsx'
@@ -24,9 +24,10 @@ const baseNav = [
 ]
 
 const membruNav = [
-  { href: '/dashboard/anunturi', icon: Megaphone,     label: 'Anunțuri'      },
-  { href: '/dashboard/taxa',     icon: Coins,         label: 'Taxa Sindicat' },
-  { href: '/dashboard/amenzi',   icon: AlertTriangle, label: 'Amenzile Mele' },
+  { href: '/dashboard/anunturi',   icon: Megaphone,     label: 'Anunțuri'      },
+  { href: '/dashboard/taxa',       icon: Coins,         label: 'Taxa Sindicat' },
+  { href: '/dashboard/amenzi',     icon: AlertTriangle, label: 'Amenzile Mele' },
+  { href: '/dashboard/bug-report', icon: Bug,           label: 'Bug Report'    },
 ]
 
 const testerNav = [
@@ -115,11 +116,12 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
           </>
         )}
       </nav>
-      <div className="p-3 border-t border-dark-border">
+      <div className="p-3 border-t border-dark-border space-y-2">
         <button onClick={() => signOut({ callbackUrl: '/auth/login' })}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200">
           <LogOut size={16} /> Ieșire
         </button>
+        <p className="text-center text-[10px] text-zinc-700 pt-1">© 2026 Zula | Grove Street</p>
       </div>
     </aside>
   )
