@@ -81,3 +81,15 @@ export async function PATCH(req: NextRequest) {
   })
   return NextResponse.json({ payment })
 }
+
+// DELETE — sterge un singur material de taxa
+export async function DELETE(req: NextRequest) {
+  const { error } = await requireLeadership()
+  if (error) return error
+
+  const { id } = await req.json()
+  if (!id) return NextResponse.json({ error: 'id lipsa' }, { status: 400 })
+
+  await (prisma as any).taxItem.delete({ where: { id } })
+  return NextResponse.json({ success: true })
+}
