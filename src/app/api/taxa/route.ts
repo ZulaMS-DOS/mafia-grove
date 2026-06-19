@@ -19,8 +19,9 @@ export async function GET() {
 
   const weekStart = getWeekStart()
   const userId    = session!.user.id
+  const myRoleIds = session!.user.roleIds || []
 
-  const [items, payment] = await Promise.all([
+  const [allItems, payment] = await Promise.all([
     (prisma as any).taxItem.findMany({
       where:   { weekStart },
       orderBy: { createdAt: 'asc' },
@@ -29,6 +30,12 @@ export async function GET() {
       where: { userId_weekStart: { userId, weekStart } },
     }),
   ])
+
+  // Filtreaza doar materialele care vizeaza gradul userului
+  // (daca targetRoles e gol, materialul se aplica tuturor)
+  const items = allItems.filter((item: any) =>
+    !item.targetRoles?.length || item.targetRoles.some((r: string) => myRoleIds.includes(r))
+  )
 
   return NextResponse.json({
     items,
