@@ -20,12 +20,15 @@ interface Payment {
 }
 interface Member { id: string; username: string; avatar: string | null; discordId: string; roleIds: string[] }
 
+const gradeLabel = (roleId: string) => GRADE_OPTIONS.find(g => g.id === roleId)?.label || roleId
+
 export default function LiderTaxaPage() {
   const [items, setItems]       = useState<TaxItem[]>([{ name: '', bucati: 0, termen: '', targetRoles: [] }])
   const [payments, setPayments] = useState<Payment[]>([])
   const [members, setMembers]   = useState<Member[]>([])
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(false)
+  const [deleting, setDeleting] = useState<number | null>(null)
   const [toggling, setToggling] = useState<string | null>(null)
   const [msg, setMsg]           = useState('')
   const [tab, setTab]           = useState<'seteaza' | 'status'>('seteaza')
@@ -37,7 +40,7 @@ export default function LiderTaxaPage() {
     const r = await fetch('/api/taxa/admin')
     const d = await r.json()
     if (d.items?.length) {
-      setItems(d.items.map((i: any) => ({ name: i.name, bucati: i.bucati, termen: i.termen, targetRoles: i.targetRoles || [] })))
+      setItems(d.items.map((i: any) => ({ id: i.id, name: i.name, bucati: i.bucati, termen: i.termen, targetRoles: i.targetRoles || [] })))
     } else {
       setItems([{ name: '', bucati: 0, termen: '', targetRoles: [] }])
     }
@@ -52,7 +55,22 @@ export default function LiderTaxaPage() {
     setItems(prev => [...prev, { name: '', bucati: 0, termen: '', targetRoles: [] }])
   }
 
-  const removeItem = (idx: number) => {
+  // Sterge un material — daca are id (deja salvat in DB), il sterge si din baza de date direct
+  const removeItem = async (idx: number) => {
+    const item = items[idx]
+
+    if (item.id) {
+      setDeleting(idx)
+      await fetch('/api/taxa/admin', {
+        method:  'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ id: item.id }),
+      })
+      setDeleting(null)
+      setMsg('🗑️ Material șters!')
+      setTimeout(() => setMsg(''), 3000)
+    }
+
     setItems(prev => {
       const next = prev.filter((_, j) => j !== idx)
       return next.length === 0 ? [] : next
@@ -108,13 +126,13 @@ export default function LiderTaxaPage() {
     setToggling(null)
   }
 
-  // Determina daca un membru e tinta a vreunei taxe (din item-urile salvate)
+  // Lider/Co-Lider vad TOATE materialele si TOTI membrii relevanti, indiferent de targetRoles
   const allTargetRoles = new Set(items.flatMap(i => i.targetRoles))
   const relevantMembers = allTargetRoles.size === 0
     ? members
     : members.filter(m => m.roleIds.some(r => allTargetRoles.has(r)))
 
-  const paidCount  = payments.filter(p => p.paid && relevantMembers.some(m => m.id === (p as any).userId || m.username === p.user.username)).length
+  const paidCount  = payments.filter(p => p.paid).length
   const totalCount = relevantMembers.length
   const paidMap    = new Map(payments.map(p => [p.user.username, p]))
 
@@ -161,7 +179,7 @@ export default function LiderTaxaPage() {
           </h2>
 
           {items.map((item, idx) => (
-            <div key={idx} className="space-y-2 pb-4 border-b border-dark-border/50 last:border-0">
+            <div key={item.id || idx} className="space-y-2 pb-4 border-b border-dark-border/50 last:border-0">
               <div className="grid grid-cols-12 gap-2 items-center">
                 <input
                   className="grove-input col-span-5 text-sm"
@@ -184,9 +202,13 @@ export default function LiderTaxaPage() {
                 />
                 <button
                   onClick={() => removeItem(idx)}
-                  className="col-span-1 p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center"
+                  disabled={deleting === idx}
+                  className="col-span-1 p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center disabled:opacity-50"
                 >
-                  <Trash2 size={13} />
+                  {deleting === idx
+                    ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                    : <Trash2 size={13} />
+                  }
                 </button>
               </div>
 
