@@ -5,13 +5,14 @@ import { usePathname } from 'next/navigation'
 import {
   Clock, FileText, LogOut, Star, Users, Coins,
   Shield, Menu, X, UserCog, Megaphone,
-  LayoutDashboard, ShoppingCart, Dices, ListTodo, AlertTriangle, Bug
+  LayoutDashboard, ShoppingCart, Dices, ListTodo, AlertTriangle, Bug, Zap
 } from 'lucide-react'
 import { signOut, useSession } from 'next-auth/react'
 import clsx from 'clsx'
 
 const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
 const TESTER_ROLE      = '1462444900388704317'
+const MUNCITOR_ROLE    = '1342912254542348298'
 
 const baseNav = [
   { href: '/dashboard',         icon: LayoutDashboard, label: 'Dashboard'    },
@@ -28,6 +29,10 @@ const membruNav = [
   { href: '/dashboard/taxa',       icon: Coins,         label: 'Taxa Sindicat' },
   { href: '/dashboard/amenzi',     icon: AlertTriangle, label: 'Amenzile Mele' },
   { href: '/dashboard/bug-report', icon: Bug,           label: 'Bug Report'    },
+]
+
+const muncitorNav = [
+  { href: '/dashboard/sageti', icon: Zap, label: 'Săgeți' },
 ]
 
 const testerNav = [
@@ -59,8 +64,9 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
 
-  const roleIds  = session?.user.roleIds || []
-  const isTester = roleIds.includes(TESTER_ROLE) && !isLeadership
+  const roleIds    = session?.user.roleIds || []
+  const isTester   = roleIds.includes(TESTER_ROLE) && !isLeadership
+  const isMuncitor = roleIds.includes(MUNCITOR_ROLE) && !isLeadership && !isTester
 
   const NavItem = ({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) => {
     const active = path === href
@@ -95,10 +101,11 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
         <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2">General</div>
         {baseNav.map(item => <NavItem key={item.href} {...item} />)}
 
-        {(isMembru || isLeadership || isTester) && (
+        {(isMembru || isLeadership || isTester || isMuncitor) && (
           <>
             <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2 mt-3">Important</div>
             {membruNav.map(item => <NavItem key={item.href} {...item} />)}
+            {isMuncitor && muncitorNav.map(item => <NavItem key={item.href} {...item} />)}
           </>
         )}
 
