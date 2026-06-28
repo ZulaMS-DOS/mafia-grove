@@ -7,13 +7,15 @@ const PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY!
 const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
 
 const JAF_CONFIG: Record<string, { label: string; points: number }> = {
-  vinewood: { label: '🎬 Vinewood Bank',      points: 1.5 },
-  alta:     { label: '🏦 Alta Bank',          points: 1.5 },
-  desert:   { label: '🏜️ Desert Heist',       points: 1.5 },
-  highway:  { label: '🛣️ Highway Robbery',    points: 1.5 },
-  pacific:  { label: '🌊 Pacific Standard',   points: 2   },
-  blaine:   { label: '⛰️ Blaine County Bank', points: 2   },
-  biju:     { label: '💎 Bijuterie',          points: 2   },
+  vinewood:    { label: '🎬 Vinewood Bank',      points: 1.5 },
+  alta:        { label: '🏦 Alta Bank',          points: 1.5 },
+  desert:      { label: '🏜️ Desert Heist',       points: 1.5 },
+  highway:     { label: '🛣️ Highway Robbery',    points: 1.5 },
+  pacific:     { label: '🌊 Pacific Standard',   points: 2   },
+  blaine:      { label: '⛰️ Blaine County Bank', points: 2   },
+  biju:        { label: '💎 Bijuterie',          points: 2   },
+  magazin:     { label: '🏪 Magazin',            points: 2.5 },
+  digital_den: { label: '💻 Digital Den',        points: 2.5 },
 }
 
 async function verifySignature(req: NextRequest, rawBody: string) {
