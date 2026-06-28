@@ -11,7 +11,11 @@ const MEMBRU_ROLES     = ['1501319885488390184']
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
-  if (!session) redirect('/auth/login')
+
+  // Daca nu e logat sau sesiunea e invalida (rol pierdut, scos de pe server etc)
+  if (!session || !session.user || !session.user.id) {
+    redirect('/auth/login')
+  }
 
   // Verifica daca userul e banat
   const user = await prisma.user.findUnique({
@@ -22,7 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const roleIds      = session.user.roleIds || []
   const isLeadership = roleIds.some((r: string) => LEADERSHIP_ROLES.includes(r))
-  const isMembru      = roleIds.some((r: string) => MEMBRU_ROLES.includes(r))
+  const isMembru     = roleIds.some((r: string) => MEMBRU_ROLES.includes(r))
 
   return (
     <div className="flex h-screen bg-black overflow-hidden">
