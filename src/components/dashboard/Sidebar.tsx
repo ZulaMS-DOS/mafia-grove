@@ -24,6 +24,7 @@ const baseNav = [
   { href: '/dashboard/tasks',   icon: ListTodo,        label: 'Tasks'        },
 ]
 
+// Nav pentru Membri+ (include Taxa Sindicat)
 const membruNav = [
   { href: '/dashboard/anunturi',   icon: Megaphone,     label: 'Anunțuri'      },
   { href: '/dashboard/taxa',       icon: Coins,         label: 'Taxa Sindicat' },
@@ -31,8 +32,12 @@ const membruNav = [
   { href: '/dashboard/bug-report', icon: Bug,           label: 'Bug Report'    },
 ]
 
+// Nav pentru Muncitori (fara Taxa Sindicat, cu Sageti)
 const muncitorNav = [
-  { href: '/dashboard/sageti', icon: Zap, label: 'Săgeți' },
+  { href: '/dashboard/anunturi',   icon: Megaphone,     label: 'Anunțuri'      },
+  { href: '/dashboard/amenzi',     icon: AlertTriangle, label: 'Amenzile Mele' },
+  { href: '/dashboard/bug-report', icon: Bug,           label: 'Bug Report'    },
+  { href: '/dashboard/sageti',     icon: Zap,           label: 'Săgeți'        },
 ]
 
 const testerNav = [
@@ -66,7 +71,7 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
 
   const roleIds    = session?.user.roleIds || []
   const isTester   = roleIds.includes(TESTER_ROLE) && !isLeadership
-  const isMuncitor = roleIds.includes(MUNCITOR_ROLE) && !isLeadership && !isTester
+  const isMuncitor = roleIds.includes(MUNCITOR_ROLE) && !isLeadership && !isTester && !isMembru
 
   const NavItem = ({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) => {
     const active = path === href
@@ -101,11 +106,19 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
         <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2">General</div>
         {baseNav.map(item => <NavItem key={item.href} {...item} />)}
 
-        {(isMembru || isLeadership || isTester || isMuncitor) && (
+        {/* Membri+ (inclusiv Tester si Leadership) */}
+        {(isMembru || isLeadership || isTester) && (
           <>
             <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2 mt-3">Important</div>
             {membruNav.map(item => <NavItem key={item.href} {...item} />)}
-            {isMuncitor && muncitorNav.map(item => <NavItem key={item.href} {...item} />)}
+          </>
+        )}
+
+        {/* Muncitori — nav separat fara Taxa Sindicat, cu Sageti */}
+        {isMuncitor && (
+          <>
+            <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2 mt-3">Important</div>
+            {muncitorNav.map(item => <NavItem key={item.href} {...item} />)}
           </>
         )}
 
