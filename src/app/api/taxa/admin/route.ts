@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireLeadership } from '@/lib/middleware'
-import { notifyAll } from '@/lib/notifications'
+import { notifyAll, notify } from '@/lib/notifications'
 
-const ALL_ROLE_IDS = ['955126889171804170','955126890472022066','1462444900388704317','1501319885488390184','1342912254542348298']
+const ALL_ROLE_IDS      = ['955126889171804170','955126890472022066','1462444900388704317','1501319885488390184','1342912254542348298']
+const LEADERSHIP_ROLES  = ['955126889171804170','955126890472022066']
 
 function getWeekStart() {
   const now = new Date()
@@ -26,7 +27,7 @@ export async function GET() {
       include: { user: { select: { username: true, avatar: true, discordId: true, roleIds: true } } },
     }),
     prisma.user.findMany({
-      where: { roleIds: { hasSome: ALL_ROLE_IDS } },
+      where:  { roleIds: { hasSome: ALL_ROLE_IDS } },
       select: { id: true, username: true, avatar: true, discordId: true, roleIds: true },
     })
   ])
@@ -41,24 +42,24 @@ export async function POST(req: NextRequest) {
   const weekStart = getWeekStart()
   await (prisma as any).taxItem.deleteMany({ where: { weekStart } })
   if (items.length === 0) return NextResponse.json({ items: [] })
+
   const created = await Promise.all(
     items
       .filter((item: any) => item.name && item.name.trim() !== '')
       .map((item: any) =>
         (prisma as any).taxItem.create({
           data: {
-            name: item.name.trim(),
-            bucati: parseInt(item.bucati) || 0,
-            termen: item.termen?.trim() || '',
+            name:        item.name.trim(),
+            bucati:      parseInt(item.bucati) || 0,
+            termen:      item.termen ? new Date(item.termen) : null,
             targetRoles: Array.isArray(item.targetRoles) ? item.targetRoles : [],
             weekStart,
-            createdBy: session!.user.id,
+            createdBy:   session!.user.id,
           },
         })
       )
   )
 
-  // Notifica toti membrii
   await notifyAll({
     type:    'tax',
     title:   '💰 Taxă Sindicat Nouă',
@@ -75,21 +76,18 @@ export async function PATCH(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'userId lipsa' }, { status: 400 })
   const weekStart = getWeekStart()
   const payment = await (prisma as any).taxPayment.upsert({
-    where: { userId_weekStart: { userId, weekStart } },
+    where:  { userId_weekStart: { userId, weekStart } },
     update: { paid, paidAt: paid ? new Date() : null },
     create: { userId, weekStart, paid, paidAt: paid ? new Date() : null },
   })
   return NextResponse.json({ payment })
 }
 
-// DELETE — sterge un singur material de taxa
 export async function DELETE(req: NextRequest) {
   const { error } = await requireLeadership()
   if (error) return error
-
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'id lipsa' }, { status: 400 })
-
   await (prisma as any).taxItem.delete({ where: { id } })
   return NextResponse.json({ success: true })
 }
