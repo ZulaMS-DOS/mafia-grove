@@ -40,7 +40,7 @@ export default function SagetiPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black text-white flex items-center gap-3">
-            <Zap size={28} className="text-yellow-400" /> Săgeți
+            <Zap size={28} className="text-yellow-400" /> Task Săgeată
           </h1>
           <p className="text-zinc-500 text-sm mt-1">
             {weekStart ? `Săptămâna: ${format(new Date(weekStart), 'dd MMM yyyy', { locale: ro })}` : 'Taxa săptămânală Runner Grove'}
