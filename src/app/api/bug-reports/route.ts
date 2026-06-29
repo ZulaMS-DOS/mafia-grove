@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, requireLeadership } from '@/lib/middleware'
-import { notifyAll } from '@/lib/notifications'
+import { notify } from '@/lib/notifications'
+
+const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
 
 // GET — membru vede ale lui, lider vede toate
 export async function GET(req: NextRequest) {
@@ -47,11 +49,22 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  await notifyAll({
-    type:    'announcement',
-    title:   '🐛 Bug Report Nou',
-    message: `${session!.user.name} a raportat: ${title}`,
+  // Notifica doar Lider/Co-Lider
+  const leaders = await prisma.user.findMany({
+    where:  { roleIds: { hasSome: LEADERSHIP_ROLES } },
+    select: { id: true },
   })
+
+  await Promise.all(
+    leaders
+      .filter(l => l.id !== session!.user.id)
+      .map(l => notify({
+        userId:  l.id,
+        type:    'announcement',
+        title:   '🐛 Bug Report Nou',
+        message: `${session!.user.name} a raportat: ${title}`,
+      }))
+  )
 
   return NextResponse.json({ report })
 }
