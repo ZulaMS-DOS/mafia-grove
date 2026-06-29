@@ -123,7 +123,7 @@ model TaxItem {
   id          String   @id @default(cuid())
   name        String
   bucati      Int      @default(0)
-  termen      String   @default("")
+  termen      DateTime?
   targetRoles String[] @default([])
   weekStart   DateTime
   createdBy   String
