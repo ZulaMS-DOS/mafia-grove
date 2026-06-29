@@ -37,7 +37,7 @@ const muncitorNav = [
   { href: '/dashboard/anunturi',   icon: Megaphone,     label: 'Anunțuri'      },
   { href: '/dashboard/amenzi',     icon: AlertTriangle, label: 'Amenzile Mele' },
   { href: '/dashboard/bug-report', icon: Bug,           label: 'Bug Report'    },
-  { href: '/dashboard/sageti',     icon: Zap,           label: 'Săgeți'        },
+  { href: '/dashboard/sageti',     icon: Zap,           label: 'Task Săgeată'  },
 ]
 
 const testerNav = [
