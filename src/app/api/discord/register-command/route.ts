@@ -27,8 +27,8 @@ export async function GET() {
             { name: 'Pacific (2 pts)',        value: 'pacific'     },
             { name: 'Blaine (2 pts)',         value: 'blaine'      },
             { name: 'Biju (2 pts)',           value: 'biju'        },
-            { name: 'Magazin (2.5 pts)',      value: 'magazin'     },
-            { name: 'Digital Den (2.5 pts)',  value: 'digital_den' },
+            { name: 'Magazin (1.5 pts)',      value: 'magazin'     },
+            { name: 'Digital Den (1.5 pts)',  value: 'digital_den' },
           ],
         },
         {
