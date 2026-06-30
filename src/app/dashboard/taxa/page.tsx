@@ -5,7 +5,7 @@ import { ro } from 'date-fns/locale'
 import { RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 
 interface TaxItem {
-  id: string; name: string; bucati: number; termen: string
+  id: string; name: string; bucati: number; termen: string | null; expired: boolean
 }
 
 export default function TaxaPage() {
@@ -29,7 +29,6 @@ export default function TaxaPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Auto-refresh la fiecare 30 secunde
   useEffect(() => {
     const t = setInterval(load, 30000)
     return () => clearInterval(t)
@@ -49,7 +48,6 @@ export default function TaxaPage() {
         </button>
       </div>
 
-      {/* Status plată */}
       <div className={`grove-card flex items-center gap-4 ${paid ? 'border-green-500/40 bg-green-500/5' : 'border-red-500/40 bg-red-500/5'}`}>
         {paid
           ? <CheckCircle size={32} className="text-green-400 shrink-0" />
@@ -66,7 +64,6 @@ export default function TaxaPage() {
         </div>
       </div>
 
-      {/* Lista materiale */}
       <div className="grove-card p-0 overflow-hidden">
         <div className="px-5 py-3 border-b border-dark-border">
           <h2 className="text-sm font-semibold text-grove-green uppercase tracking-widest">Materiale de Predat</h2>
@@ -88,13 +85,21 @@ export default function TaxaPage() {
             </div>
             {items.map((item, i) => (
               <div key={item.id}
-                className={`grid grid-cols-3 px-5 py-3.5 border-b border-dark-border/50 hover:bg-dark-hover transition-colors ${i % 2 === 1 ? 'bg-white/[0.01]' : ''}`}>
+                className={`grid grid-cols-3 px-5 py-3.5 border-b border-dark-border/50 hover:bg-dark-hover transition-colors ${i % 2 === 1 ? 'bg-white/[0.01]' : ''} ${item.expired ? 'opacity-60' : ''}`}>
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-grove-green shrink-0" />
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.expired ? 'bg-red-500' : 'bg-grove-green'}`} />
                   <span className="text-white text-sm font-medium">{item.name}</span>
                 </div>
                 <div className="text-center text-grove-green font-bold text-sm">{item.bucati.toLocaleString()}</div>
-                <div className="text-center text-yellow-400 text-sm">{item.termen || '—'}</div>
+                <div className="text-center text-sm">
+                  {item.termen ? (
+                    <span className={item.expired ? 'text-red-400 font-semibold' : 'text-yellow-400'}>
+                      {item.expired ? '⛔ Expirat' : format(new Date(item.termen), 'dd MMM yyyy', { locale: ro })}
+                    </span>
+                  ) : (
+                    <span className="text-zinc-700">—</span>
+                  )}
+                </div>
               </div>
             ))}
           </>
