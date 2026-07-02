@@ -24,7 +24,6 @@ const baseNav = [
   { href: '/dashboard/tasks',   icon: ListTodo,        label: 'Tasks'        },
 ]
 
-// Nav pentru Membri+ (include Taxa Sindicat)
 const membruNav = [
   { href: '/dashboard/anunturi',   icon: Megaphone,     label: 'Anunțuri'      },
   { href: '/dashboard/taxa',       icon: Coins,         label: 'Taxa Sindicat' },
@@ -32,7 +31,6 @@ const membruNav = [
   { href: '/dashboard/bug-report', icon: Bug,           label: 'Bug Report'    },
 ]
 
-// Nav pentru Muncitori (fara Taxa Sindicat, cu Sageti)
 const muncitorNav = [
   { href: '/dashboard/anunturi',   icon: Megaphone,     label: 'Anunțuri'      },
   { href: '/dashboard/amenzi',     icon: AlertTriangle, label: 'Amenzile Mele' },
@@ -45,7 +43,6 @@ const testerNav = [
 ]
 
 const liderNav = [
-  { href: '/dashboard/lider',           icon: Star,          label: 'Lider Panel'       },
   { href: '/dashboard/lider/grade',     icon: UserCog,       label: 'Grade Membri'      },
   { href: '/dashboard/lider/amenzi',    icon: AlertTriangle, label: 'Amenzi'            },
   { href: '/dashboard/lider/shop',      icon: ShoppingCart,  label: 'Gestionare Shop'   },
@@ -106,7 +103,6 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
         <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2">General</div>
         {baseNav.map(item => <NavItem key={item.href} {...item} />)}
 
-        {/* Membri+ (inclusiv Tester si Leadership) */}
         {(isMembru || isLeadership || isTester) && (
           <>
             <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2 mt-3">Important</div>
@@ -114,7 +110,6 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
           </>
         )}
 
-        {/* Muncitori — nav separat fara Taxa Sindicat, cu Sageti */}
         {isMuncitor && (
           <>
             <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2 mt-3">Important</div>
