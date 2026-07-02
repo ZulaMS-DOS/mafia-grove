@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
           data: {
             name:        item.name.trim(),
             bucati:      parseInt(item.bucati) || 0,
-            termen:      item.termen ? new Date(item.termen) : null,
+                        termen:      item.termen && item.termen.trim() !== '' ? new Date(item.termen) : null,
             targetRoles: Array.isArray(item.targetRoles) ? item.targetRoles : [],
             weekStart,
             createdBy:   session!.user.id,
