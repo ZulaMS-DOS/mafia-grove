@@ -13,6 +13,13 @@ const GRADE_OPTIONS = [
   { id: '1342912254542348298', label: 'Muncitor', color: 'text-zinc-400 border-zinc-600/30 bg-zinc-600/10' },
 ]
 
+function getGrade(roleIds: string[]) {
+  for (const g of GRADE_OPTIONS) {
+    if (roleIds.includes(g.id)) return g
+  }
+  return { label: 'Fără Grad', color: 'text-zinc-600 border-zinc-700/30 bg-zinc-700/10' }
+}
+
 interface TaxItem { id?: string; name: string; bucati: number; termen: string; targetRoles: string[] }
 interface Payment {
   id: string; paid: boolean; paidAt: string | null
@@ -42,7 +49,6 @@ export default function LiderTaxaPage() {
         id:          i.id,
         name:        i.name,
         bucati:      i.bucati,
-        // Converteste data ISO in format YYYY-MM-DD pentru input[type=date]
         termen:      i.termen ? new Date(i.termen).toISOString().split('T')[0] : '',
         targetRoles: i.targetRoles || [],
       })))
@@ -123,8 +129,8 @@ export default function LiderTaxaPage() {
     setToggling(null)
   }
 
-  const allTargetRoles   = new Set(items.flatMap(i => i.targetRoles))
-  const relevantMembers  = allTargetRoles.size === 0
+  const allTargetRoles  = new Set(items.flatMap(i => i.targetRoles))
+  const relevantMembers = allTargetRoles.size === 0
     ? members
     : members.filter(m => m.roleIds.some(r => allTargetRoles.has(r)))
   const paidCount  = payments.filter(p => p.paid).length
@@ -268,6 +274,7 @@ export default function LiderTaxaPage() {
                 const payment    = paidMap.get(m.username)
                 const hasPaid    = payment?.paid ?? false
                 const isToggling = toggling === m.id
+                const grade      = getGrade(m.roleIds)
                 return (
                   <div key={m.id} className="flex items-center justify-between px-5 py-3 hover:bg-dark-hover transition-colors">
                     <div className="flex items-center gap-3">
@@ -279,11 +286,16 @@ export default function LiderTaxaPage() {
                       </div>
                       <div>
                         <div className="text-sm font-medium text-white">{m.username}</div>
-                        {hasPaid && payment?.paidAt && (
-                          <div className="text-xs text-zinc-600">
-                            {format(new Date(payment.paidAt), 'dd MMM HH:mm', { locale: ro })}
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-xs px-2 py-0.5 rounded-full border font-semibold ${grade.color}`}>
+                            {grade.label}
+                          </span>
+                          {hasPaid && payment?.paidAt && (
+                            <span className="text-xs text-zinc-600">
+                              {format(new Date(payment.paidAt), 'dd MMM HH:mm', { locale: ro })}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <button
