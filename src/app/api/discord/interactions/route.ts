@@ -3,7 +3,9 @@ import nacl from 'tweetnacl'
 import { prisma } from '@/lib/prisma'
 import { notify } from '@/lib/notifications'
 
-const PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY!
+const PUBLIC_KEY       = process.env.DISCORD_PUBLIC_KEY!
+const DISCORD_APP_ID   = process.env.DISCORD_CLIENT_ID!
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
 const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
 
 const JAF_CONFIG: Record<string, { label: string; points: number }> = {
@@ -78,6 +80,18 @@ async function awardPoints(userIds: string[], points: number, reasonLabel: strin
   return { successLines, failLines }
 }
 
+// Trimite followup dupa defer (tip 5)
+async function sendFollowup(token: string, content: string) {
+  await fetch(`https://discord.com/api/v10/webhooks/${DISCORD_APP_ID}/${token}/messages/@original`, {
+    method:  'PATCH',
+    headers: {
+      'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
+      'Content-Type':  'application/json',
+    },
+    body: JSON.stringify({ content }),
+  })
+}
+
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
   const valid   = await verifySignature(req, rawBody)
@@ -88,14 +102,17 @@ export async function POST(req: NextRequest) {
 
   const body = JSON.parse(rawBody)
 
+  // PING
   if (body.type === 1) {
     return NextResponse.json({ type: 1 })
   }
 
+  // APPLICATION_COMMAND
   if (body.type === 2) {
     const commandName = body.data.name
     const memberRoles: string[] = body.member?.roles || []
     const callerName  = body.member?.nick || body.member?.user?.username || 'Necunoscut'
+    const token       = body.token
 
     const isLeader = memberRoles.some(r => LEADERSHIP_ROLES.includes(r))
     if (!isLeader) {
@@ -108,84 +125,77 @@ export async function POST(req: NextRequest) {
     const options  = body.data.options || []
     const useriRaw = options.find((o: any) => o.name === 'useri')?.value as string | undefined
 
-    if (commandName === 'jaf-procesat') {
-      const jafType = options.find((o: any) => o.name === 'tip-jaf')?.value as string | undefined
+    // Raspunde instant cu "thinking..." (defer) ca sa nu expire Discord timeout-ul
+    const deferResponse = NextResponse.json({ type: 5 })
 
-      if (!useriRaw || !jafType || !JAF_CONFIG[jafType]) {
-        return NextResponse.json({
-          type: 4,
-          data: { content: '⚠️ Trebuie să specifici tip-jaf și useri valizi.', flags: 64 },
-        })
+    // Proceseaza in fundal dupa ce trimitem defer-ul
+    ;(async () => {
+      try {
+        if (commandName === 'jaf-procesat') {
+          const jafType = options.find((o: any) => o.name === 'tip-jaf')?.value as string | undefined
+
+          if (!useriRaw || !jafType || !JAF_CONFIG[jafType]) {
+            await sendFollowup(token, '⚠️ Trebuie să specifici tip-jaf și useri valizi.')
+            return
+          }
+
+          const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
+          if (!userIds.length) {
+            await sendFollowup(token, '⚠️ Nicio mențiune validă găsită.')
+            return
+          }
+
+          const { label, points } = JAF_CONFIG[jafType]
+          const { successLines, failLines } = await awardPoints(userIds, points, label, callerName)
+          const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
+          await sendFollowup(token, content)
+
+        } else if (commandName === 'taxa24h') {
+          if (!useriRaw) {
+            await sendFollowup(token, '⚠️ Trebuie să specifici useri.')
+            return
+          }
+
+          const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
+          if (!userIds.length) {
+            await sendFollowup(token, '⚠️ Nicio mențiune validă găsită.')
+            return
+          }
+
+          const label = '⏰ Taxa 24 Ore'
+          const { successLines, failLines } = await awardPoints(userIds, 10, label, callerName)
+          const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
+          await sendFollowup(token, content)
+
+        } else if (commandName === 'activitate') {
+          const puncteRaw = options.find((o: any) => o.name === 'puncte')?.value
+          const puncte = typeof puncteRaw === 'string' ? parseFloat(puncteRaw) : puncteRaw
+
+          if (!puncte || !useriRaw) {
+            await sendFollowup(token, '⚠️ Trebuie să specifici puncte și useri.')
+            return
+          }
+
+          const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
+          if (!userIds.length) {
+            await sendFollowup(token, '⚠️ Nicio mențiune validă găsită.')
+            return
+          }
+
+          const label = '⭐ Activitate'
+          const { successLines, failLines } = await awardPoints(userIds, puncte, label, callerName)
+          const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
+          await sendFollowup(token, content)
+
+        } else {
+          await sendFollowup(token, '❌ Comandă necunoscută.')
+        }
+      } catch (e) {
+        await sendFollowup(token, '❌ A apărut o eroare. Încearcă din nou.')
       }
+    })()
 
-      const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
-      if (!userIds.length) {
-        return NextResponse.json({
-          type: 4,
-          data: { content: '⚠️ Nicio mențiune validă găsită.', flags: 64 },
-        })
-      }
-
-      const { label, points } = JAF_CONFIG[jafType]
-      const { successLines, failLines } = await awardPoints(userIds, points, label, callerName)
-      const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
-
-      return NextResponse.json({ type: 4, data: { content } })
-    }
-
-    if (commandName === 'taxa24h') {
-      if (!useriRaw) {
-        return NextResponse.json({
-          type: 4,
-          data: { content: '⚠️ Trebuie să specifici useri.', flags: 64 },
-        })
-      }
-
-      const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
-      if (!userIds.length) {
-        return NextResponse.json({
-          type: 4,
-          data: { content: '⚠️ Nicio mențiune validă găsită.', flags: 64 },
-        })
-      }
-
-      const label = '⏰ Taxa 24 Ore'
-      const { successLines, failLines } = await awardPoints(userIds, 10, label, callerName)
-      const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
-
-      return NextResponse.json({ type: 4, data: { content } })
-    }
-
-    if (commandName === 'activitate') {
-      const puncteRaw = options.find((o: any) => o.name === 'puncte')?.value
-      const puncte = typeof puncteRaw === 'string' ? parseFloat(puncteRaw) : puncteRaw
-
-      if (!puncte || !useriRaw) {
-        return NextResponse.json({
-          type: 4,
-          data: { content: '⚠️ Trebuie să specifici puncte și useri.', flags: 64 },
-        })
-      }
-
-      const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
-      if (!userIds.length) {
-        return NextResponse.json({
-          type: 4,
-          data: { content: '⚠️ Nicio mențiune validă găsită.', flags: 64 },
-        })
-      }
-
-      const label = '⭐ Activitate'
-      const { successLines, failLines } = await awardPoints(userIds, puncte, label, callerName)
-      const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
-
-      return NextResponse.json({ type: 4, data: { content } })
-    }
-
-    return NextResponse.json({
-      type: 4,
-      data: { content: '❌ Comandă necunoscută.', flags: 64 },
-    })
+    return deferResponse
   }
 
   return NextResponse.json({ error: 'Tip request necunoscut' }, { status: 400 })
