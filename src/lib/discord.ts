@@ -34,8 +34,11 @@ export function discordAvatar(userId: string, hash: string | null) {
   return `https://cdn.discordapp.com/avatars/${userId}/${hash}.png?size=128`
 }
 
-export const CO_LIDER_ROLE_ID = '955126890472022066'
-export const TESTER_ROLE_ID   = '1462444900388704317'
+export const CO_LIDER_ROLE_ID     = '955126890472022066'
+export const TESTER_ROLE_ID       = '1462444900388704317'
+export const MUNCITOR_ROLE_ID     = '1342912254542348298'
+export const MEMBRU_ROLE_ID       = '1501319885488390184'
+export const GROVE_KILLER_ROLE_ID = '955126892984410162'
 
 export function isFullLeadership(roleIds: string[]): boolean {
   return roleIds.some(id => LEADERSHIP_ROLE_IDS.includes(id))
@@ -52,14 +55,13 @@ export function canGiveFines(roleIds: string[]): boolean {
 export function canManageRequests(roleIds: string[]): boolean {
   return isFullLeadership(roleIds) || isTester(roleIds)
 }
-export const MUNCITOR_ROLE_ID = '1342912254542348298'
-export const MEMBRU_ROLE_ID   = '1501319885488390184'
 
-/** Verifica daca userul are cel putin rolul de Muncitor (sau orice rol superior) */
+/** Verifica daca userul are cel putin rolul minim (Muncitor sau mai sus) */
 export function hasMinimumAccess(roleIds: string[]): boolean {
   const validRoles = [
     MUNCITOR_ROLE_ID,
     MEMBRU_ROLE_ID,
+    GROVE_KILLER_ROLE_ID,
     TESTER_ROLE_ID,
     CO_LIDER_ROLE_ID,
     ...LEADERSHIP_ROLE_IDS,
