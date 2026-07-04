@@ -6,12 +6,14 @@ import { ro } from 'date-fns/locale'
 import Image from 'next/image'
 
 const GRADE_OPTIONS = [
-  { id: '955126889171804170',  label: 'Lider',    color: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' },
-  { id: '955126890472022066',  label: 'Co-Lider', color: 'text-orange-400 border-orange-500/30 bg-orange-500/10' },
-  { id: '1462444900388704317', label: 'Tester',   color: 'text-purple-400 border-purple-500/30 bg-purple-500/10' },
-  { id: '1501319885488390184', label: 'Membru',   color: 'text-grove-green border-grove-border bg-grove-dim' },
-  { id: '1342912254542348298', label: 'Muncitor', color: 'text-zinc-400 border-zinc-600/30 bg-zinc-600/10' },
+  { id: '955126889171804170',  label: 'Lider',        color: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' },
+  { id: '955126890472022066',  label: 'Co-Lider',     color: 'text-orange-400 border-orange-500/30 bg-orange-500/10' },
+  { id: '1462444900388704317', label: 'Tester',       color: 'text-purple-400 border-purple-500/30 bg-purple-500/10' },
+  { id: '1501319885488390184', label: 'Membru',       color: 'text-grove-green border-grove-border bg-grove-dim' },
+  { id: '955126892984410162',  label: 'Grove Killer', color: 'text-red-400 border-red-500/30 bg-red-500/10' },
+  { id: '1342912254542348298', label: 'Muncitor',     color: 'text-zinc-400 border-zinc-600/30 bg-zinc-600/10' },
 ]
+
 
 function getGrade(roleIds: string[]) {
   for (const g of GRADE_OPTIONS) {
