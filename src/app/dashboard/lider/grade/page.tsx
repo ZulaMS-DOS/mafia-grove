@@ -3,24 +3,27 @@ import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { RefreshCw } from 'lucide-react'
 
-const LIDER_ROLES    = ['955126889171804170']
-const COLIDER_ROLE   = '955126890472022066'
-const TESTER_ROLE    = '1462444900388704317'
-const MEMBRU_ROLES   = ['1501319885488390184']
-const MUNCITOR_ROLES = ['1342912254542348298']
+const GRADE_CONFIG = [
+  { id: '955126889171804170',  label: 'Lider',        color: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' },
+  { id: '955126890472022066',  label: 'Co-Lider',     color: 'text-orange-400 border-orange-500/30 bg-orange-500/10' },
+  { id: '1462444900388704317', label: 'Tester',       color: 'text-purple-400 border-purple-500/30 bg-purple-500/10' },
+  { id: '1501319885488390184', label: 'Membru',       color: 'text-grove-green border-grove-border bg-grove-dim' },
+  { id: '955126892984410162',  label: 'Grove Killer', color: 'text-red-400 border-red-500/30 bg-red-500/10' },
+  { id: '1342912254542348298', label: 'Muncitor',     color: 'text-zinc-400 border-zinc-600/30 bg-zinc-600/10' },
+]
+
+const GRADE_ORDER = ['Lider', 'Co-Lider', 'Tester', 'Membru', 'Grove Killer', 'Muncitor', 'Fără Grad']
 
 interface Member {
   id: string; discordId: string; username: string
   avatar: string | null; points: number; roleIds: string[]
 }
 
-function getAutoGrade(roleIds: string[]): { label: string; color: string } {
-  if (roleIds.includes(COLIDER_ROLE))                return { label: 'Co-Lider', color: 'text-orange-400 border-orange-500/30 bg-orange-500/10' }
-  if (roleIds.some(r => LIDER_ROLES.includes(r)))    return { label: 'Lider',    color: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' }
-  if (roleIds.includes(TESTER_ROLE))                 return { label: 'Tester',   color: 'text-purple-400 border-purple-500/30 bg-purple-500/10' }
-  if (roleIds.some(r => MEMBRU_ROLES.includes(r)))   return { label: 'Membru',   color: 'text-grove-green border-grove-border bg-grove-dim' }
-  if (roleIds.some(r => MUNCITOR_ROLES.includes(r))) return { label: 'Muncitor', color: 'text-zinc-400 border-zinc-600/30 bg-zinc-600/10' }
-  return { label: 'Fără Grad', color: 'text-zinc-600 border-zinc-700/30 bg-zinc-700/10' }
+// Returneaza TOATE gradele unui user
+function getGrades(roleIds: string[]): { label: string; color: string }[] {
+  const grades = GRADE_CONFIG.filter(g => roleIds.includes(g.id))
+  if (grades.length === 0) return [{ label: 'Fără Grad', color: 'text-zinc-600 border-zinc-700/30 bg-zinc-700/10' }]
+  return grades
 }
 
 export default function GradePage() {
@@ -58,11 +61,15 @@ export default function GradePage() {
     m.username.toLowerCase().includes(search.toLowerCase())
   )
 
-  const gradeOrder = ['Lider', 'Co-Lider', 'Tester', 'Membru', 'Muncitor', 'Fără Grad']
-  const grouped = gradeOrder.map(g => ({
-    grade:   g,
-    members: filtered.filter(m => getAutoGrade(m.roleIds).label === g),
-  })).filter(g => g.members.length > 0)
+  // Grupare — un user poate apare in mai multe categorii daca are mai multe grade
+  const grouped = GRADE_ORDER.map(gradeName => {
+    const gradeConf = GRADE_CONFIG.find(g => g.label === gradeName)
+    const gradeMembers = gradeName === 'Fără Grad'
+      ? filtered.filter(m => !GRADE_CONFIG.some(g => m.roleIds.includes(g.id)))
+      : filtered.filter(m => gradeConf && m.roleIds.includes(gradeConf.id))
+
+    return { grade: gradeName, members: gradeMembers }
+  }).filter(g => g.members.length > 0)
 
   return (
     <div className="space-y-5 animate-slide-up">
@@ -100,9 +107,9 @@ export default function GradePage() {
               {group.grade} <span className="text-zinc-700">({group.members.length})</span>
             </div>
             {group.members.map(m => {
-              const grade = getAutoGrade(m.roleIds)
+              const grades = getGrades(m.roleIds)
               return (
-                <div key={m.id} className="grove-card flex items-center gap-3 py-2.5">
+                <div key={`${group.grade}-${m.id}`} className="grove-card flex items-center gap-3 py-2.5">
                   <div className="w-10 h-10 rounded-full border-2 border-dark-border overflow-hidden shrink-0 bg-dark-muted flex items-center justify-center">
                     {m.avatar
                       ? <Image src={m.avatar} alt={m.username} width={40} height={40} className="object-cover" unoptimized />
@@ -113,9 +120,13 @@ export default function GradePage() {
                     <div className="font-semibold text-white text-sm truncate">{m.username}</div>
                     <div className="text-xs text-zinc-600">{m.points} Grove Coins</div>
                   </div>
-                  <span className={`text-xs px-3 py-1 rounded-full border font-semibold shrink-0 ${grade.color}`}>
-                    {grade.label}
-                  </span>
+                  <div className="flex flex-wrap gap-1 justify-end shrink-0 max-w-[160px]">
+                    {grades.map(g => (
+                      <span key={g.label} className={`text-xs px-2 py-0.5 rounded-full border font-semibold ${g.color}`}>
+                        {g.label}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )
             })}
