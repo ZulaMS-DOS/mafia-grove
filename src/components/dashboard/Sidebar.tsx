@@ -5,14 +5,16 @@ import { usePathname } from 'next/navigation'
 import {
   Clock, FileText, LogOut, Star, Users, Coins,
   Shield, Menu, X, UserCog, Megaphone,
-  LayoutDashboard, ShoppingCart, Dices, ListTodo, AlertTriangle, Bug, Zap
+  LayoutDashboard, ShoppingCart, Dices, ListTodo, AlertTriangle, Bug, Zap, Sword
 } from 'lucide-react'
 import { signOut, useSession } from 'next-auth/react'
 import clsx from 'clsx'
 
-const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
-const TESTER_ROLE      = '1462444900388704317'
-const MUNCITOR_ROLE    = '1342912254542348298'
+const LEADERSHIP_ROLES  = ['955126889171804170', '955126890472022066']
+const TESTER_ROLE       = '1462444900388704317'
+const MUNCITOR_ROLE     = '1342912254542348298'
+const MEMBRU_ROLE       = '1501319885488390184'
+const GROVE_KILLER_ROLE = '955126892984410162'
 
 const baseNav = [
   { href: '/dashboard',         icon: LayoutDashboard, label: 'Dashboard'    },
@@ -24,18 +26,11 @@ const baseNav = [
   { href: '/dashboard/tasks',   icon: ListTodo,        label: 'Tasks'        },
 ]
 
-const membruNav = [
-  { href: '/dashboard/anunturi',   icon: Megaphone,     label: 'Anunțuri'      },
-  { href: '/dashboard/taxa',       icon: Coins,         label: 'Taxa Sindicat' },
-  { href: '/dashboard/amenzi',     icon: AlertTriangle, label: 'Amenzile Mele' },
-  { href: '/dashboard/bug-report', icon: Bug,           label: 'Bug Report'    },
-]
-
-const muncitorNav = [
+// Nav comun pentru toti (fara taxa/task specific)
+const importantNavBase = [
   { href: '/dashboard/anunturi',   icon: Megaphone,     label: 'Anunțuri'      },
   { href: '/dashboard/amenzi',     icon: AlertTriangle, label: 'Amenzile Mele' },
   { href: '/dashboard/bug-report', icon: Bug,           label: 'Bug Report'    },
-  { href: '/dashboard/sageti',     icon: Zap,           label: 'Task Săgeată'  },
 ]
 
 const testerNav = [
@@ -66,9 +61,16 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
 
-  const roleIds    = session?.user.roleIds || []
-  const isTester   = roleIds.includes(TESTER_ROLE) && !isLeadership
-  const isMuncitor = roleIds.includes(MUNCITOR_ROLE) && !isLeadership && !isTester && !isMembru
+  const roleIds      = session?.user.roleIds || []
+  const isTester     = roleIds.includes(TESTER_ROLE) && !isLeadership
+  const isMuncitor   = roleIds.includes(MUNCITOR_ROLE) && !isLeadership && !isTester
+  const isGroveKiller = roleIds.includes(GROVE_KILLER_ROLE) && !isLeadership && !isTester
+  const isMembrul    = roleIds.includes(MEMBRU_ROLE) && !isLeadership && !isTester
+
+  // Determina ce sectiuni extra apara in Important (multi-grad)
+  const showTaxa         = isMembrul || isMembru || (isGroveKiller && isMuncitor === false && isMembrul === false)
+  const showTaskSaptamanal = isGroveKiller
+  const showSageti       = isMuncitor
 
   const NavItem = ({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) => {
     const active = path === href
@@ -87,6 +89,8 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
     )
   }
 
+  const hasImportant = isMembru || isLeadership || isTester || isMuncitor || isGroveKiller
+
   const SidebarContent = () => (
     <aside className="w-64 bg-dark-card flex flex-col h-full">
       <div className="p-5 border-b border-dark-border flex items-center justify-between">
@@ -103,17 +107,22 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
         <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2">General</div>
         {baseNav.map(item => <NavItem key={item.href} {...item} />)}
 
-        {(isMembru || isLeadership || isTester) && (
+        {hasImportant && (
           <>
             <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2 mt-3">Important</div>
-            {membruNav.map(item => <NavItem key={item.href} {...item} />)}
-          </>
-        )}
-
-        {isMuncitor && (
-          <>
-            <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2 mt-3">Important</div>
-            {muncitorNav.map(item => <NavItem key={item.href} {...item} />)}
+            {importantNavBase.map(item => <NavItem key={item.href} {...item} />)}
+            {/* Taxa Sindicat — Membri + Lider/Tester + cineva cu grad Membru */}
+            {(isMembru || isLeadership || isTester || isMembrul) && (
+              <NavItem href="/dashboard/taxa" icon={Coins} label="Taxa Sindicat" />
+            )}
+            {/* Task Saptamanal — Grove Killer */}
+            {showTaskSaptamanal && (
+              <NavItem href="/dashboard/task-saptamanal" icon={Sword} label="Task Săptămânal" />
+            )}
+            {/* Sageti — Muncitor */}
+            {showSageti && (
+              <NavItem href="/dashboard/sageti" icon={Zap} label="Task Săgeată" />
+            )}
           </>
         )}
 
