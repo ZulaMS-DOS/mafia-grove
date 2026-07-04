@@ -14,7 +14,6 @@ const GRADE_OPTIONS = [
   { id: '1342912254542348298', label: 'Muncitor',     color: 'text-zinc-400 border-zinc-600/30 bg-zinc-600/10' },
 ]
 
-
 function getGrade(roleIds: string[]) {
   for (const g of GRADE_OPTIONS) {
     if (roleIds.includes(g.id)) return g
