@@ -18,7 +18,7 @@ export default function LiderTasksPage() {
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(false)
   const [reviewing, setReview]  = useState<string | null>(null)
-  const [deleting, setDeleting] = useState<string | null>(null)  // id-ul care așteaptă confirmare
+  const [deleting, setDeleting] = useState<string | null>(null)
   const [msg, setMsg]           = useState('')
   const [tab, setTab]           = useState<'taskuri' | 'pending'>('taskuri')
 
@@ -167,8 +167,6 @@ export default function LiderTasksPage() {
                           </span>
                         </div>
                       </div>
-
-                      {/* Confirmare inline in loc de confirm() */}
                       {deleting === task.id ? (
                         <div className="flex items-center gap-2 shrink-0 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2">
                           <AlertTriangle size={13} className="text-red-400" />
@@ -215,8 +213,7 @@ export default function LiderTasksPage() {
                 <div key={claim.id} className="flex items-center gap-3 px-5 py-4 hover:bg-dark-hover transition-colors">
                   <div className="w-9 h-9 rounded-full border border-dark-border overflow-hidden bg-dark-muted flex items-center justify-center shrink-0">
                     {claim.user.avatar
-                      ? <Image src={`https://cdn.discordapp.com/avatars/${claim.user.discordId}/${claim.user.avatar}.png`}
-                          alt={claim.user.username} width={36} height={36} className="object-cover" />
+                      ? <Image src={claim.user.avatar} alt={claim.user.username} width={36} height={36} className="object-cover" unoptimized />
                       : <span className="text-sm">👤</span>
                     }
                   </div>
