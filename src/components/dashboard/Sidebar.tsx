@@ -10,11 +10,14 @@ import {
 import { signOut, useSession } from 'next-auth/react'
 import clsx from 'clsx'
 
-const LEADERSHIP_ROLES  = ['955126889171804170', '955126890472022066']
-const TESTER_ROLE       = '1462444900388704317'
-const MUNCITOR_ROLE     = '1342912254542348298'
-const MEMBRU_ROLE       = '1501319885488390184'
-const GROVE_KILLER_ROLE = '955126892984410162'
+const ROLES = {
+  LIDER:        '955126889171804170',
+  CO_LIDER:     '955126890472022066',
+  TESTER:       '1462444900388704317',
+  MEMBRU:       '1501319885488390184',
+  GROVE_KILLER: '955126892984410162',
+  MUNCITOR:     '1342912254542348298',
+}
 
 const baseNav = [
   { href: '/dashboard',         icon: LayoutDashboard, label: 'Dashboard'    },
@@ -24,13 +27,6 @@ const baseNav = [
   { href: '/dashboard/shop',    icon: ShoppingCart,    label: 'Shop'         },
   { href: '/dashboard/wheel',   icon: Dices,           label: 'Fortune Wheel'},
   { href: '/dashboard/tasks',   icon: ListTodo,        label: 'Tasks'        },
-]
-
-// Nav comun pentru toti (fara taxa/task specific)
-const importantNavBase = [
-  { href: '/dashboard/anunturi',   icon: Megaphone,     label: 'Anunțuri'      },
-  { href: '/dashboard/amenzi',     icon: AlertTriangle, label: 'Amenzile Mele' },
-  { href: '/dashboard/bug-report', icon: Bug,           label: 'Bug Report'    },
 ]
 
 const testerNav = [
@@ -53,22 +49,24 @@ const liderNav = [
 
 interface SidebarProps {
   isLeadership: boolean
-  isMembru: boolean
+  roleIds: string[]
 }
 
-export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
+export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
   const path = usePathname()
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
 
-  const roleIds      = session?.user.roleIds || []
-  const isTester     = roleIds.includes(TESTER_ROLE) && !isLeadership
-  const isMuncitor   = roleIds.includes(MUNCITOR_ROLE) && !isLeadership && !isTester
-  const isGroveKiller = roleIds.includes(GROVE_KILLER_ROLE) && !isLeadership && !isTester
-  const isMembrul    = roleIds.includes(MEMBRU_ROLE) && !isLeadership && !isTester
+  // Detecteaza toate gradele userului
+  const has = (role: string) => roleIds.includes(role)
+  const isTester     = has(ROLES.TESTER)     && !isLeadership
+  const isMembru     = has(ROLES.MEMBRU)
+  const isGroveKiller = has(ROLES.GROVE_KILLER)
+  const isMuncitor   = has(ROLES.MUNCITOR)
 
-  // Determina ce sectiuni extra apara in Important (multi-grad)
-  const showTaxa         = isMembrul || isMembru || (isGroveKiller && isMuncitor === false && isMembrul === false)
+  // Sectiunile Important — combina orice grade are userul
+  const showImportant    = isLeadership || isTester || isMembru || isGroveKiller || isMuncitor
+  const showTaxa         = isLeadership || isTester || isMembru
   const showTaskSaptamanal = isGroveKiller
   const showSageti       = isMuncitor
 
@@ -89,8 +87,6 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
     )
   }
 
-  const hasImportant = isMembru || isLeadership || isTester || isMuncitor || isGroveKiller
-
   const SidebarContent = () => (
     <aside className="w-64 bg-dark-card flex flex-col h-full">
       <div className="p-5 border-b border-dark-border flex items-center justify-between">
@@ -107,22 +103,15 @@ export function Sidebar({ isLeadership, isMembru }: SidebarProps) {
         <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2">General</div>
         {baseNav.map(item => <NavItem key={item.href} {...item} />)}
 
-        {hasImportant && (
+        {showImportant && (
           <>
             <div className="text-xs text-zinc-700 uppercase tracking-widest px-4 py-2 mt-3">Important</div>
-            {importantNavBase.map(item => <NavItem key={item.href} {...item} />)}
-            {/* Taxa Sindicat — Membri + Lider/Tester + cineva cu grad Membru */}
-            {(isMembru || isLeadership || isTester || isMembrul) && (
-              <NavItem href="/dashboard/taxa" icon={Coins} label="Taxa Sindicat" />
-            )}
-            {/* Task Saptamanal — Grove Killer */}
-            {showTaskSaptamanal && (
-              <NavItem href="/dashboard/task-saptamanal" icon={Sword} label="Task Săptămânal" />
-            )}
-            {/* Sageti — Muncitor */}
-            {showSageti && (
-              <NavItem href="/dashboard/sageti" icon={Zap} label="Task Săgeată" />
-            )}
+            <NavItem href="/dashboard/anunturi"   icon={Megaphone}     label="Anunțuri"       />
+            <NavItem href="/dashboard/amenzi"     icon={AlertTriangle} label="Amenzile Mele"  />
+            <NavItem href="/dashboard/bug-report" icon={Bug}           label="Bug Report"     />
+            {showTaxa          && <NavItem href="/dashboard/taxa"            icon={Coins} label="Taxa Sindicat"   />}
+            {showTaskSaptamanal && <NavItem href="/dashboard/task-saptamanal" icon={Sword} label="Task Săptămânal" />}
+            {showSageti        && <NavItem href="/dashboard/sageti"          icon={Zap}   label="Task Săgeată"   />}
           </>
         )}
 
