@@ -120,14 +120,14 @@ model Announcement {
 }
 
 model TaxItem {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
-  bucati      Int      @default(0)
+  bucati      Int       @default(0)
   termen      DateTime?
-  targetRoles String[] @default([])
+  targetRoles String[]  @default([])
   weekStart   DateTime
   createdBy   String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 }
 
 model TaxPayment {
@@ -149,7 +149,7 @@ model ShopItem {
   description String?
   imageUrl    String?
   price       Int
-  stock       Int      @default(-1) // -1 = infinit
+  stock       Int      @default(-1)
   active      Boolean  @default(true)
   createdBy   String
   createdAt   DateTime @default(now())
@@ -173,22 +173,22 @@ model ShopOrder {
 model WheelPrize {
   id        String   @id @default(cuid())
   label     String
-  type      String   @default("points") // "points" sau "item"
-  value     Int      @default(0)        // puncte acordate sau itemId daca e item
-  itemId    String?                     // optional - daca e item din shop
-  chance    Int      @default(10)       // sansa in procente (toate trebuie sa dea 100)
+  type      String   @default("points")
+  value     Int      @default(0)
+  itemId    String?
+  chance    Int      @default(10)
   color     String   @default("#00ff66")
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
 }
 
 model WheelSpin {
-  id        String   @id @default(cuid())
-  userId    String
-  prizeId   String
+  id         String   @id @default(cuid())
+  userId     String
+  prizeId    String
   prizeLabel String
-  cost      Int
-  createdAt DateTime @default(now())
+  cost       Int
+  createdAt  DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -204,7 +204,7 @@ model Task {
   title       String
   description String
   points      Int
-  stock       Int      @default(-1) // -1 = nelimitat
+  stock       Int      @default(-1)
   active      Boolean  @default(true)
   createdBy   String
   createdAt   DateTime @default(now())
@@ -213,16 +213,16 @@ model Task {
 }
 
 model TaskClaim {
-  id        String      @id @default(cuid())
-  taskId    String
-  userId    String
-  status    ClaimStatus @default(PENDING)
-  claimedAt DateTime    @default(now())
+  id         String      @id @default(cuid())
+  taskId     String
+  userId     String
+  status     ClaimStatus @default(PENDING)
+  claimedAt  DateTime    @default(now())
   reviewedBy String?
   reviewedAt DateTime?
 
-  task Task @relation(fields: [taskId],  references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId],  references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, userId])
 }
@@ -236,7 +236,7 @@ enum ClaimStatus {
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  type      String   // "announcement" | "tax" | "leave" | "resignation" | "task"
+  type      String
   title     String
   message   String
   read      Boolean  @default(false)
@@ -246,27 +246,28 @@ model Notification {
 }
 
 model Fine {
-  id        String   @id @default(cuid())
-  userId    String
-  material  String
-  bucati    Int      @default(0)
-  termen    String   @default("")
-  fwLevel   Int?
-  givenBy   String
+  id          String   @id @default(cuid())
+  userId      String
+  tip         String   @default("amenda") // "amenda" sau "fw"
+  material    String
+  bucati      Int      @default(0)
+  termen      String   @default("")
+  fwLevel     Int?
+  givenBy     String
   givenByName String
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model BugReport {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   title       String
   description String
-  mediaUrls   String[] @default([])
+  mediaUrls   String[]  @default([])
   status      BugStatus @default(OPEN)
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
