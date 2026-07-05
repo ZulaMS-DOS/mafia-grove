@@ -22,14 +22,17 @@ export async function POST(req: NextRequest) {
   const { session, error } = await requireFineGiver()
   if (error) return error
 
-  const { userId, material, bucati, termen, fwLevel } = await req.json()
+  const { userId, tip, material, bucati, termen, fwLevel } = await req.json()
   if (!userId || !material) {
     return NextResponse.json({ error: 'Membru și material obligatorii' }, { status: 400 })
   }
 
+  const tipFinal = tip === 'fw' ? 'fw' : 'amenda'
+
   const fine = await (prisma as any).fine.create({
     data: {
       userId,
+      tip:         tipFinal,
       material,
       bucati:      parseInt(bucati) || 0,
       termen:      termen?.trim()   || '',
@@ -39,13 +42,22 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  const fwText = fwLevel ? ` + Faction Warn ${fwLevel}/3` : ''
-  await notify({
-    userId,
-    type:    'fine',
-    title:   '⚠️ Ai primit o amendă',
-    message: `${material}${bucati ? ` (${bucati} buc)` : ''}${termen ? ` · Termen: ${termen}` : ''}${fwText} — de la ${session!.user.name}`,
-  })
+  if (tipFinal === 'fw') {
+    await notify({
+      userId,
+      type:    'fine',
+      title:   '🚨 Ai primit un Faction Warn',
+      message: `FW ${fwLevel}/3 — Motiv: ${material} — de la ${session!.user.name}`,
+    })
+  } else {
+    const fwText = fwLevel ? ` + Faction Warn ${fwLevel}/3` : ''
+    await notify({
+      userId,
+      type:    'fine',
+      title:   '⚠️ Ai primit o amendă',
+      message: `${material}${bucati ? ` (${bucati} buc)` : ''}${termen ? ` · Termen: ${termen}` : ''}${fwText} — de la ${session!.user.name}`,
+    })
+  }
 
   return NextResponse.json({ fine })
 }
