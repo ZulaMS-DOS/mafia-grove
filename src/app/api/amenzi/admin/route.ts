@@ -12,16 +12,20 @@ export async function GET() {
       take:    100,
       include: { user: { select: { username: true, avatar: true, discordId: true } } },
     }),
-   prisma.user.findMany({
-  where: {
-    roleIds: { hasSome: ['955126889171804170','955126890472022066','1462444900388704317','1501319885488390184','1342912254542348298'] }
-  },
-  orderBy: { username: 'asc' },
-  select:  { id: true, username: true, avatar: true, discordId: true },
-})
+    prisma.user.findMany({
+      where: {
+        roleIds: { hasSome: ['955126889171804170','955126890472022066','1462444900388704317','1501319885488390184','1342912254542348298','955126892984410162'] }
+      },
+      orderBy: { username: 'asc' },
+      select:  { id: true, username: true, avatar: true, discordId: true },
+    })
   ])
 
-  return NextResponse.json({ fines, members })
+  // Separa amenzile de fw-uri
+  const amenzi = fines.filter((f: any) => f.tip === 'amenda' || !f.tip)
+  const fwuri  = fines.filter((f: any) => f.tip === 'fw')
+
+  return NextResponse.json({ fines, amenzi, fwuri, members })
 }
 
 export async function DELETE(req: NextRequest) {
