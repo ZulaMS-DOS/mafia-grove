@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, requireLeadership } from '@/lib/middleware'
 import { checkRateLimit } from '@/lib/rateLimit'
+import { notify } from '@/lib/notifications'
 
-// POST — cumpara produs
+const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
+
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -13,7 +15,6 @@ export async function POST(
 
   const userId = session!.user.id
 
-  // Limita: max 10 cumparari pe minut (suficient pt utilizare normala)
   const rl = checkRateLimit(`shop-buy:${userId}`, { windowMs: 60_000, max: 10 })
   if (!rl.allowed) {
     return NextResponse.json(
@@ -29,18 +30,12 @@ export async function POST(
   try {
     const result = await prisma.$transaction(async (tx) => {
       const item = await (tx as any).shopItem.findUnique({ where: { id } })
-      if (!item || !item.active) {
-        throw new Error('NOT_FOUND')
-      }
-      if (item.stock !== -1 && item.stock < qty) {
-        throw new Error(`STOCK:${item.stock}`)
-      }
+      if (!item || !item.active) throw new Error('NOT_FOUND')
+      if (item.stock !== -1 && item.stock < qty) throw new Error(`STOCK:${item.stock}`)
 
       const user  = await tx.user.findUnique({ where: { id: userId } })
       const total = item.price * qty
-      if (!user || user.points < total) {
-        throw new Error(`POINTS:${user?.points ?? 0}:${total}`)
-      }
+      if (!user || user.points < total) throw new Error(`POINTS:${user?.points ?? 0}:${total}`)
 
       const updatedUser = await tx.user.update({
         where:  { id: userId },
@@ -59,17 +54,31 @@ export async function POST(
         })
       }
 
-      return { pointsLeft: updatedUser.points, order }
+      return { pointsLeft: updatedUser.points, order, itemName: item.name, total }
     })
 
-    return NextResponse.json({ success: true, ...result })
+    // Notifica Lider/Co-Lider
+    const buyer = await prisma.user.findUnique({ where: { id: userId }, select: { username: true } })
+    const leaders = await prisma.user.findMany({
+      where:  { roleIds: { hasSome: LEADERSHIP_ROLES } },
+      select: { id: true },
+    })
+    await Promise.all(
+      leaders
+        .filter(l => l.id !== userId)
+        .map(l => notify({
+          userId:  l.id,
+          type:    'announcement',
+          title:   '🛒 Cumpărătură Nouă',
+          message: `${buyer?.username} a cumpărat "${result.itemName}" pentru ${result.total} pts`,
+        }))
+    )
+
+    return NextResponse.json({ success: true, pointsLeft: result.pointsLeft, order: result.order })
 
   } catch (e: any) {
     const msg = typeof e.message === 'string' ? e.message : ''
-
-    if (msg === 'NOT_FOUND') {
-      return NextResponse.json({ error: 'Produs inexistent' }, { status: 404 })
-    }
+    if (msg === 'NOT_FOUND') return NextResponse.json({ error: 'Produs inexistent' }, { status: 404 })
     if (msg.startsWith('STOCK:')) {
       const stock = msg.split(':')[1]
       return NextResponse.json({ error: `Stoc insuficient (disponibil: ${stock})` }, { status: 400 })
@@ -78,12 +87,10 @@ export async function POST(
       const [, have, need] = msg.split(':')
       return NextResponse.json({ error: `Puncte insuficiente (ai ${have}, ai nevoie de ${need})` }, { status: 400 })
     }
-
     throw e
   }
 }
 
-// PATCH — editeaza produs
 export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -99,16 +106,15 @@ export async function PATCH(
     data: {
       ...(data.name        !== undefined && { name:        String(data.name) }),
       ...(data.description !== undefined && { description: data.description || null }),
-      ...(data.imageUrl     !== undefined && { imageUrl:    data.imageUrl     || null }),
-      ...(data.price        !== undefined && { price:       parseInt(data.price) }),
-      ...(data.stock        !== undefined && { stock:       parseInt(data.stock) }),
-      ...(data.active       !== undefined && { active:      Boolean(data.active) }),
+      ...(data.imageUrl    !== undefined && { imageUrl:    data.imageUrl    || null }),
+      ...(data.price       !== undefined && { price:       parseInt(data.price) }),
+      ...(data.stock       !== undefined && { stock:       parseInt(data.stock) }),
+      ...(data.active      !== undefined && { active:      Boolean(data.active) }),
     },
   })
   return NextResponse.json({ item })
 }
 
-// DELETE — dezactiveaza produs
 export async function DELETE(
   _req: NextRequest,
   context: { params: Promise<{ id: string }> }
