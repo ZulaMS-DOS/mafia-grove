@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth, requireLeadership } from '@/lib/middleware'
+import { requireAuth } from '@/lib/middleware'
 import { checkRateLimit } from '@/lib/rateLimit'
+import { notify } from '@/lib/notifications'
+
+const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
 
 // GET — toate taskurile active + statusul userului
 export async function GET() {
@@ -43,7 +46,6 @@ export async function POST(req: NextRequest) {
 
   const userId = session!.user.id
 
-  // Limita: max 15 claim-uri pe minut
   const rl = checkRateLimit(`task-claim:${userId}`, { windowMs: 60_000, max: 15 })
   if (!rl.allowed) {
     return NextResponse.json(
@@ -64,24 +66,42 @@ export async function POST(req: NextRequest) {
         include: { _count: { select: { claims: { where: { status: 'APPROVED' } } } } },
       })
 
-      if (!task || !task.active) {
-        throw new Error('NOT_FOUND')
-      }
-      if (task.stock !== -1 && task._count.claims >= task.stock) {
-        throw new Error('FULL')
-      }
+      if (!task || !task.active) throw new Error('NOT_FOUND')
+      if (task.stock !== -1 && task._count.claims >= task.stock) throw new Error('FULL')
 
       const existing = await (tx as any).taskClaim.findUnique({
         where: { taskId_userId: { taskId, userId } },
       })
-      if (existing) {
-        throw new Error('ALREADY_CLAIMED')
-      }
+      if (existing) throw new Error('ALREADY_CLAIMED')
 
       return (tx as any).taskClaim.create({
         data: { taskId, userId },
       })
     })
+
+    // Notifica Lider/Co-Lider ca cineva a preluat un task
+    const user = await prisma.user.findUnique({
+      where:  { id: userId },
+      select: { username: true },
+    })
+    const task = await (prisma as any).task.findUnique({
+      where:  { id: taskId },
+      select: { title: true },
+    })
+    const leaders = await prisma.user.findMany({
+      where:  { roleIds: { hasSome: LEADERSHIP_ROLES } },
+      select: { id: true },
+    })
+    await Promise.all(
+      leaders
+        .filter(l => l.id !== userId)
+        .map(l => notify({
+          userId:  l.id,
+          type:    'task',
+          title:   '📋 Task Preluat',
+          message: `${user?.username} a preluat task-ul "${task?.title}".`,
+        }))
+    )
 
     return NextResponse.json({ claim })
 
