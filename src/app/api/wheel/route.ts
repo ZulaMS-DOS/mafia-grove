@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/middleware'
 import { checkRateLimit } from '@/lib/rateLimit'
+import { notify } from '@/lib/notifications'
+
+const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
 
 export async function GET() {
   const { error } = await requireAuth()
@@ -36,7 +39,6 @@ export async function POST() {
 
   const userId = session!.user.id
 
-  // Limita specifica: max 6 spinuri pe minut (suficient pentru folosire normala, blocheaza spam-ul)
   const rl = checkRateLimit(`wheel-spin:${userId}`, { windowMs: 60_000, max: 6 })
   if (!rl.allowed) {
     return NextResponse.json(
@@ -64,8 +66,6 @@ export async function POST() {
     if (rand <= 0) { prize = p; break }
   }
 
-  // Tranzactie atomica: verifica + scade punctele intr-un singur pas,
-  // astfel incat doua request-uri simultane sa nu poata "fenta" verificarea
   let userAfterDeduction
   try {
     userAfterDeduction = await prisma.$transaction(async (tx) => {
@@ -129,6 +129,23 @@ export async function POST() {
   await (prisma as any).wheelSpin.create({
     data: { userId, prizeId: prize.id, prizeLabel: prize.label, cost: spinCost },
   })
+
+  // Notifica Lider/Co-Lider despre spin
+  const spinner = await prisma.user.findUnique({ where: { id: userId }, select: { username: true } })
+  const leaders = await prisma.user.findMany({
+    where:  { roleIds: { hasSome: LEADERSHIP_ROLES } },
+    select: { id: true },
+  })
+  await Promise.all(
+    leaders
+      .filter(l => l.id !== userId)
+      .map(l => notify({
+        userId:  l.id,
+        type:    'announcement',
+        title:   '🎰 Spin Roată',
+        message: `${spinner?.username} a câștigat "${prizeResult}" la Fortune Wheel!`,
+      }))
+  )
 
   return NextResponse.json({
     success: true,
