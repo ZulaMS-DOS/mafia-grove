@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   Clock, FileText, LogOut, Star, Users, Coins,
   Shield, Menu, X, UserCog, Megaphone,
-  LayoutDashboard, ShoppingCart, Dices, ListTodo, AlertTriangle, Bug, Zap, Sword
+  LayoutDashboard, ShoppingCart, Dices, ListTodo, AlertTriangle, Bug, Zap, Sword, Trophy
 } from 'lucide-react'
 import { signOut, useSession } from 'next-auth/react'
 import clsx from 'clsx'
