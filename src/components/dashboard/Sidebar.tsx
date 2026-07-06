@@ -20,13 +20,14 @@ const ROLES = {
 }
 
 const baseNav = [
-  { href: '/dashboard',         icon: LayoutDashboard, label: 'Dashboard'    },
-  { href: '/dashboard/clock',   icon: Clock,           label: 'Clock In/Out' },
-  { href: '/dashboard/invoiri', icon: FileText,        label: 'Invoiri'      },
-  { href: '/dashboard/demisii', icon: LogOut,          label: 'Demisii'      },
-  { href: '/dashboard/shop',    icon: ShoppingCart,    label: 'Shop'         },
-  { href: '/dashboard/wheel',   icon: Dices,           label: 'Fortune Wheel'},
-  { href: '/dashboard/tasks',   icon: ListTodo,        label: 'Tasks'        },
+  { href: '/dashboard',              icon: LayoutDashboard, label: 'Dashboard'    },
+  { href: '/dashboard/clock',        icon: Clock,           label: 'Clock In/Out' },
+  { href: '/dashboard/invoiri',      icon: FileText,        label: 'Invoiri'      },
+  { href: '/dashboard/demisii',      icon: LogOut,          label: 'Demisii'      },
+  { href: '/dashboard/shop',         icon: ShoppingCart,    label: 'Shop'         },
+  { href: '/dashboard/wheel',        icon: Dices,           label: 'Fortune Wheel'},
+  { href: '/dashboard/tasks',        icon: ListTodo,        label: 'Tasks'        },
+  { href: '/dashboard/leaderboard',  icon: Trophy,          label: 'Leaderboard'  },
 ]
 
 const testerNav = [
