@@ -123,6 +123,7 @@ model TaxItem {
   id          String    @id @default(cuid())
   name        String
   bucati      Int       @default(0)
+  jafuri      Json?
   termen      DateTime?
   targetRoles String[]  @default([])
   weekStart   DateTime
