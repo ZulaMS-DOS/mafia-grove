@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, Trash2, Save, Users, RefreshCw } from 'lucide-react'
+import { Plus, Trash2, Save, Users, RefreshCw, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
 import Image from 'next/image'
@@ -14,6 +14,31 @@ const GRADE_OPTIONS = [
   { id: '1342912254542348298', label: 'Muncitor',     color: 'text-zinc-400 border-zinc-600/30 bg-zinc-600/10' },
 ]
 
+const GROVE_KILLER_ID = '955126892984410162'
+
+const JAF_TYPES = [
+  { value: 'vinewood',    label: '🎬 Vinewood'    },
+  { value: 'alta',        label: '🏦 Alta'        },
+  { value: 'desert',      label: '🏜️ Desert'      },
+  { value: 'highway',     label: '🛣️ Highway'     },
+  { value: 'pacific',     label: '🌊 Pacific'     },
+  { value: 'blaine',      label: '⛰️ Blaine'      },
+  { value: 'biju',        label: '💎 Biju'        },
+  { value: 'magazin',     label: '🏪 Magazin'     },
+  { value: 'digital_den', label: '💻 Digital Den' },
+]
+
+interface JafEntry { type: string; count: number }
+interface TaxItem {
+  id?: string; name: string; bucati: number; termen: string
+  targetRoles: string[]; jafuri: JafEntry[] | null
+}
+interface Payment {
+  id: string; paid: boolean; paidAt: string | null
+  user: { username: string; avatar: string | null; discordId: string; roleIds: string[] }
+}
+interface Member { id: string; username: string; avatar: string | null; discordId: string; roleIds: string[] }
+
 function getGrade(roleIds: string[]) {
   for (const g of GRADE_OPTIONS) {
     if (roleIds.includes(g.id)) return g
@@ -21,15 +46,10 @@ function getGrade(roleIds: string[]) {
   return { label: 'Fără Grad', color: 'text-zinc-600 border-zinc-700/30 bg-zinc-700/10' }
 }
 
-interface TaxItem { id?: string; name: string; bucati: number; termen: string; targetRoles: string[] }
-interface Payment {
-  id: string; paid: boolean; paidAt: string | null
-  user: { username: string; avatar: string | null; discordId: string; roleIds: string[] }
-}
-interface Member { id: string; username: string; avatar: string | null; discordId: string; roleIds: string[] }
+const emptyItem = (): TaxItem => ({ name: '', bucati: 0, termen: '', targetRoles: [], jafuri: null })
 
 export default function LiderTaxaPage() {
-  const [items, setItems]       = useState<TaxItem[]>([{ name: '', bucati: 0, termen: '', targetRoles: [] }])
+  const [items, setItems]       = useState<TaxItem[]>([emptyItem()])
   const [payments, setPayments] = useState<Payment[]>([])
   const [members, setMembers]   = useState<Member[]>([])
   const [loading, setLoading]   = useState(true)
@@ -52,20 +72,19 @@ export default function LiderTaxaPage() {
         bucati:      i.bucati,
         termen:      i.termen ? new Date(i.termen).toISOString().split('T')[0] : '',
         targetRoles: i.targetRoles || [],
+        jafuri:      i.jafuri || null,
       })))
     } else {
-      setItems([{ name: '', bucati: 0, termen: '', targetRoles: [] }])
+      setItems([emptyItem()])
     }
     setPayments(d.payments || [])
-    setMembers(d.members  || [])
+    setMembers(d.members   || [])
     setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
 
-  const addItem = () => {
-    setItems(prev => [...prev, { name: '', bucati: 0, termen: '', targetRoles: [] }])
-  }
+  const addItem = () => setItems(prev => [...prev, emptyItem()])
 
   const removeItem = async (idx: number) => {
     const item = items[idx]
@@ -80,10 +99,7 @@ export default function LiderTaxaPage() {
       setMsg('🗑️ Material șters!')
       setTimeout(() => setMsg(''), 3000)
     }
-    setItems(prev => {
-      const next = prev.filter((_, j) => j !== idx)
-      return next.length === 0 ? [] : next
-    })
+    setItems(prev => prev.filter((_, j) => j !== idx).length ? prev.filter((_, j) => j !== idx) : [emptyItem()])
   }
 
   const updateItem = (idx: number, field: keyof TaxItem, value: any) => {
@@ -94,10 +110,35 @@ export default function LiderTaxaPage() {
     setItems(prev => prev.map((item, j) => {
       if (j !== idx) return item
       const has = item.targetRoles.includes(roleId)
-      return {
-        ...item,
-        targetRoles: has ? item.targetRoles.filter(r => r !== roleId) : [...item.targetRoles, roleId],
-      }
+      const newRoles = has ? item.targetRoles.filter(r => r !== roleId) : [...item.targetRoles, roleId]
+      // Daca adaugam Grove Killer si nu exista jafuri, initializam lista goala
+      const newJafuri = newRoles.includes(GROVE_KILLER_ID) && !item.jafuri ? [] : item.jafuri
+      return { ...item, targetRoles: newRoles, jafuri: newJafuri }
+    }))
+  }
+
+  const addJaf = (idx: number) => {
+    setItems(prev => prev.map((item, j) => {
+      if (j !== idx) return item
+      const jafuri = item.jafuri || []
+      return { ...item, jafuri: [...jafuri, { type: 'alta', count: 1 }] }
+    }))
+  }
+
+  const updateJaf = (idx: number, jafIdx: number, field: 'type' | 'count', value: string | number) => {
+    setItems(prev => prev.map((item, j) => {
+      if (j !== idx) return item
+      const jafuri = (item.jafuri || []).map((jaf, k) =>
+        k === jafIdx ? { ...jaf, [field]: value } : jaf
+      )
+      return { ...item, jafuri }
+    }))
+  }
+
+  const removeJaf = (idx: number, jafIdx: number) => {
+    setItems(prev => prev.map((item, j) => {
+      if (j !== idx) return item
+      return { ...item, jafuri: (item.jafuri || []).filter((_, k) => k !== jafIdx) }
     }))
   }
 
@@ -109,12 +150,8 @@ export default function LiderTaxaPage() {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ items: valid }),
     })
-    if (r.ok) {
-      setMsg(`✅ Taxa salvată! ${valid.length} materiale.`)
-      await load()
-    } else {
-      setMsg('❌ Eroare la salvare')
-    }
+    if (r.ok) { setMsg(`✅ Taxa salvată! ${valid.length} materiale.`); await load() }
+    else       { setMsg('❌ Eroare la salvare') }
     setSaving(false)
     setTimeout(() => setMsg(''), 4000)
   }
@@ -168,75 +205,101 @@ export default function LiderTaxaPage() {
         ))}
       </div>
 
-      {msg && (
-        <div className="p-3 bg-dark-hover rounded-xl text-sm text-grove-green border border-grove-border">{msg}</div>
-      )}
+      {msg && <div className="p-3 bg-dark-hover rounded-xl text-sm text-grove-green border border-grove-border">{msg}</div>}
 
       {tab === 'seteaza' && (
         <div className="grove-card space-y-4">
-          <h2 className="text-sm font-semibold text-grove-green uppercase tracking-widest mb-2">
-            Materiale Săptămâna Curentă
-          </h2>
+          <h2 className="text-sm font-semibold text-grove-green uppercase tracking-widest">Materiale Săptămâna Curentă</h2>
 
-          {items.map((item, idx) => (
-            <div key={item.id || idx} className="space-y-2 pb-4 border-b border-dark-border/50 last:border-0">
-              <div className="grid grid-cols-12 gap-2 items-center">
-                <input
-                  className="grove-input col-span-5 text-sm"
-                  placeholder="ex: Monede Sindicat"
-                  value={item.name}
-                  onChange={e => updateItem(idx, 'name', e.target.value)}
-                />
-                <input
-                  type="number" min="0"
-                  className="grove-input col-span-2 text-sm text-center"
-                  placeholder="0"
-                  value={item.bucati || ''}
-                  onChange={e => updateItem(idx, 'bucati', parseInt(e.target.value) || 0)}
-                />
-                <input
-                  type="date"
-                  className="grove-input col-span-4 text-sm"
-                  value={item.termen}
-                  onChange={e => updateItem(idx, 'termen', e.target.value)}
-                />
-                <button
-                  onClick={() => removeItem(idx)}
-                  disabled={deleting === idx}
-                  className="col-span-1 p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center disabled:opacity-50"
-                >
-                  {deleting === idx
-                    ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-                    : <Trash2 size={13} />
-                  }
-                </button>
-              </div>
-
-              <div>
-                <div className="text-xs text-zinc-600 uppercase tracking-wider mb-1.5 px-1">Pentru ce grade?</div>
-                <div className="flex flex-wrap gap-2">
-                  {GRADE_OPTIONS.map(g => {
-                    const checked = item.targetRoles.includes(g.id)
-                    return (
-                      <button
-                        key={g.id}
-                        type="button"
-                        onClick={() => toggleRole(idx, g.id)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                          checked ? g.color : 'text-zinc-600 border-dark-border bg-dark-hover'
-                        }`}
-                      >
-                        {checked ? '✓' : ''} {g.label}
-                      </button>
-                    )
-                  })}
+          {items.map((item, idx) => {
+            const isGroveKiller = item.targetRoles.includes(GROVE_KILLER_ID)
+            return (
+              <div key={item.id || idx} className="space-y-3 pb-4 border-b border-dark-border/50 last:border-0">
+                <div className="grid grid-cols-12 gap-2 items-center">
+                  <input className="grove-input col-span-5 text-sm" placeholder="ex: Monede Sindicat"
+                    value={item.name} onChange={e => updateItem(idx, 'name', e.target.value)} />
+                  {!isGroveKiller && (
+                    <input type="number" min="0" className="grove-input col-span-2 text-sm text-center"
+                      placeholder="0" value={item.bucati || ''}
+                      onChange={e => updateItem(idx, 'bucati', parseInt(e.target.value) || 0)} />
+                  )}
+                  <input type="date" className={`grove-input text-sm ${isGroveKiller ? 'col-span-6' : 'col-span-4'}`}
+                    value={item.termen} onChange={e => updateItem(idx, 'termen', e.target.value)} />
+                  <button onClick={() => removeItem(idx)} disabled={deleting === idx}
+                    className="col-span-1 p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center disabled:opacity-50">
+                    {deleting === idx
+                      ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                      : <Trash2 size={13} />
+                    }
+                  </button>
                 </div>
-                {item.targetRoles.length === 0 && (
-                  <p className="text-xs text-zinc-700 mt-1">Niciun grad selectat = se aplică tuturor</p>
+
+                {/* Grade selector */}
+                <div>
+                  <div className="text-xs text-zinc-600 uppercase tracking-wider mb-1.5 px-1">Pentru ce grade?</div>
+                  <div className="flex flex-wrap gap-2">
+                    {GRADE_OPTIONS.map(g => {
+                      const checked = item.targetRoles.includes(g.id)
+                      return (
+                        <button key={g.id} type="button" onClick={() => toggleRole(idx, g.id)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                            checked ? g.color : 'text-zinc-600 border-dark-border bg-dark-hover'
+                          }`}>
+                          {checked ? '✓' : ''} {g.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {item.targetRoles.length === 0 && (
+                    <p className="text-xs text-zinc-700 mt-1">Niciun grad selectat = se aplică tuturor</p>
+                  )}
+                </div>
+
+                {/* Selector jafuri — doar daca e selectat Grove Killer */}
+                {isGroveKiller && (
+                  <div className="space-y-2 p-3 rounded-xl bg-red-500/5 border border-red-500/20">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-red-400 uppercase tracking-wider font-semibold">⚔️ Jafuri Grove Killer</div>
+                      <button onClick={() => addJaf(idx)}
+                        className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20">
+                        <Plus size={11} /> Adaugă jaf
+                      </button>
+                    </div>
+
+                    {(!item.jafuri || item.jafuri.length === 0) ? (
+                      <p className="text-xs text-zinc-600 text-center py-2">Apasă "Adaugă jaf" pentru a specifica cerințele</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {item.jafuri.map((jaf, jafIdx) => (
+                          <div key={jafIdx} className="flex items-center gap-2">
+                            <select className="grove-select text-xs flex-1"
+                              value={jaf.type} onChange={e => updateJaf(idx, jafIdx, 'type', e.target.value)}>
+                              {JAF_TYPES.map(j => <option key={j.value} value={j.value}>{j.label}</option>)}
+                            </select>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-zinc-500">x</span>
+                              <input type="number" min="1" className="grove-input text-xs w-16 text-center"
+                                value={jaf.count} onChange={e => updateJaf(idx, jafIdx, 'count', parseInt(e.target.value) || 1)} />
+                            </div>
+                            <button onClick={() => removeJaf(idx, jafIdx)}
+                              className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20">
+                              <X size={11} />
+                            </button>
+                          </div>
+                        ))}
+                        <div className="text-xs text-zinc-600 pt-1">
+                          Total: {item.jafuri.map(j => {
+                            const label = JAF_TYPES.find(t => t.value === j.type)?.label || j.type
+                            return `${j.count}x ${label}`
+                          }).join(' + ')}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            )
+          })}
 
           {items.length === 0 && (
             <div className="text-center py-4 text-zinc-600 text-sm border border-dashed border-dark-border rounded-xl">
@@ -299,15 +362,12 @@ export default function LiderTaxaPage() {
                         </div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => togglePaid(m.id, hasPaid)}
-                      disabled={isToggling}
+                    <button onClick={() => togglePaid(m.id, hasPaid)} disabled={isToggling}
                       className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
                         hasPaid
                           ? 'text-green-400 border-green-500/30 bg-green-500/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30'
                           : 'text-red-400 border-red-500/30 bg-red-500/10 hover:bg-green-500/10 hover:text-green-400 hover:border-green-500/30'
-                      } disabled:opacity-50`}
-                    >
+                      } disabled:opacity-50`}>
                       {isToggling
                         ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
                         : hasPaid ? '✓ Achitat' : '✗ Neachitat'
