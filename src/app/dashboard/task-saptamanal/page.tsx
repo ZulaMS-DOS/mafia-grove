@@ -4,8 +4,22 @@ import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
 import { RefreshCw, CheckCircle, XCircle, Sword } from 'lucide-react'
 
+const JAF_LABELS: Record<string, string> = {
+  vinewood:    '🎬 Vinewood',
+  alta:        '🏦 Alta',
+  desert:      '🏜️ Desert',
+  highway:     '🛣️ Highway',
+  pacific:     '🌊 Pacific',
+  blaine:      '⛰️ Blaine',
+  biju:        '💎 Biju',
+  magazin:     '🏪 Magazin',
+  digital_den: '💻 Digital Den',
+}
+
+interface JafEntry { type: string; count: number }
 interface TaxItem {
-  id: string; name: string; bucati: number; termen: string | null; expired: boolean
+  id: string; name: string; bucati: number; termen: string | null
+  expired: boolean; jafuri: JafEntry[] | null
 }
 
 export default function TaskSaptamanalPage() {
@@ -28,7 +42,6 @@ export default function TaskSaptamanalPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
-
   useEffect(() => {
     const t = setInterval(load, 30000)
     return () => clearInterval(t)
@@ -79,32 +92,45 @@ export default function TaskSaptamanalPage() {
             <p className="text-zinc-600 text-sm">Niciun task setat pentru această săptămână.</p>
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-3 px-5 py-2.5 bg-dark-hover border-b border-dark-border">
-              <div className="col-span-1 text-xs text-zinc-600 uppercase tracking-wider">Cerință</div>
-              <div className="text-xs text-zinc-600 uppercase tracking-wider text-center">Cantitate</div>
-              <div className="text-xs text-zinc-600 uppercase tracking-wider text-center">Termen</div>
-            </div>
+          <div className="divide-y divide-dark-border/50">
             {items.map((item, i) => (
               <div key={item.id}
-                className={`grid grid-cols-3 px-5 py-3.5 border-b border-dark-border/50 hover:bg-dark-hover transition-colors ${i % 2 === 1 ? 'bg-white/[0.01]' : ''} ${item.expired ? 'opacity-60' : ''}`}>
-                <div className="flex items-center gap-2">
-                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.expired ? 'bg-red-500' : 'bg-red-400'}`} />
-                  <span className="text-white text-sm font-medium">{item.name}</span>
+                className={`px-5 py-4 hover:bg-dark-hover transition-colors ${item.expired ? 'opacity-60' : ''}`}>
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.expired ? 'bg-red-500' : 'bg-red-400'}`} />
+                    <span className="text-white text-sm font-semibold">{item.name}</span>
+                  </div>
+                  <div className="text-sm shrink-0">
+                    {item.termen ? (
+                      <span className={item.expired ? 'text-red-400 font-semibold text-xs' : 'text-yellow-400 text-xs'}>
+                        {item.expired ? '⛔ Expirat' : format(new Date(item.termen), 'dd MMM yyyy', { locale: ro })}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
-                <div className="text-center text-red-400 font-bold text-sm">{item.bucati.toLocaleString()}</div>
-                <div className="text-center text-sm">
-                  {item.termen ? (
-                    <span className={item.expired ? 'text-red-400 font-semibold' : 'text-yellow-400'}>
-                      {item.expired ? '⛔ Expirat' : format(new Date(item.termen), 'dd MMM yyyy', { locale: ro })}
-                    </span>
-                  ) : (
-                    <span className="text-zinc-700">—</span>
-                  )}
-                </div>
+
+                {/* Jafuri pentru Grove Killer */}
+                {item.jafuri && item.jafuri.length > 0 ? (
+                  <div className="space-y-1 ml-3.5">
+                    {item.jafuri.map((jaf, j) => (
+                      <div key={j} className="flex items-center gap-2">
+                        <span className="text-xs text-red-400 font-bold">{jaf.count}x</span>
+                        <span className="text-xs text-zinc-300">{JAF_LABELS[jaf.type] || jaf.type}</span>
+                      </div>
+                    ))}
+                    <div className="text-xs text-zinc-600 mt-1 pt-1 border-t border-dark-border/30">
+                      Total: {item.jafuri.map(j => `${j.count}x ${JAF_LABELS[j.type] || j.type}`).join(' + ')}
+                    </div>
+                  </div>
+                ) : item.bucati > 0 ? (
+                  <div className="ml-3.5 text-xs text-zinc-400">
+                    Cantitate: <span className="text-red-400 font-bold">{item.bucati}</span>
+                  </div>
+                ) : null}
               </div>
             ))}
-          </>
+          </div>
         )}
       </div>
 
