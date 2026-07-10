@@ -7,6 +7,15 @@ const LEADERSHIP_ROLES  = ['955126889171804170','955126890472022066']
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
 const NOTIFY_CHANNEL_ID = '1522391429899358298'
 
+const GRADE_LABELS: Record<string, string> = {
+  '955126889171804170':  'Lider',
+  '955126890472022066':  'Co-Lider',
+  '1462444900388704317': 'Tester',
+  '1501319885488390184': 'Membru',
+  '955126892984410162':  'Grove Killer',
+  '1342912254542348298': 'Muncitor',
+}
+
 function getWeekStart() {
   const now = new Date()
   const day = now.getDay()
@@ -27,9 +36,35 @@ async function sendDiscordMessage(content: string) {
       },
       body: JSON.stringify({ content }),
     })
-  } catch (e) {
-    // Esecul silentios — nu blocam pagina daca Discord e down
-  }
+  } catch {}
+}
+
+async function buildUnpaidList(item: any, weekStart: Date): Promise<string[]> {
+  // Gaseste toti userii care trebuie sa plateasca aceasta taxa
+  const targetRoles: string[] = item.targetRoles || []
+
+  const allUsers = await prisma.user.findMany({
+    where: targetRoles.length > 0
+      ? { roleIds: { hasSome: targetRoles } }
+      : {},
+    select: { id: true, username: true, discordId: true },
+  })
+
+  // Gaseste cine a platit
+  const payments = await (prisma as any).taxPayment.findMany({
+    where: {
+      weekStart,
+      paid:   true,
+      userId: { in: allUsers.map((u: any) => u.id) },
+    },
+    select: { userId: true },
+  })
+  const paidIds = new Set(payments.map((p: any) => p.userId))
+
+  // Returneaza lista celor care NU au platit
+  return allUsers
+    .filter((u: any) => !paidIds.has(u.id))
+    .map((u: any) => `> ❌ <@${u.discordId}> (${u.username})`)
 }
 
 export async function GET() {
@@ -56,13 +91,11 @@ export async function GET() {
     !item.targetRoles?.length || item.targetRoles.some((r: string) => myRoleIds.includes(r))
   )
 
-  // Marcheaza itemele expirate
   const items = filtered.map((item: any) => ({
     ...item,
     expired: item.termen ? new Date(item.termen) < now : false,
   }))
 
-  // Verifica taxe care expira maine sau azi
   const tomorrow = new Date(now)
   tomorrow.setDate(tomorrow.getDate() + 1)
   tomorrow.setHours(0, 0, 0, 0)
@@ -74,33 +107,30 @@ export async function GET() {
   const todayEnd = new Date(today)
   todayEnd.setDate(todayEnd.getDate() + 1)
 
-  // Taxe care expira maine
   const expiringTomorrow = allItems.filter((item: any) => {
     if (!item.termen) return false
     const t = new Date(item.termen)
     return t >= tomorrow && t < dayAfterTomorrow
   })
 
-  // Taxe care expira azi
   const expiringToday = allItems.filter((item: any) => {
     if (!item.termen) return false
     const t = new Date(item.termen)
     return t >= today && t < todayEnd
   })
 
-  // Trimite notificari (verificam sa nu trimitem de mai multe ori pe zi)
+  // Notificari taxe care expira maine
   for (const item of expiringTomorrow) {
     const alreadyNotified = await (prisma as any).notification.findFirst({
       where: {
-        type:    'tax',
-        title:   '⏰ Taxă Expiră Mâine',
-        message: { contains: item.name },
-        createdAt: { gte: new Date(today) },
+        type:      'tax',
+        title:     '⏰ Taxă Expiră Mâine',
+        message:   { contains: item.name },
+        createdAt: { gte: today },
       },
     })
 
     if (!alreadyNotified) {
-      // Notificare pe site pentru lideri
       const leaders = await prisma.user.findMany({
         where:  { roleIds: { hasSome: LEADERSHIP_ROLES } },
         select: { id: true },
@@ -114,20 +144,40 @@ export async function GET() {
         }))
       )
 
-      // Notificare pe Discord
+      // Construieste lista grade tinta
+      const targetRoles: string[] = item.targetRoles || []
+      const gradeText = targetRoles.length > 0
+        ? targetRoles.map((r: string) => GRADE_LABELS[r] || r).join(', ')
+        : 'Toți membrii'
+
+      // Construieste lista neplatitori
+      const unpaidLines = await buildUnpaidList(item, weekStart)
+      const unpaidText = unpaidLines.length > 0
+        ? unpaidLines.join('\n')
+        : '> ✅ Toți au achitat!'
+
       await sendDiscordMessage(
-        `## ⏰ Taxă Sindicat — Expiră Mâine!\n━━━━━━━━━━━━━━━━━━━━\n> **${item.name}** expiră mâine!\n> Verificați cine nu a achitat încă.\n━━━━━━━━━━━━━━━━━━━━\n<@&955126889171804170> <@&955126890472022066>`
+        `## ⏰ Taxă Sindicat — Expiră Mâine!\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `> 📋 **${item.name}**\n` +
+        `> 👥 **Grade vizate:** ${gradeText}\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `**Membri care NU au achitat (${unpaidLines.length}):**\n` +
+        `${unpaidText}\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `<@&955126889171804170> <@&955126890472022066>`
       )
     }
   }
 
+  // Notificari taxe care expira azi
   for (const item of expiringToday) {
     const alreadyNotified = await (prisma as any).notification.findFirst({
       where: {
-        type:    'tax',
-        title:   '🚨 Taxă Expiră Azi',
-        message: { contains: item.name },
-        createdAt: { gte: new Date(today) },
+        type:      'tax',
+        title:     '🚨 Taxă Expiră Azi',
+        message:   { contains: item.name },
+        createdAt: { gte: today },
       },
     })
 
@@ -145,17 +195,34 @@ export async function GET() {
         }))
       )
 
-      // Notificare pe Discord
+      const targetRoles: string[] = item.targetRoles || []
+      const gradeText = targetRoles.length > 0
+        ? targetRoles.map((r: string) => GRADE_LABELS[r] || r).join(', ')
+        : 'Toți membrii'
+
+      const unpaidLines = await buildUnpaidList(item, weekStart)
+      const unpaidText = unpaidLines.length > 0
+        ? unpaidLines.join('\n')
+        : '> ✅ Toți au achitat!'
+
       await sendDiscordMessage(
-        `## 🚨 Taxă Sindicat — Expiră AZI!\n━━━━━━━━━━━━━━━━━━━━\n> **${item.name}** expiră **AZI**!\n> Acționați urgent — verificați plățile imediat.\n━━━━━━━━━━━━━━━━━━━━\n<@&955126889171804170> <@&955126890472022066>`
+        `## 🚨 Taxă Sindicat — Expiră AZI!\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `> 📋 **${item.name}**\n` +
+        `> 👥 **Grade vizate:** ${gradeText}\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `**Membri care NU au achitat (${unpaidLines.length}):**\n` +
+        `${unpaidText}\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `<@&955126889171804170> <@&955126890472022066>`
       )
     }
   }
 
   return NextResponse.json({
     items,
-    paid:      payment?.paid    ?? false,
-    paidAt:    payment?.paidAt  ?? null,
+    paid:      payment?.paid   ?? false,
+    paidAt:    payment?.paidAt ?? null,
     weekStart: weekStart.toISOString(),
   })
 }
