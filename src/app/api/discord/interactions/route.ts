@@ -16,6 +16,7 @@ const JAF_CONFIG: Record<string, { label: string; points: number }> = {
   pacific:     { label: '🌊 Pacific Standard',   points: 2   },
   blaine:      { label: '⛰️ Blaine County Bank', points: 2   },
   biju:        { label: '💎 Bijuterie',          points: 2   },
+  atm:         { label: '💳 ATM Run',            points: 2   },
   magazin:     { label: '🏪 Magazin',            points: 1.5 },
   digital_den: { label: '💻 Digital Den',        points: 1.5 },
 }
