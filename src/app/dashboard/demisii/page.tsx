@@ -6,7 +6,6 @@ import { ro } from 'date-fns/locale'
 import { Plus, Check, X } from 'lucide-react'
 
 const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
-const TESTER_ROLE      = '1462444900388704317'
 
 interface Demisie {
   id: string; reason: string; status: string; createdAt: string; approvedAt: string | null
@@ -52,12 +51,23 @@ export default function DemisiiPage() {
   const submit = async () => {
     if (!reason.trim()) return
     setSub(true)
-    await fetch('/api/demisii', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) })
-    setReason(''); setShowForm(false); await load(); setSub(false)
+    await fetch('/api/demisii', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ reason }),
+    })
+    setReason('')
+    setShowForm(false)
+    await load()
+    setSub(false)
   }
 
   const review = async (id: string, status: 'ACCEPTED' | 'REJECTED') => {
-    await fetch(`/api/demisii/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+    await fetch(`/api/demisii/${id}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ status }),
+    })
     await load()
   }
 
@@ -84,7 +94,9 @@ export default function DemisiiPage() {
             {canManage ? 'Toate cererile de demisie ale membrilor' : 'Cererile tale de demisie'}
           </p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="grove-btn-danger flex items-center gap-2"><Plus size={16} /> Demisie</button>
+        <button onClick={() => setShowForm(!showForm)} className="grove-btn-danger flex items-center gap-2">
+          <Plus size={16} /> Demisie
+        </button>
       </div>
 
       {showForm && (
@@ -99,7 +111,9 @@ export default function DemisiiPage() {
               value={reason} onChange={e => setReason(e.target.value)} />
           </div>
           <div className="flex gap-3 mt-4">
-            <button onClick={submit} disabled={submitting} className="grove-btn-danger">{submitting ? 'Se trimite...' : '💀 Trimite Demisia'}</button>
+            <button onClick={submit} disabled={submitting} className="grove-btn-danger">
+              {submitting ? 'Se trimite...' : '💀 Trimite Demisia'}
+            </button>
             <button onClick={() => setShowForm(false)} className="grove-btn-outline">Anulare</button>
           </div>
         </div>
@@ -132,13 +146,26 @@ export default function DemisiiPage() {
                   {statusBadge(d.status)}
                 </div>
                 <p className="text-zinc-400 text-sm mb-2">{d.reason}</p>
-                <div className="text-xs text-zinc-600">{format(new Date(d.createdAt), 'dd MMM yyyy HH:mm', { locale: ro })}</div>
-                {d.approver && <div className="mt-2 text-xs text-zinc-600">{d.status === 'ACCEPTED' ? '✅' : '❌'} {d.approver.username} — {d.approvedAt ? format(new Date(d.approvedAt), 'dd MMM HH:mm', { locale: ro }) : ''}</div>}
+                <div className="text-xs text-zinc-600">
+                  {format(new Date(d.createdAt), 'dd MMM yyyy HH:mm', { locale: ro })}
+                </div>
+                {d.approver && (
+                  <div className="mt-2 text-xs text-zinc-600">
+                    {d.status === 'ACCEPTED' ? '✅' : '❌'} {d.approver.username}
+                    {d.approvedAt ? ` — ${format(new Date(d.approvedAt), 'dd MMM HH:mm', { locale: ro })}` : ''}
+                  </div>
+                )}
               </div>
               {canManage && d.status === 'PENDING' && (
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={() => review(d.id, 'ACCEPTED')} className="p-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20"><Check size={14} /></button>
-                  <button onClick={() => review(d.id, 'REJECTED')} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"><X size={14} /></button>
+                  <button onClick={() => review(d.id, 'ACCEPTED')}
+                    className="p-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20">
+                    <Check size={14} />
+                  </button>
+                  <button onClick={() => review(d.id, 'REJECTED')}
+                    className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20">
+                    <X size={14} />
+                  </button>
                 </div>
               )}
             </div>
