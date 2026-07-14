@@ -19,7 +19,7 @@ export async function GET() {
           name:        'tip-jaf',
           description: 'Tipul jafului procesat',
           required:    true,
-          choices: [
+                    choices: [
             { name: 'Vinewood (1.5 pts)',    value: 'vinewood'    },
             { name: 'Alta (1.5 pts)',         value: 'alta'        },
             { name: 'Desert (1.5 pts)',       value: 'desert'      },
@@ -27,6 +27,7 @@ export async function GET() {
             { name: 'Pacific (2 pts)',        value: 'pacific'     },
             { name: 'Blaine (2 pts)',         value: 'blaine'      },
             { name: 'Biju (2 pts)',           value: 'biju'        },
+            { name: 'ATM (2 pts)',            value: 'atm'         },
             { name: 'Magazin (1.5 pts)',      value: 'magazin'     },
             { name: 'Digital Den (1.5 pts)',  value: 'digital_den' },
           ],
