@@ -3,10 +3,11 @@ import nacl from 'tweetnacl'
 import { prisma } from '@/lib/prisma'
 import { notify } from '@/lib/notifications'
 
-const PUBLIC_KEY       = process.env.DISCORD_PUBLIC_KEY!
-const DISCORD_APP_ID   = process.env.DISCORD_CLIENT_ID!
-const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
-const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
+const PUBLIC_KEY         = process.env.DISCORD_PUBLIC_KEY!
+const DISCORD_APP_ID     = process.env.DISCORD_CLIENT_ID!
+const DISCORD_BOT_TOKEN  = process.env.DISCORD_BOT_TOKEN!
+const LEADERSHIP_ROLES   = ['955126889171804170', '955126890472022066']
+const JAF_ALLOWED_ROLES  = ['955126889171804170', '955126890472022066', '1348974812315258972']
 
 const JAF_CONFIG: Record<string, { label: string; points: number }> = {
   vinewood:    { label: '🎬 Vinewood Bank',      points: 1.5 },
@@ -81,7 +82,6 @@ async function awardPoints(userIds: string[], points: number, reasonLabel: strin
   return { successLines, failLines }
 }
 
-// Trimite followup dupa defer (tip 5)
 async function sendFollowup(token: string, content: string) {
   await fetch(`https://discord.com/api/v10/webhooks/${DISCORD_APP_ID}/${token}/messages/@original`, {
     method:  'PATCH',
@@ -103,36 +103,35 @@ export async function POST(req: NextRequest) {
 
   const body = JSON.parse(rawBody)
 
-  // PING
   if (body.type === 1) {
     return NextResponse.json({ type: 1 })
   }
 
-  // APPLICATION_COMMAND
   if (body.type === 2) {
-    const commandName = body.data.name
+    const commandName  = body.data.name
     const memberRoles: string[] = body.member?.roles || []
-    const callerName  = body.member?.nick || body.member?.user?.username || 'Necunoscut'
-    const token       = body.token
+    const callerName   = body.member?.nick || body.member?.user?.username || 'Necunoscut'
+    const token        = body.token
 
-    const isLeader = memberRoles.some(r => LEADERSHIP_ROLES.includes(r))
-    if (!isLeader) {
-      return NextResponse.json({
-        type: 4,
-        data: { content: '🚫 **Acces interzis** — doar Lider sau Co-Lider pot folosi această comandă.', flags: 64 },
-      })
-    }
+    const isLeader     = memberRoles.some(r => LEADERSHIP_ROLES.includes(r))
+    const canProcessJaf = memberRoles.some(r => JAF_ALLOWED_ROLES.includes(r))
 
     const options  = body.data.options || []
     const useriRaw = options.find((o: any) => o.name === 'useri')?.value as string | undefined
 
-    // Raspunde instant cu "thinking..." (defer) ca sa nu expire Discord timeout-ul
-    const deferResponse = NextResponse.json({ type: 5 })
+    // ── /jaf-procesat — Lider, Co-Lider SAU Responsabil Jafuri ──
+    if (commandName === 'jaf-procesat') {
+      if (!canProcessJaf) {
+        return NextResponse.json({
+          type: 4,
+          data: { content: '🚫 **Acces interzis** — doar Lider, Co-Lider sau Responsabil Jafuri pot procesa jafuri.', flags: 64 },
+        })
+      }
 
-    // Proceseaza in fundal dupa ce trimitem defer-ul
-    ;(async () => {
-      try {
-        if (commandName === 'jaf-procesat') {
+      const deferResponse = NextResponse.json({ type: 5 })
+
+      ;(async () => {
+        try {
           const jafType = options.find((o: any) => o.name === 'tip-jaf')?.value as string | undefined
 
           if (!useriRaw || !jafType || !JAF_CONFIG[jafType]) {
@@ -150,53 +149,66 @@ export async function POST(req: NextRequest) {
           const { successLines, failLines } = await awardPoints(userIds, points, label, callerName)
           const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
           await sendFollowup(token, content)
+        } catch (e) {
+          await sendFollowup(token, '❌ A apărut o eroare. Încearcă din nou.')
+        }
+      })()
 
-        } else if (commandName === 'taxa24h') {
-          if (!useriRaw) {
-            await sendFollowup(token, '⚠️ Trebuie să specifici useri.')
-            return
-          }
+      return deferResponse
+    }
 
+    // ── /taxa24h și /activitate — doar Lider/Co-Lider ──
+    if (!isLeader) {
+      return NextResponse.json({
+        type: 4,
+        data: { content: '🚫 **Acces interzis** — doar Lider sau Co-Lider pot folosi această comandă.', flags: 64 },
+      })
+    }
+
+    if (commandName === 'taxa24h') {
+      const deferResponse = NextResponse.json({ type: 5 })
+
+      ;(async () => {
+        try {
+          if (!useriRaw) { await sendFollowup(token, '⚠️ Trebuie să specifici useri.'); return }
           const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
-          if (!userIds.length) {
-            await sendFollowup(token, '⚠️ Nicio mențiune validă găsită.')
-            return
-          }
+          if (!userIds.length) { await sendFollowup(token, '⚠️ Nicio mențiune validă găsită.'); return }
 
           const label = '⏰ Taxa 24 Ore'
           const { successLines, failLines } = await awardPoints(userIds, 10, label, callerName)
-          const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
-          await sendFollowup(token, content)
+          await sendFollowup(token, buildRichMessage(label, successLines, failLines, callerName, userIds.length))
+        } catch (e) {
+          await sendFollowup(token, '❌ A apărut o eroare. Încearcă din nou.')
+        }
+      })()
 
-        } else if (commandName === 'activitate') {
+      return deferResponse
+    }
+
+    if (commandName === 'activitate') {
+      const deferResponse = NextResponse.json({ type: 5 })
+
+      ;(async () => {
+        try {
           const puncteRaw = options.find((o: any) => o.name === 'puncte')?.value
           const puncte = typeof puncteRaw === 'string' ? parseFloat(puncteRaw) : puncteRaw
 
-          if (!puncte || !useriRaw) {
-            await sendFollowup(token, '⚠️ Trebuie să specifici puncte și useri.')
-            return
-          }
-
+          if (!puncte || !useriRaw) { await sendFollowup(token, '⚠️ Trebuie să specifici puncte și useri.'); return }
           const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
-          if (!userIds.length) {
-            await sendFollowup(token, '⚠️ Nicio mențiune validă găsită.')
-            return
-          }
+          if (!userIds.length) { await sendFollowup(token, '⚠️ Nicio mențiune validă găsită.'); return }
 
           const label = '⭐ Activitate'
           const { successLines, failLines } = await awardPoints(userIds, puncte, label, callerName)
-          const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
-          await sendFollowup(token, content)
-
-        } else {
-          await sendFollowup(token, '❌ Comandă necunoscută.')
+          await sendFollowup(token, buildRichMessage(label, successLines, failLines, callerName, userIds.length))
+        } catch (e) {
+          await sendFollowup(token, '❌ A apărut o eroare. Încearcă din nou.')
         }
-      } catch (e) {
-        await sendFollowup(token, '❌ A apărut o eroare. Încearcă din nou.')
-      }
-    })()
+      })()
 
-    return deferResponse
+      return deferResponse
+    }
+
+    return NextResponse.json({ type: 4, data: { content: '❌ Comandă necunoscută.', flags: 64 } })
   }
 
   return NextResponse.json({ error: 'Tip request necunoscut' }, { status: 400 })
