@@ -22,41 +22,34 @@ function connect() {
 
     if (s) lastSequence = s
 
-    // HELLO — incepe heartbeat
     if (op === 10) {
       const interval = d.heartbeat_interval
       heartbeatInterval = setInterval(() => {
         ws.send(JSON.stringify({ op: 1, d: lastSequence }))
       }, interval)
 
-      // IDENTIFY
       ws.send(JSON.stringify({
         op: 2,
         d: {
-          token:   TOKEN,
-          intents: 512, // GUILD_MESSAGES
+          token:      TOKEN,
+          intents:    512,
           properties: { os: 'linux', browser: 'grove-bot', device: 'grove-bot' },
         },
       }))
     }
 
-    // RECONNECT
     if (op === 7) reconnect()
-
-    // INVALID SESSION
     if (op === 9) setTimeout(connect, 5000)
 
-    // READY
     if (t === 'READY') {
       console.log(`Bot gata: ${d.user.username}`)
     }
 
-    // MESSAGE_CREATE
     if (t === 'MESSAGE_CREATE') {
-      const channelId  = d.channel_id
-      const content    = (d.content || '').toLowerCase()
-      const messageId  = d.id
-      const authorRoles: string[] = d.member?.roles || []
+      const channelId   = d.channel_id
+      const content     = (d.content || '').toLowerCase()
+      const messageId   = d.id
+      const authorRoles = d.member ? d.member.roles || [] : []
 
       if (channelId === CHANNEL_ID && content.includes(KEYWORD)) {
         const isResponsabil = authorRoles.includes(RESPONSABIL_RESURSE_ROLE)
@@ -95,7 +88,7 @@ async function addReaction(channelId, messageId, emoji) {
       }
     )
     if (res.ok) {
-      console.log(`Reaction ${emoji} adăugat la mesajul ${messageId}`)
+      console.log(`Reaction ${emoji} adaugat la mesajul ${messageId}`)
     } else {
       const err = await res.json()
       console.error('Eroare reaction:', err)
