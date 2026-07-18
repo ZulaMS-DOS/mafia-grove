@@ -32,7 +32,7 @@ function connect() {
         op: 2,
         d: {
           token:      TOKEN,
-          intents:    512,
+          intents:    33280,
           properties: { os: 'linux', browser: 'grove-bot', device: 'grove-bot' },
         },
       }))
