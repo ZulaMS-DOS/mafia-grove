@@ -3,11 +3,12 @@ import nacl from 'tweetnacl'
 import { prisma } from '@/lib/prisma'
 import { notify } from '@/lib/notifications'
 
-const PUBLIC_KEY         = process.env.DISCORD_PUBLIC_KEY!
-const DISCORD_APP_ID     = process.env.DISCORD_CLIENT_ID!
-const DISCORD_BOT_TOKEN  = process.env.DISCORD_BOT_TOKEN!
-const LEADERSHIP_ROLES   = ['955126889171804170', '955126890472022066']
-const JAF_ALLOWED_ROLES  = ['955126889171804170', '955126890472022066', '1348974812315258972']
+const PUBLIC_KEY        = process.env.DISCORD_PUBLIC_KEY!
+const DISCORD_APP_ID    = process.env.DISCORD_CLIENT_ID!
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
+const LEADERSHIP_ROLES  = ['955126889171804170', '955126890472022066']
+const JAF_ALLOWED_ROLES = ['955126889171804170', '955126890472022066', '1348974812315258972']
+const SUPER_ADMIN_ID    = '949760812518617138'
 
 const JAF_CONFIG: Record<string, { label: string; points: number }> = {
   vinewood:    { label: '🎬 Vinewood Bank',      points: 1.5 },
@@ -17,14 +18,14 @@ const JAF_CONFIG: Record<string, { label: string; points: number }> = {
   pacific:     { label: '🌊 Pacific Standard',   points: 2   },
   blaine:      { label: '⛰️ Blaine County Bank', points: 2   },
   biju:        { label: '💎 Bijuterie',          points: 2   },
-  atm:         { label: '💳 ATM Run',            points: 2   },
-  magazin:     { label: '🏪 Magazin',            points: 1.5 },
-  digital_den: { label: '💻 Digital Den',        points: 1.5 },
+  atm:         { label: '💳 ATM Run',            points: 1.5 },
+  magazin:     { label: '🏪 Magazin',            points: 1   },
+  digital_den: { label: '💻 Digital Den',        points: 2   },
 }
 
 async function verifySignature(req: NextRequest, rawBody: string) {
   const signature = req.headers.get('x-signature-ed25519')
-  const timestamp  = req.headers.get('x-signature-timestamp')
+  const timestamp = req.headers.get('x-signature-timestamp')
   if (!signature || !timestamp) return false
 
   return nacl.sign.detached.verify(
@@ -40,41 +41,30 @@ function buildRichMessage(label: string, successLines: string[], failLines: stri
     `## 🏴 ${label}`,
     divider,
     successLines.length ? successLines.join('\n') : null,
-    failLines.length ? failLines.join('\n') : null,
+    failLines.length    ? failLines.join('\n')    : null,
     divider,
     `*Procesat de* **${callerName}** *· ${total} membri recompensați*`,
   ].filter(Boolean).join('\n')
 }
 
-const SUPER_ADMIN_ID = '949760812518617138'
-
 async function sendDM(discordId: string, content: string) {
   try {
-    // Deschide DM channel
-    const dmChannel = await fetch('https://discord.com/api/v10/users/@me/channels', {
+    const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
       method:  'POST',
-      headers: {
-        'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
-        'Content-Type':  'application/json',
-      },
-      body: JSON.stringify({ recipient_id: discordId }),
+      headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ recipient_id: discordId }),
     })
-    const dm = await dmChannel.json()
+    const dm = await dmRes.json()
     if (!dm.id) return
-
-    // Trimite mesajul
     await fetch(`https://discord.com/api/v10/channels/${dm.id}/messages`, {
       method:  'POST',
-      headers: {
-        'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
-        'Content-Type':  'application/json',
-      },
-      body: JSON.stringify({ content }),
+      headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ content }),
     })
   } catch {}
 }
 
-async function awardPoints(userIds: string[], points: number, reasonLabel: string, callerName: string, callerDiscordId?: string) {
+async function awardPoints(userIds: string[], points: number, reasonLabel: string, callerName: string) {
   const successLines: string[] = []
   const failLines: string[]    = []
 
@@ -113,39 +103,31 @@ async function awardPoints(userIds: string[], points: number, reasonLabel: strin
 async function sendFollowup(token: string, content: string) {
   await fetch(`https://discord.com/api/v10/webhooks/${DISCORD_APP_ID}/${token}/messages/@original`, {
     method:  'PATCH',
-    headers: {
-      'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
-      'Content-Type':  'application/json',
-    },
-    body: JSON.stringify({ content }),
+    headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ content }),
   })
 }
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
   const valid   = await verifySignature(req, rawBody)
-
-  if (!valid) {
-    return NextResponse.json({ error: 'Semnatura invalida' }, { status: 401 })
-  }
+  if (!valid) return NextResponse.json({ error: 'Semnatura invalida' }, { status: 401 })
 
   const body = JSON.parse(rawBody)
 
-  if (body.type === 1) {
-    return NextResponse.json({ type: 1 })
-  }
+  if (body.type === 1) return NextResponse.json({ type: 1 })
 
   if (body.type === 2) {
-    const commandName  = body.data.name
+    const commandName   = body.data.name
     const memberRoles: string[] = body.member?.roles || []
-    const callerName   = body.member?.nick || body.member?.user?.username || 'Necunoscut'
-    const token        = body.token
+    const callerName    = body.member?.nick || body.member?.user?.username || 'Necunoscut'
+    const callerDiscordId = body.member?.user?.id as string | undefined
+    const token         = body.token
 
-    const isLeader     = memberRoles.some(r => LEADERSHIP_ROLES.includes(r))
+    const isLeader      = memberRoles.some(r => LEADERSHIP_ROLES.includes(r))
     const canProcessJaf = memberRoles.some(r => JAF_ALLOWED_ROLES.includes(r))
-
-    const options  = body.data.options || []
-    const useriRaw = options.find((o: any) => o.name === 'useri')?.value as string | undefined
+    const options       = body.data.options || []
+    const useriRaw      = options.find((o: any) => o.name === 'useri')?.value as string | undefined
 
     // ── /jaf-procesat — Lider, Co-Lider SAU Responsabil Jafuri ──
     if (commandName === 'jaf-procesat') {
@@ -173,11 +155,9 @@ export async function POST(req: NextRequest) {
             return
           }
 
-                    const callerDiscordId = body.member?.user?.id
           const { label, points } = JAF_CONFIG[jafType]
-          const { successLines, failLines } = await awardPoints(userIds, points, label, callerName, callerDiscordId)
-          const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
-          await sendFollowup(token, content)
+          const { successLines, failLines } = await awardPoints(userIds, points, label, callerName)
+          await sendFollowup(token, buildRichMessage(label, successLines, failLines, callerName, userIds.length))
 
           // DM catre tine daca altcineva a procesat
           if (callerDiscordId && callerDiscordId !== SUPER_ADMIN_ID) {
@@ -185,16 +165,11 @@ export async function POST(req: NextRequest) {
               SUPER_ADMIN_ID,
               `## 🏴 Jaf Procesat\n` +
               `**Procesat de:** ${callerName}\n` +
-              `**Tip jaf:** ${label}\n` +
-              `**Puncte acordate:** ${points} pts\n` +
-              `**Useri recompensați:** ${userIds.length}\n` +
+              `**Tip jaf:** ${label} (${points} pts)\n` +
+              `**Useri recompensați (${userIds.length}):**\n` +
               `${successLines.join('\n')}`
             )
           }
-
-          const { successLines, failLines } = await awardPoints(userIds, points, label, callerName)
-          const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
-          await sendFollowup(token, content)
         } catch (e) {
           await sendFollowup(token, '❌ A apărut o eroare. Încearcă din nou.')
         }
@@ -213,13 +188,11 @@ export async function POST(req: NextRequest) {
 
     if (commandName === 'taxa24h') {
       const deferResponse = NextResponse.json({ type: 5 })
-
       ;(async () => {
         try {
           if (!useriRaw) { await sendFollowup(token, '⚠️ Trebuie să specifici useri.'); return }
           const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
           if (!userIds.length) { await sendFollowup(token, '⚠️ Nicio mențiune validă găsită.'); return }
-
           const label = '⏰ Taxa 24 Ore'
           const { successLines, failLines } = await awardPoints(userIds, 10, label, callerName)
           await sendFollowup(token, buildRichMessage(label, successLines, failLines, callerName, userIds.length))
@@ -227,22 +200,18 @@ export async function POST(req: NextRequest) {
           await sendFollowup(token, '❌ A apărut o eroare. Încearcă din nou.')
         }
       })()
-
       return deferResponse
     }
 
     if (commandName === 'activitate') {
       const deferResponse = NextResponse.json({ type: 5 })
-
       ;(async () => {
         try {
           const puncteRaw = options.find((o: any) => o.name === 'puncte')?.value
           const puncte = typeof puncteRaw === 'string' ? parseFloat(puncteRaw) : puncteRaw
-
           if (!puncte || !useriRaw) { await sendFollowup(token, '⚠️ Trebuie să specifici puncte și useri.'); return }
           const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
           if (!userIds.length) { await sendFollowup(token, '⚠️ Nicio mențiune validă găsită.'); return }
-
           const label = '⭐ Activitate'
           const { successLines, failLines } = await awardPoints(userIds, puncte, label, callerName)
           await sendFollowup(token, buildRichMessage(label, successLines, failLines, callerName, userIds.length))
@@ -250,7 +219,6 @@ export async function POST(req: NextRequest) {
           await sendFollowup(token, '❌ A apărut o eroare. Încearcă din nou.')
         }
       })()
-
       return deferResponse
     }
 
