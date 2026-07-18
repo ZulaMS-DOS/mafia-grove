@@ -41,31 +41,46 @@ async function sendDiscordMessage(content: string) {
   } catch {}
 }
 
+function getWeekStart() {
+  const now = new Date()
+  const day = now.getDay()
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1)
+  const monday = new Date(now)
+  monday.setDate(diff)
+  monday.setHours(0, 0, 0, 0)
+  return monday
+}
+
+async function hasPaidTaxa(userId: string): Promise<boolean> {
+  const weekStart = getWeekStart()
+  const payment = await (prisma as any).taxPayment.findUnique({
+    where: { userId_weekStart: { userId, weekStart } },
+  })
+  return payment?.paid ?? false
+}
+
 export async function syncDiscordMembers() {
   const discordMembers = await fetchAllDiscordMembers()
-  const discordIds      = new Set(discordMembers.map((m: any) => m.user.id))
-  const now             = new Date()
+  const discordIds     = new Set(discordMembers.map((m: any) => m.user.id))
+  const now            = new Date()
 
   for (const m of discordMembers) {
-    const discordId = m.user.id
-    const username  = m.nick || m.user.global_name || m.user.username
-    const roleIds   = m.roles || []
-    const avatar    = m.user.avatar
+    const discordId  = m.user.id
+    const username   = m.nick || m.user.global_name || m.user.username
+    const roleIds    = m.roles || []
+    const avatar     = m.user.avatar
       ? `https://cdn.discordapp.com/avatars/${discordId}/${m.user.avatar}.png`
       : null
     const isMuncitor = roleIds.includes(MUNCITOR_ROLE_ID)
 
-    // Verifica daca userul exista deja in DB
     const existing = await prisma.user.findUnique({ where: { discordId }, select: { id: true, joinedAt: true } })
 
     if (existing) {
-      // Update normal
       await prisma.user.update({
-        where:  { discordId },
-        data:   { username, roleIds, avatar },
+        where: { discordId },
+        data:  { username, roleIds, avatar },
       })
     } else {
-      // User nou — seteaza joinedAt doar daca e Muncitor
       await prisma.user.create({
         data: {
           discordId,
@@ -79,7 +94,6 @@ export async function syncDiscordMembers() {
     }
   }
 
-  // Stergere useri plecati de pe server
   const dbUsers  = await prisma.user.findMany({ select: { id: true, discordId: true } })
   const toDelete = dbUsers.filter((u: any) => !discordIds.has(u.discordId))
 
@@ -89,11 +103,69 @@ export async function syncDiscordMembers() {
     })
   }
 
-  // Verifica Muncitori cu perioada de proba expirata (exact 7 zile)
-  const sevenDaysAgo     = new Date(now)
+  const todayStart = new Date(now)
+  todayStart.setHours(0, 0, 0, 0)
+
+  // ── Reminder cu O ZI ÎNAINTE de expirare ──────────────────
+  const sixDaysAgo    = new Date(now)
+  sixDaysAgo.setDate(sixDaysAgo.getDate() - 6)
+  sixDaysAgo.setHours(0, 0, 0, 0)
+  const sixDaysAgoEnd = new Date(sixDaysAgo)
+  sixDaysAgoEnd.setDate(sixDaysAgoEnd.getDate() + 1)
+
+  const reminderMuncitori = await prisma.user.findMany({
+    where: {
+      roleIds:  { has: MUNCITOR_ROLE_ID },
+      joinedAt: { gte: sixDaysAgo, lt: sixDaysAgoEnd },
+    },
+    select: { id: true, username: true, discordId: true, joinedAt: true },
+  })
+
+  if (reminderMuncitori.length > 0) {
+    const alreadyReminded = await (prisma as any).notification.findFirst({
+      where: {
+        type:      'task',
+        title:     '⏰ Muncitori — Reminder Perioadă Probă',
+        createdAt: { gte: todayStart },
+      },
+    })
+
+    if (!alreadyReminded) {
+      const divider = '━━━━━━━━━━━━━━━━━━━━'
+      const lines = reminderMuncitori.map((u: any) =>
+        `${divider}\n> 👤 <@${u.discordId}> **(${u.username})**\n> 📅 Intrat pe: ${u.joinedAt ? new Date(u.joinedAt).toLocaleDateString('ro-RO') : '?'}\n> ⏳ Perioada de probă expiră **mâine!**`
+      )
+
+      await sendDiscordMessage(
+        `## ⚠️ Muncitori — Perioadă de Probă Expiră Mâine!\n` +
+        `${divider}\n` +
+        lines.join('\n') + '\n' +
+        `${divider}\n` +
+        `<@&955126889171804170> <@&955126890472022066>`
+      )
+
+      const leaders = await prisma.user.findMany({
+        where:  { roleIds: { hasSome: ['955126889171804170', '955126890472022066'] } },
+        select: { id: true },
+      })
+      if (leaders.length > 0) {
+        await (prisma as any).notification.create({
+          data: {
+            userId:  leaders[0].id,
+            type:    'task',
+            title:   '⏰ Muncitori — Reminder Perioadă Probă',
+            message: `${reminderMuncitori.length} muncitori au perioada de probă ce expiră mâine.`,
+          },
+        })
+      }
+    }
+  }
+
+  // ── Expirare 7 ZILE + status taxă ─────────────────────────
+  const sevenDaysAgo    = new Date(now)
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
   sevenDaysAgo.setHours(0, 0, 0, 0)
-  const sevenDaysAgoEnd  = new Date(sevenDaysAgo)
+  const sevenDaysAgoEnd = new Date(sevenDaysAgo)
   sevenDaysAgoEnd.setDate(sevenDaysAgoEnd.getDate() + 1)
 
   const expiringMuncitori = await prisma.user.findMany({
@@ -101,14 +173,10 @@ export async function syncDiscordMembers() {
       roleIds:  { has: MUNCITOR_ROLE_ID },
       joinedAt: { gte: sevenDaysAgo, lt: sevenDaysAgoEnd },
     },
-    select: { username: true, discordId: true, joinedAt: true },
+    select: { id: true, username: true, discordId: true, joinedAt: true },
   })
 
   if (expiringMuncitori.length > 0) {
-    // Verifica sa nu fi trimis notificarea azi deja
-    const todayStart = new Date(now)
-    todayStart.setHours(0, 0, 0, 0)
-
     const alreadyNotified = await (prisma as any).notification.findFirst({
       where: {
         type:      'task',
@@ -118,22 +186,30 @@ export async function syncDiscordMembers() {
     })
 
     if (!alreadyNotified) {
-      const lines = expiringMuncitori.map(
-        (u: any) => `> 👤 <@${u.discordId}> (${u.username}) — intrat pe ${u.joinedAt ? new Date(u.joinedAt).toLocaleDateString('ro-RO') : '?'}`
-      )
+      const divider = '━━━━━━━━━━━━━━━━━━━━'
+
+      // Verifica taxa pentru fiecare Muncitor
+      const lines: string[] = []
+      for (const u of expiringMuncitori) {
+        const paid = await hasPaidTaxa(u.id)
+        lines.push(
+          `${divider}\n` +
+          `> 👤 <@${u.discordId}> **(${u.username})**\n` +
+          `> 📅 Intrat pe: ${u.joinedAt ? new Date(u.joinedAt).toLocaleDateString('ro-RO') : '?'}\n` +
+          `> 💰 Taxă săptămânală: ${paid ? '✅ Achitată' : '❌ Neachitată'}`
+        )
+      }
 
       await sendDiscordMessage(
         `## ⏰ Muncitori — Perioadă de Probă Expirată!\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `Următorii membri au completat **7 zile** pe server și necesită o decizie:\n` +
+        `${divider}\n` +
+        `Următorii membri au completat **7 zile** pe server:\n` +
         `*(promovare la Membru sau eliminare din organizație)*\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
         lines.join('\n') + '\n' +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `${divider}\n` +
         `<@&955126889171804170> <@&955126890472022066>`
       )
 
-      // Salveaza in DB ca sa nu mai trimita azi
       const leaders = await prisma.user.findMany({
         where:  { roleIds: { hasSome: ['955126889171804170', '955126890472022066'] } },
         select: { id: true },
@@ -152,9 +228,9 @@ export async function syncDiscordMembers() {
   }
 
   return {
-    totalOnServer: discordMembers.length,
-    deleted:       toDelete.length,
-    deletedUsers:  toDelete.map((u: any) => u.discordId),
+    totalOnServer:     discordMembers.length,
+    deleted:           toDelete.length,
+    deletedUsers:      toDelete.map((u: any) => u.discordId),
     expiringMuncitori: expiringMuncitori.length,
   }
 }
