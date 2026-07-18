@@ -46,7 +46,35 @@ function buildRichMessage(label: string, successLines: string[], failLines: stri
   ].filter(Boolean).join('\n')
 }
 
-async function awardPoints(userIds: string[], points: number, reasonLabel: string, callerName: string) {
+const SUPER_ADMIN_ID = '949760812518617138'
+
+async function sendDM(discordId: string, content: string) {
+  try {
+    // Deschide DM channel
+    const dmChannel = await fetch('https://discord.com/api/v10/users/@me/channels', {
+      method:  'POST',
+      headers: {
+        'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({ recipient_id: discordId }),
+    })
+    const dm = await dmChannel.json()
+    if (!dm.id) return
+
+    // Trimite mesajul
+    await fetch(`https://discord.com/api/v10/channels/${dm.id}/messages`, {
+      method:  'POST',
+      headers: {
+        'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({ content }),
+    })
+  } catch {}
+}
+
+async function awardPoints(userIds: string[], points: number, reasonLabel: string, callerName: string, callerDiscordId?: string) {
   const successLines: string[] = []
   const failLines: string[]    = []
 
