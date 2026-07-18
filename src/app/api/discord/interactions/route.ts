@@ -173,7 +173,25 @@ export async function POST(req: NextRequest) {
             return
           }
 
+                    const callerDiscordId = body.member?.user?.id
           const { label, points } = JAF_CONFIG[jafType]
+          const { successLines, failLines } = await awardPoints(userIds, points, label, callerName, callerDiscordId)
+          const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
+          await sendFollowup(token, content)
+
+          // DM catre tine daca altcineva a procesat
+          if (callerDiscordId && callerDiscordId !== SUPER_ADMIN_ID) {
+            await sendDM(
+              SUPER_ADMIN_ID,
+              `## 🏴 Jaf Procesat\n` +
+              `**Procesat de:** ${callerName}\n` +
+              `**Tip jaf:** ${label}\n` +
+              `**Puncte acordate:** ${points} pts\n` +
+              `**Useri recompensați:** ${userIds.length}\n` +
+              `${successLines.join('\n')}`
+            )
+          }
+
           const { successLines, failLines } = await awardPoints(userIds, points, label, callerName)
           const content = buildRichMessage(label, successLines, failLines, callerName, userIds.length)
           await sendFollowup(token, content)
