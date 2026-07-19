@@ -279,3 +279,11 @@ enum BugStatus {
   IN_PROGRESS
   RESOLVED
 }
+
+model BotLog {
+  id        String   @id @default(cuid())
+  categorie String   // "muncitori" | "taxa" | "jafuri"
+  titlu     String
+  continut  String
+  createdAt DateTime @default(now())
+}
