@@ -118,18 +118,18 @@ export async function POST(req: NextRequest) {
   if (body.type === 1) return NextResponse.json({ type: 1 })
 
   if (body.type === 2) {
-    const commandName   = body.data.name
+    const commandName     = body.data.name
     const memberRoles: string[] = body.member?.roles || []
-    const callerName    = body.member?.nick || body.member?.user?.username || 'Necunoscut'
+    const callerName      = body.member?.nick || body.member?.user?.username || 'Necunoscut'
     const callerDiscordId = body.member?.user?.id as string | undefined
-    const token         = body.token
+    const token           = body.token
 
     const isLeader      = memberRoles.some(r => LEADERSHIP_ROLES.includes(r))
     const canProcessJaf = memberRoles.some(r => JAF_ALLOWED_ROLES.includes(r))
     const options       = body.data.options || []
     const useriRaw      = options.find((o: any) => o.name === 'useri')?.value as string | undefined
 
-    // ── /jaf-procesat — Lider, Co-Lider SAU Responsabil Jafuri ──
+    // ── /jaf-procesat ──
     if (commandName === 'jaf-procesat') {
       if (!canProcessJaf) {
         return NextResponse.json({
@@ -159,15 +159,18 @@ export async function POST(req: NextRequest) {
           const { successLines, failLines } = await awardPoints(userIds, points, label, callerName)
           await sendFollowup(token, buildRichMessage(label, successLines, failLines, callerName, userIds.length))
 
-          // DM catre tine daca altcineva a procesat
+          // DM cu linii separatoare
           if (callerDiscordId && callerDiscordId !== SUPER_ADMIN_ID) {
             await sendDM(
               SUPER_ADMIN_ID,
               `## 🏴 Jaf Procesat\n` +
-              `**Procesat de:** ${callerName}\n` +
-              `**Tip jaf:** ${label} (${points} pts)\n` +
-              `**Useri recompensați (${userIds.length}):**\n` +
-              `${successLines.join('\n')}`
+              `━━━━━━━━━━━━━━━━━━━━\n` +
+              `> **Procesat de:** ${callerName}\n` +
+              `> **Tip jaf:** ${label} (${points} pts)\n` +
+              `> **Useri recompensați:** ${userIds.length}\n` +
+              `━━━━━━━━━━━━━━━━━━━━\n` +
+              `${successLines.join('\n')}\n` +
+              `━━━━━━━━━━━━━━━━━━━━`
             )
           }
         } catch (e) {
