@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   Clock, FileText, LogOut, Star, Users, Coins,
   Shield, Menu, X, UserCog, Megaphone,
-  LayoutDashboard, ShoppingCart, Dices, ListTodo, AlertTriangle, Bug, Zap, Sword, Trophy
+  LayoutDashboard, ShoppingCart, Dices, ListTodo, AlertTriangle, Bug, Zap, Sword, Trophy, ScrollText
 } from 'lucide-react'
 import { signOut, useSession } from 'next-auth/react'
 import clsx from 'clsx'
@@ -46,6 +46,7 @@ const liderNav = [
   { href: '/dashboard/lider/anunturi',  icon: Megaphone,     label: 'Postează Anunț'    },
   { href: '/dashboard/lider/taxa',      icon: Coins,         label: 'Taxa Sindicat'     },
   { href: '/dashboard/lider/ban',       icon: Shield,        label: 'Gestionare Acces'  },
+  { href: '/dashboard/lider/logs',      icon: ScrollText,    label: 'Logs Bot'          },
 ]
 
 interface SidebarProps {
@@ -58,18 +59,16 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
 
-  // Detecteaza toate gradele userului
   const has = (role: string) => roleIds.includes(role)
-  const isTester     = has(ROLES.TESTER)     && !isLeadership
-  const isMembru     = has(ROLES.MEMBRU)
+  const isTester      = has(ROLES.TESTER)       && !isLeadership
+  const isMembru      = has(ROLES.MEMBRU)
   const isGroveKiller = has(ROLES.GROVE_KILLER)
-  const isMuncitor   = has(ROLES.MUNCITOR)
+  const isMuncitor    = has(ROLES.MUNCITOR)
 
-  // Sectiunile Important — combina orice grade are userul
-  const showImportant    = isLeadership || isTester || isMembru || isGroveKiller || isMuncitor
-  const showTaxa         = isLeadership || isTester || isMembru
+  const showImportant      = isLeadership || isTester || isMembru || isGroveKiller || isMuncitor
+  const showTaxa           = isLeadership || isTester || isMembru
   const showTaskSaptamanal = isGroveKiller
-  const showSageti       = isMuncitor
+  const showSageti         = isMuncitor
 
   const NavItem = ({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) => {
     const active = path === href
@@ -110,9 +109,9 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
             <NavItem href="/dashboard/anunturi"   icon={Megaphone}     label="Anunțuri"       />
             <NavItem href="/dashboard/amenzi"     icon={AlertTriangle} label="Amenzile Mele"  />
             <NavItem href="/dashboard/bug-report" icon={Bug}           label="Bug Report"     />
-            {showTaxa          && <NavItem href="/dashboard/taxa"            icon={Coins} label="Taxa Sindicat"   />}
+            {showTaxa           && <NavItem href="/dashboard/taxa"            icon={Coins} label="Taxa Sindicat"   />}
             {showTaskSaptamanal && <NavItem href="/dashboard/task-saptamanal" icon={Sword} label="Task Săptămânal" />}
-            {showSageti        && <NavItem href="/dashboard/sageti"          icon={Zap}   label="Task Săgeată"   />}
+            {showSageti         && <NavItem href="/dashboard/sageti"          icon={Zap}   label="Task Săgeată"   />}
           </>
         )}
 
