@@ -10,10 +10,10 @@ const RESPONSABIL_RESURSE_ROLE = '1462444666958909583'
 
 let ws
 let heartbeatInterval
-let lastSequence      = null
-let reconnectDelay    = 5000
-let isConnecting      = false
-let reportScheduled   = false  // previne duplicate intervale
+let lastSequence    = null
+let reconnectDelay  = 5000
+let isConnecting    = false
+let reportScheduled = false
 
 function scheduleReports() {
   if (reportScheduled) return
@@ -60,45 +60,43 @@ async function sendReport(isMorning) {
     const messages = await messagesRes.json()
     if (!Array.isArray(messages)) return
 
-    const unpaidMessages = []
+    // Colecteaza useri unici cu emoji ⏲️
+    const unpaidUsers = new Map()
     for (const msg of messages) {
       const content = (msg.content || '').toLowerCase()
       if (!content.includes(KEYWORD)) continue
       const reactions = msg.reactions || []
       const hasTimer  = reactions.some(r => r.emoji.name === '⏲️')
       if (hasTimer) {
-        unpaidMessages.push({
-          author:  msg.author.username,
-          content: msg.content.slice(0, 100),
-        })
+        unpaidUsers.set(msg.author.id, msg.author.username)
       }
     }
 
     const emoji   = isMorning ? '☀️' : '🌙'
     const period  = isMorning ? 'Dimineață' : 'Seară'
     const divider = '━━━━━━━━━━━━━━━━━━━━'
+    // Tag doar Responsabil Resurse Jafuri
+    const pingRole = `<@&${RESPONSABIL_RESURSE_ROLE}>`
 
     let content
-    if (unpaidMessages.length === 0) {
+    if (unpaidUsers.size === 0) {
       content =
         `## ${emoji} Raport ${period} — Evidențe Jafuri\n` +
         `${divider}\n` +
         `> ✅ Toți membrii au predat resursele!\n` +
-        `${divider}`
+        `${divider}\n` +
+        pingRole
     } else {
-      const lines = unpaidMessages.map(m =>
-        `${divider}\n> ⏲️ **${m.author}**\n> ${m.content}`
-      )
+      const lines = Array.from(unpaidUsers.values()).map(u => `> ⏲️ **${u}**`)
       content =
         `## ${emoji} Raport ${period} — Evidențe Jafuri\n` +
         `${divider}\n` +
-        `**${unpaidMessages.length} membri nu au predat resursele:**\n` +
+        `**${unpaidUsers.size} membri nu au predat resursele:**\n` +
         lines.join('\n') + '\n' +
         `${divider}\n` +
-        `<@&955126889171804170> <@&955126890472022066>`
+        pingRole
     }
 
-    // Sterge mesajele vechi si trimite unul nou
     await deleteOldBotMessages()
     await sendMessage(REPORT_CHANNEL_ID, content)
 
