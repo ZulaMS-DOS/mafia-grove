@@ -10,25 +10,22 @@ const RESPONSABIL_RESURSE_ROLE = '1462444666958909583'
 
 let ws
 let heartbeatInterval
-let lastSequence = null
+let lastSequence    = null
+let reconnectDelay  = 5000
+let isConnecting    = false
 
-// ── Raport zilnic ──────────────────────────────────────────
 function scheduleReports() {
   setInterval(async () => {
     const now = new Date()
     const h   = now.getHours()
     const m   = now.getMinutes()
-
-    if ((h === 8 && m === 0) || (h === 20 && m === 0)) {
-      const isMorning = h === 8
-      await sendReport(isMorning)
-    }
-  }, 60 * 1000) // verifica la fiecare minut
+    if (h === 8  && m === 0) await sendReport(true)
+    if (h === 20 && m === 0) await sendReport(false)
+  }, 60 * 1000)
 }
 
 async function sendReport(isMorning) {
   try {
-    // Aduna toate mesajele din canalul de evidenta
     const messagesRes = await fetch(
       `https://discord.com/api/v10/channels/${CHANNEL_ID}/messages?limit=100`,
       { headers: { 'Authorization': `Bot ${TOKEN}` } }
@@ -36,53 +33,41 @@ async function sendReport(isMorning) {
     const messages = await messagesRes.json()
     if (!Array.isArray(messages)) return
 
-    // Filtreaza mesajele care au emoji ⏲️ (nu au dat resursele inca)
     const unpaidMessages = []
-
     for (const msg of messages) {
       const content = (msg.content || '').toLowerCase()
       if (!content.includes(KEYWORD)) continue
-
-      // Verifica daca are reactia ⏲️
-      const reactions = msg.reactions || []
-      const hasTimer  = reactions.some(r =>
-        r.emoji.name === '⏲️' || r.emoji.name === '⌛' || r.emoji.name === '⏳'
-      )
-
+      const reactions  = msg.reactions || []
+      const hasTimer   = reactions.some(r => r.emoji.name === '⏲️')
       if (hasTimer) {
         unpaidMessages.push({
           author:  msg.author.username,
           content: msg.content.slice(0, 80),
-          id:      msg.id,
         })
       }
     }
 
     const emoji  = isMorning ? '☀️' : '🌙'
     const period = isMorning ? 'Dimineață' : 'Seară'
+    const divider = '━━━━━━━━━━━━━━━━━━━━'
 
     if (unpaidMessages.length === 0) {
       await sendMessage(
         REPORT_CHANNEL_ID,
-        `## ${emoji} Raport ${period} — Evidențe Jafuri\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `> ✅ Toți membrii au predat resursele!\n` +
-        `━━━━━━━━━━━━━━━━━━━━`
+        `## ${emoji} Raport ${period} — Evidențe Jafuri\n${divider}\n> ✅ Toți membrii au predat resursele!\n${divider}`
       )
       return
     }
 
-    const lines = unpaidMessages.map(m =>
-      `> ⏲️ **${m.author}** — ${m.content}`
-    )
+    const lines = unpaidMessages.map(m => `${divider}\n> ⏲️ **${m.author}**\n> ${m.content}`)
 
     await sendMessage(
       REPORT_CHANNEL_ID,
       `## ${emoji} Raport ${period} — Evidențe Jafuri\n` +
-      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `${divider}\n` +
       `**${unpaidMessages.length} membri nu au predat resursele:**\n` +
       lines.join('\n') + '\n' +
-      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `${divider}\n` +
       `<@&955126889171804170> <@&955126890472022066>`
     )
   } catch (e) {
@@ -107,13 +92,10 @@ async function addReaction(channelId, messageId, emoji) {
     const encoded = encodeURIComponent(emoji)
     const res = await fetch(
       `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/${encoded}/@me`,
-      {
-        method:  'PUT',
-        headers: { 'Authorization': `Bot ${TOKEN}` },
-      }
+      { method: 'PUT', headers: { 'Authorization': `Bot ${TOKEN}` } }
     )
     if (res.ok) {
-      console.log(`Reaction ${emoji} adaugat la mesajul ${messageId}`)
+      console.log(`Reaction ${emoji} adaugat`)
     } else {
       const err = await res.json()
       console.error('Eroare reaction:', err)
@@ -123,11 +105,18 @@ async function addReaction(channelId, messageId, emoji) {
   }
 }
 
-// ── Gateway ─────────────────────────────────────────────────
 function connect() {
+  if (isConnecting) return
+  isConnecting = true
+
+  console.log(`Conectare Gateway (delay: ${reconnectDelay}ms)...`)
   ws = new WebSocket('wss://gateway.discord.gg/?v=10&encoding=json')
 
-  ws.on('open', () => console.log('Gateway conectat'))
+  ws.on('open', () => {
+    console.log('Gateway conectat')
+    isConnecting   = false
+    reconnectDelay = 5000 // reset delay la succes
+  })
 
   ws.on('message', async (data) => {
     const payload = JSON.parse(data)
@@ -137,8 +126,11 @@ function connect() {
 
     if (op === 10) {
       const interval = d.heartbeat_interval
+      clearInterval(heartbeatInterval)
       heartbeatInterval = setInterval(() => {
-        ws.send(JSON.stringify({ op: 1, d: lastSequence }))
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ op: 1, d: lastSequence }))
+        }
       }, interval)
 
       ws.send(JSON.stringify({
@@ -151,8 +143,15 @@ function connect() {
       }))
     }
 
-    if (op === 7) reconnect()
-    if (op === 9) setTimeout(connect, 5000)
+    if (op === 7) {
+      console.log('Discord cere reconnect')
+      safeReconnect(1000)
+    }
+
+    if (op === 9) {
+      console.log('Sesiune invalida — reconectare lenta')
+      safeReconnect(20000)
+    }
 
     if (t === 'READY') {
       console.log(`Bot gata: ${d.user.username}`)
@@ -176,19 +175,30 @@ function connect() {
   ws.on('close', (code) => {
     console.log(`Gateway inchis: ${code}`)
     clearInterval(heartbeatInterval)
-    if (code !== 1000) setTimeout(reconnect, 5000)
+    isConnecting = false
+    // Nu reconecta la coduri fatale
+    if (code === 4004 || code === 4010 || code === 4011 || code === 4012 || code === 4013 || code === 4014) {
+      console.error(`Cod fatal ${code} — nu reconectez`)
+      return
+    }
+    reconnectDelay = Math.min(reconnectDelay * 2, 60000) // exponential backoff max 60s
+    safeReconnect(reconnectDelay)
   })
 
   ws.on('error', (err) => {
     console.error('Gateway eroare:', err.message)
-    ws.close()
+    isConnecting = false
+    ws.terminate()
   })
 }
 
-function reconnect() {
+function safeReconnect(delay) {
   clearInterval(heartbeatInterval)
-  if (ws) ws.terminate()
-  setTimeout(connect, 3000)
+  if (ws) {
+    try { ws.terminate() } catch {}
+  }
+  isConnecting = false
+  setTimeout(connect, delay)
 }
 
 connect()
