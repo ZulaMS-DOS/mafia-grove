@@ -3,7 +3,9 @@ import { prisma } from '@/lib/prisma'
 const DISCORD_GUILD_ID  = process.env.DISCORD_GUILD_ID!
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
 const MUNCITOR_ROLE_ID  = '1342912254542348298'
+const MEMBRU_ROLE_ID    = '1501319885488390184'
 const NOTIFY_CHANNEL_ID = '1525258100599165008'
+const DIVIDER           = '━━━━━━━━━━━━━━━━━━━━'
 
 async function fetchAllDiscordMembers() {
   const allMembers: any[] = []
@@ -15,13 +17,10 @@ async function fetchAllDiscordMembers() {
       { headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` } }
     )
     if (!res.ok) throw new Error(`Discord API error: ${res.status}`)
-
     const batch = await res.json()
     if (!batch.length) break
-
     allMembers.push(...batch)
     after = batch[batch.length - 1].user.id
-
     if (batch.length < 1000) break
   }
 
@@ -32,18 +31,33 @@ async function sendDiscordMessage(content: string) {
   try {
     await fetch(`https://discord.com/api/v10/channels/${NOTIFY_CHANNEL_ID}/messages`, {
       method:  'POST',
-      headers: {
-        'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
-        'Content-Type':  'application/json',
-      },
-      body: JSON.stringify({ content }),
+      headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ content }),
     })
   } catch {}
 }
 
+async function addRole(discordId: string, roleId: string) {
+  try {
+    await fetch(
+      `https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members/${discordId}/roles/${roleId}`,
+      { method: 'PUT', headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` } }
+    )
+  } catch {}
+}
+
+async function removeRole(discordId: string, roleId: string) {
+  try {
+    await fetch(
+      `https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members/${discordId}/roles/${roleId}`,
+      { method: 'DELETE', headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` } }
+    )
+  } catch {}
+}
+
 function getWeekStart() {
-  const now = new Date()
-  const day = now.getDay()
+  const now  = new Date()
+  const day  = now.getDay()
   const diff = now.getDate() - day + (day === 0 ? -6 : 1)
   const monday = new Date(now)
   monday.setDate(diff)
@@ -53,7 +67,7 @@ function getWeekStart() {
 
 async function hasPaidTaxa(userId: string): Promise<boolean> {
   const weekStart = getWeekStart()
-  const payment = await (prisma as any).taxPayment.findUnique({
+  const payment   = await (prisma as any).taxPayment.findUnique({
     where: { userId_weekStart: { userId, weekStart } },
   })
   return payment?.paid ?? false
@@ -73,7 +87,10 @@ export async function syncDiscordMembers() {
       : null
     const isMuncitor = roleIds.includes(MUNCITOR_ROLE_ID)
 
-    const existing = await prisma.user.findUnique({ where: { discordId }, select: { id: true, joinedAt: true } })
+    const existing = await prisma.user.findUnique({
+      where:  { discordId },
+      select: { id: true, joinedAt: true },
+    })
 
     if (existing) {
       await prisma.user.update({
@@ -81,6 +98,7 @@ export async function syncDiscordMembers() {
         data:  { username, roleIds, avatar },
       })
     } else {
+      // User nou — seteaza joinedAt din Discord joined_at daca e Muncitor
       await prisma.user.create({
         data: {
           discordId,
@@ -88,15 +106,15 @@ export async function syncDiscordMembers() {
           roleIds,
           avatar,
           points:   0,
-          joinedAt: isMuncitor ? now : null,
+          joinedAt: isMuncitor ? new Date(m.joined_at) : null,
         },
       })
     }
   }
 
+  // Stergere useri plecati
   const dbUsers  = await prisma.user.findMany({ select: { id: true, discordId: true } })
   const toDelete = dbUsers.filter((u: any) => !discordIds.has(u.discordId))
-
   if (toDelete.length) {
     await prisma.user.deleteMany({
       where: { id: { in: toDelete.map((u: any) => u.id) } },
@@ -106,7 +124,7 @@ export async function syncDiscordMembers() {
   const todayStart = new Date(now)
   todayStart.setHours(0, 0, 0, 0)
 
-  // ── Reminder cu O ZI ÎNAINTE de expirare ──────────────────
+  // ── ZIUA 6 — Reminder cu o zi înainte ──────────────────────
   const sixDaysAgo    = new Date(now)
   sixDaysAgo.setDate(sixDaysAgo.getDate() - 6)
   sixDaysAgo.setHours(0, 0, 0, 0)
@@ -125,22 +143,24 @@ export async function syncDiscordMembers() {
     const alreadyReminded = await (prisma as any).notification.findFirst({
       where: {
         type:      'task',
-        title:     '⏰ Muncitori — Reminder Perioadă Probă',
+        title:     '⚠️ Muncitori — Reminder Perioadă Probă',
         createdAt: { gte: todayStart },
       },
     })
 
     if (!alreadyReminded) {
-      const divider = '━━━━━━━━━━━━━━━━━━━━'
       const lines = reminderMuncitori.map((u: any) =>
-        `${divider}\n> 👤 <@${u.discordId}> **(${u.username})**\n> 📅 Intrat pe: ${u.joinedAt ? new Date(u.joinedAt).toLocaleDateString('ro-RO') : '?'}\n> ⏳ Perioada de probă expiră **mâine!**`
+        `${DIVIDER}\n` +
+        `> 👤 <@${u.discordId}> **(${u.username})**\n` +
+        `> 📅 Intrat pe: ${u.joinedAt ? new Date(u.joinedAt).toLocaleDateString('ro-RO') : '?'}\n` +
+        `> ⏳ Perioada de probă expiră **mâine!**`
       )
 
       await sendDiscordMessage(
         `## ⚠️ Muncitori — Perioadă de Probă Expiră Mâine!\n` +
-        `${divider}\n` +
+        `${DIVIDER}\n` +
         lines.join('\n') + '\n' +
-        `${divider}\n` +
+        `${DIVIDER}\n` +
         `<@&955126889171804170> <@&955126890472022066>`
       )
 
@@ -153,7 +173,7 @@ export async function syncDiscordMembers() {
           data: {
             userId:  leaders[0].id,
             type:    'task',
-            title:   '⏰ Muncitori — Reminder Perioadă Probă',
+            title:   '⚠️ Muncitori — Reminder Perioadă Probă',
             message: `${reminderMuncitori.length} muncitori au perioada de probă ce expiră mâine.`,
           },
         })
@@ -161,7 +181,7 @@ export async function syncDiscordMembers() {
     }
   }
 
-  // ── Expirare 7 ZILE + status taxă ─────────────────────────
+  // ── ZIUA 7 — Expirare + promovare automată ──────────────────
   const sevenDaysAgo    = new Date(now)
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
   sevenDaysAgo.setHours(0, 0, 0, 0)
@@ -173,7 +193,7 @@ export async function syncDiscordMembers() {
       roleIds:  { has: MUNCITOR_ROLE_ID },
       joinedAt: { gte: sevenDaysAgo, lt: sevenDaysAgoEnd },
     },
-    select: { id: true, username: true, discordId: true, joinedAt: true },
+    select: { id: true, username: true, discordId: true, joinedAt: true, roleIds: true },
   })
 
   if (expiringMuncitori.length > 0) {
@@ -186,29 +206,62 @@ export async function syncDiscordMembers() {
     })
 
     if (!alreadyNotified) {
-      const divider = '━━━━━━━━━━━━━━━━━━━━'
+      const promotati:   string[] = []
+      const nepromotati: string[] = []
 
-      // Verifica taxa pentru fiecare Muncitor
-      const lines: string[] = []
       for (const u of expiringMuncitori) {
-        const paid = await hasPaidTaxa(u.id)
-        lines.push(
-          `${divider}\n` +
-          `> 👤 <@${u.discordId}> **(${u.username})**\n` +
-          `> 📅 Intrat pe: ${u.joinedAt ? new Date(u.joinedAt).toLocaleDateString('ro-RO') : '?'}\n` +
-          `> 💰 Taxă săptămânală: ${paid ? '✅ Achitată' : '❌ Neachitată'}`
-        )
+        const paid      = await hasPaidTaxa(u.id)
+        const joinedStr = u.joinedAt
+          ? new Date(u.joinedAt).toLocaleDateString('ro-RO')
+          : '?'
+
+        if (paid) {
+          // Promovare automata
+          await removeRole(u.discordId, MUNCITOR_ROLE_ID)
+          await addRole(u.discordId, MEMBRU_ROLE_ID)
+
+          // Actualizeaza DB
+          const newRoleIds = (u.roleIds as string[])
+            .filter((r: string) => r !== MUNCITOR_ROLE_ID)
+            .concat(MEMBRU_ROLE_ID)
+          await prisma.user.update({
+            where: { id: u.id },
+            data:  { roleIds: { set: newRoleIds }, joinedAt: null },
+          })
+
+          promotati.push(
+            `${DIVIDER}\n` +
+            `> 👤 <@${u.discordId}> **(${u.username})**\n` +
+            `> 📅 Intrat pe: ${joinedStr}\n` +
+            `> 💰 Taxă: ✅ Achitată\n` +
+            `> 🎉 **Promovat automat la Membru!**`
+          )
+        } else {
+          nepromotati.push(
+            `${DIVIDER}\n` +
+            `> 👤 <@${u.discordId}> **(${u.username})**\n` +
+            `> 📅 Intrat pe: ${joinedStr}\n` +
+            `> 💰 Taxă: ❌ Neachitată\n` +
+            `> ⚠️ **Necesită decizie manuală!**`
+          )
+        }
       }
 
-      await sendDiscordMessage(
-        `## ⏰ Muncitori — Perioadă de Probă Expirată!\n` +
-        `${divider}\n` +
-        `Următorii membri au completat **7 zile** pe server:\n` +
-        `*(promovare la Membru sau eliminare din organizație)*\n` +
-        lines.join('\n') + '\n' +
-        `${divider}\n` +
-        `<@&955126889171804170> <@&955126890472022066>`
-      )
+      let message = `## ⏰ Muncitori — Perioadă de Probă Expirată!\n${DIVIDER}\n`
+
+      if (promotati.length > 0) {
+        message += `**✅ Promovați automat la Membru (${promotati.length}):**\n`
+        message += promotati.join('\n') + '\n'
+      }
+
+      if (nepromotati.length > 0) {
+        message += `**❌ Necesită decizie manuală (${nepromotati.length}):**\n`
+        message += nepromotati.join('\n') + '\n'
+      }
+
+      message += `${DIVIDER}\n<@&955126889171804170> <@&955126890472022066>`
+
+      await sendDiscordMessage(message)
 
       const leaders = await prisma.user.findMany({
         where:  { roleIds: { hasSome: ['955126889171804170', '955126890472022066'] } },
@@ -220,7 +273,7 @@ export async function syncDiscordMembers() {
             userId:  leaders[0].id,
             type:    'task',
             title:   '⏰ Muncitori — Perioadă Probă Expirată',
-            message: `${expiringMuncitori.length} muncitori au completat 7 zile.`,
+            message: `${promotati.length} promovați, ${nepromotati.length} necesită decizie manuală.`,
           },
         })
       }
