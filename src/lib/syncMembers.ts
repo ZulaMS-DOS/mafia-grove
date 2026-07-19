@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 
 const DISCORD_GUILD_ID  = process.env.DISCORD_GUILD_ID!
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
+const NEXTAUTH_URL      = process.env.NEXTAUTH_URL!
 const MUNCITOR_ROLE_ID  = '1342912254542348298'
 const MEMBRU_ROLE_ID    = '1501319885488390184'
 const NOTIFY_CHANNEL_ID = '1525258100599165008'
@@ -10,7 +11,6 @@ const DIVIDER           = '━━━━━━━━━━━━━━━━━�
 async function fetchAllDiscordMembers() {
   const allMembers: any[] = []
   let after = '0'
-
   while (true) {
     const res = await fetch(
       `https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members?limit=1000&after=${after}`,
@@ -23,12 +23,38 @@ async function fetchAllDiscordMembers() {
     after = batch[batch.length - 1].user.id
     if (batch.length < 1000) break
   }
-
   return allMembers
+}
+
+async function saveLog(categorie: string, titlu: string, continut: string) {
+  try {
+    await (prisma as any).botLog.create({
+      data: { categorie, titlu, continut },
+    })
+  } catch {}
 }
 
 async function sendDiscordMessage(content: string) {
   try {
+    // Sterge mesajele vechi ale botului din canal
+    const existing = await fetch(
+      `https://discord.com/api/v10/channels/${NOTIFY_CHANNEL_ID}/messages?limit=10`,
+      { headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` } }
+    )
+    const messages = await existing.json()
+    if (Array.isArray(messages)) {
+      for (const msg of messages) {
+        if (msg.author?.bot) {
+          await fetch(
+            `https://discord.com/api/v10/channels/${NOTIFY_CHANNEL_ID}/messages/${msg.id}`,
+            { method: 'DELETE', headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` } }
+          )
+          await new Promise(r => setTimeout(r, 500))
+        }
+      }
+    }
+
+    // Trimite mesaj nou
     await fetch(`https://discord.com/api/v10/channels/${NOTIFY_CHANNEL_ID}/messages`, {
       method:  'POST',
       headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
@@ -98,21 +124,15 @@ export async function syncDiscordMembers() {
         data:  { username, roleIds, avatar },
       })
     } else {
-      // User nou — seteaza joinedAt din Discord joined_at daca e Muncitor
       await prisma.user.create({
         data: {
-          discordId,
-          username,
-          roleIds,
-          avatar,
-          points:   0,
+          discordId, username, roleIds, avatar, points: 0,
           joinedAt: isMuncitor ? new Date(m.joined_at) : null,
         },
       })
     }
   }
 
-  // Stergere useri plecati
   const dbUsers  = await prisma.user.findMany({ select: { id: true, discordId: true } })
   const toDelete = dbUsers.filter((u: any) => !discordIds.has(u.discordId))
   if (toDelete.length) {
@@ -156,13 +176,15 @@ export async function syncDiscordMembers() {
         `> ⏳ Perioada de probă expiră **mâine!**`
       )
 
-      await sendDiscordMessage(
+      const reminderMsg =
         `## ⚠️ Muncitori — Perioadă de Probă Expiră Mâine!\n` +
         `${DIVIDER}\n` +
         lines.join('\n') + '\n' +
         `${DIVIDER}\n` +
         `<@&955126889171804170> <@&955126890472022066>`
-      )
+
+      await sendDiscordMessage(reminderMsg)
+      await saveLog('muncitori', '⚠️ Reminder Perioadă Probă', reminderMsg)
 
       const leaders = await prisma.user.findMany({
         where:  { roleIds: { hasSome: ['955126889171804170', '955126890472022066'] } },
@@ -211,16 +233,11 @@ export async function syncDiscordMembers() {
 
       for (const u of expiringMuncitori) {
         const paid      = await hasPaidTaxa(u.id)
-        const joinedStr = u.joinedAt
-          ? new Date(u.joinedAt).toLocaleDateString('ro-RO')
-          : '?'
+        const joinedStr = u.joinedAt ? new Date(u.joinedAt).toLocaleDateString('ro-RO') : '?'
 
         if (paid) {
-          // Promovare automata
           await removeRole(u.discordId, MUNCITOR_ROLE_ID)
           await addRole(u.discordId, MEMBRU_ROLE_ID)
-
-          // Actualizeaza DB
           const newRoleIds = (u.roleIds as string[])
             .filter((r: string) => r !== MUNCITOR_ROLE_ID)
             .concat(MEMBRU_ROLE_ID)
@@ -228,7 +245,6 @@ export async function syncDiscordMembers() {
             where: { id: u.id },
             data:  { roleIds: { set: newRoleIds }, joinedAt: null },
           })
-
           promotati.push(
             `${DIVIDER}\n` +
             `> 👤 <@${u.discordId}> **(${u.username})**\n` +
@@ -248,20 +264,18 @@ export async function syncDiscordMembers() {
       }
 
       let message = `## ⏰ Muncitori — Perioadă de Probă Expirată!\n${DIVIDER}\n`
-
       if (promotati.length > 0) {
         message += `**✅ Promovați automat la Membru (${promotati.length}):**\n`
         message += promotati.join('\n') + '\n'
       }
-
       if (nepromotati.length > 0) {
         message += `**❌ Necesită decizie manuală (${nepromotati.length}):**\n`
         message += nepromotati.join('\n') + '\n'
       }
-
       message += `${DIVIDER}\n<@&955126889171804170> <@&955126890472022066>`
 
       await sendDiscordMessage(message)
+      await saveLog('muncitori', '⏰ Perioadă Probă Expirată', message)
 
       const leaders = await prisma.user.findMany({
         where:  { roleIds: { hasSome: ['955126889171804170', '955126890472022066'] } },
