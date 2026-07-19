@@ -10,11 +10,15 @@ const RESPONSABIL_RESURSE_ROLE = '1462444666958909583'
 
 let ws
 let heartbeatInterval
-let lastSequence    = null
-let reconnectDelay  = 5000
-let isConnecting    = false
+let lastSequence      = null
+let reconnectDelay    = 5000
+let isConnecting      = false
+let reportScheduled   = false  // previne duplicate intervale
 
 function scheduleReports() {
+  if (reportScheduled) return
+  reportScheduled = true
+
   setInterval(async () => {
     const now = new Date()
     const h   = now.getHours()
@@ -22,6 +26,29 @@ function scheduleReports() {
     if (h === 8  && m === 0) await sendReport(true)
     if (h === 20 && m === 0) await sendReport(false)
   }, 60 * 1000)
+}
+
+async function deleteOldBotMessages() {
+  try {
+    const res = await fetch(
+      `https://discord.com/api/v10/channels/${REPORT_CHANNEL_ID}/messages?limit=20`,
+      { headers: { 'Authorization': `Bot ${TOKEN}` } }
+    )
+    const messages = await res.json()
+    if (!Array.isArray(messages)) return
+
+    for (const msg of messages) {
+      if (msg.author?.bot) {
+        await fetch(
+          `https://discord.com/api/v10/channels/${REPORT_CHANNEL_ID}/messages/${msg.id}`,
+          { method: 'DELETE', headers: { 'Authorization': `Bot ${TOKEN}` } }
+        )
+        await new Promise(r => setTimeout(r, 600))
+      }
+    }
+  } catch (e) {
+    console.error('Eroare stergere mesaje:', e.message)
+  }
 }
 
 async function sendReport(isMorning) {
@@ -37,39 +64,44 @@ async function sendReport(isMorning) {
     for (const msg of messages) {
       const content = (msg.content || '').toLowerCase()
       if (!content.includes(KEYWORD)) continue
-      const reactions  = msg.reactions || []
-      const hasTimer   = reactions.some(r => r.emoji.name === '⏲️')
+      const reactions = msg.reactions || []
+      const hasTimer  = reactions.some(r => r.emoji.name === '⏲️')
       if (hasTimer) {
         unpaidMessages.push({
           author:  msg.author.username,
-          content: msg.content.slice(0, 80),
+          content: msg.content.slice(0, 100),
         })
       }
     }
 
-    const emoji  = isMorning ? '☀️' : '🌙'
-    const period = isMorning ? 'Dimineață' : 'Seară'
+    const emoji   = isMorning ? '☀️' : '🌙'
+    const period  = isMorning ? 'Dimineață' : 'Seară'
     const divider = '━━━━━━━━━━━━━━━━━━━━'
 
+    let content
     if (unpaidMessages.length === 0) {
-      await sendMessage(
-        REPORT_CHANNEL_ID,
-        `## ${emoji} Raport ${period} — Evidențe Jafuri\n${divider}\n> ✅ Toți membrii au predat resursele!\n${divider}`
+      content =
+        `## ${emoji} Raport ${period} — Evidențe Jafuri\n` +
+        `${divider}\n` +
+        `> ✅ Toți membrii au predat resursele!\n` +
+        `${divider}`
+    } else {
+      const lines = unpaidMessages.map(m =>
+        `${divider}\n> ⏲️ **${m.author}**\n> ${m.content}`
       )
-      return
+      content =
+        `## ${emoji} Raport ${period} — Evidențe Jafuri\n` +
+        `${divider}\n` +
+        `**${unpaidMessages.length} membri nu au predat resursele:**\n` +
+        lines.join('\n') + '\n' +
+        `${divider}\n` +
+        `<@&955126889171804170> <@&955126890472022066>`
     }
 
-    const lines = unpaidMessages.map(m => `${divider}\n> ⏲️ **${m.author}**\n> ${m.content}`)
+    // Sterge mesajele vechi si trimite unul nou
+    await deleteOldBotMessages()
+    await sendMessage(REPORT_CHANNEL_ID, content)
 
-    await sendMessage(
-      REPORT_CHANNEL_ID,
-      `## ${emoji} Raport ${period} — Evidențe Jafuri\n` +
-      `${divider}\n` +
-      `**${unpaidMessages.length} membri nu au predat resursele:**\n` +
-      lines.join('\n') + '\n' +
-      `${divider}\n` +
-      `<@&955126889171804170> <@&955126890472022066>`
-    )
   } catch (e) {
     console.error('Eroare raport:', e.message)
   }
@@ -115,7 +147,7 @@ function connect() {
   ws.on('open', () => {
     console.log('Gateway conectat')
     isConnecting   = false
-    reconnectDelay = 5000 // reset delay la succes
+    reconnectDelay = 5000
   })
 
   ws.on('message', async (data) => {
@@ -145,7 +177,7 @@ function connect() {
 
     if (op === 7) {
       console.log('Discord cere reconnect')
-      safeReconnect(1000)
+      safeReconnect(5000)
     }
 
     if (op === 9) {
@@ -176,12 +208,11 @@ function connect() {
     console.log(`Gateway inchis: ${code}`)
     clearInterval(heartbeatInterval)
     isConnecting = false
-    // Nu reconecta la coduri fatale
     if (code === 4004 || code === 4010 || code === 4011 || code === 4012 || code === 4013 || code === 4014) {
       console.error(`Cod fatal ${code} — nu reconectez`)
       return
     }
-    reconnectDelay = Math.min(reconnectDelay * 2, 60000) // exponential backoff max 60s
+    reconnectDelay = Math.min(reconnectDelay * 2, 60000)
     safeReconnect(reconnectDelay)
   })
 
