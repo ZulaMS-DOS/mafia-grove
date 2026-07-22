@@ -5,6 +5,8 @@ import { requireAuth, requireFineGiver } from '@/lib/middleware'
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
 const DISCORD_GUILD_ID  = process.env.DISCORD_GUILD_ID!
 const FW_CHANNEL_ID     = '1342941323367288852'
+const AMENDA_CHANNEL_ID = '1446452930310832219'
+const DIVIDER           = '━━━━━━━━━━━━━━━━━━━━'
 
 const FW_ROLES: Record<number, string> = {
   1: '955132772249387048',
@@ -86,7 +88,7 @@ export async function POST(req: NextRequest) {
     const previousFws = await (prisma as any).fine.findMany({
       where:   { userId, tip: 'fw', id: { not: fine.id } },
       orderBy: { createdAt: 'asc' },
-      select:  { fwLevel: true, material: true },
+      select:  { fwLevel: true },
     })
 
     // Total FW curent (max 3)
@@ -104,7 +106,6 @@ export async function POST(req: NextRequest) {
       ? `${history.join(' + ')} = FW ${totalFw}/3`
       : `FW ${totalFw}/3`
 
-    // Obtine datele userului
     const user = await prisma.user.findUnique({
       where:  { id: userId },
       select: { username: true, discordId: true },
@@ -121,27 +122,26 @@ export async function POST(req: NextRequest) {
         await addRole(user.discordId, FW_ROLES[totalFw])
       }
 
-      // Mesaj Discord
-      const divider = '━━━━━━━━━━━━━━━━━━━━'
+      // Mesaj Discord FW
       await sendDiscordMessage(
         FW_CHANNEL_ID,
         `## 🚨 Faction Warn — ${user.username}\n` +
-        `${divider}\n` +
+        `${DIVIDER}\n` +
         `> 👤 **Membru:** <@${user.discordId}>\n` +
         `> 📋 **Motiv:** ${material}\n` +
         `> 📊 **Istoric:** ${historyText}\n` +
         `> 👮 **Dat de:** ${session!.user.name}\n` +
-        `${divider}`
+        `${DIVIDER}`
       )
     }
 
-    // Salveaza log FW
+    // Log FW
     await (prisma as any).botLog.create({
       data: {
         categorie: 'jafuri',
         titlu:     `🚨 FW ${totalFw}/3 — ${user?.username || 'Necunoscut'}`,
         continut:
-          `Membru: ${user?.username} (<@${user?.discordId}>)\n` +
+          `Membru: ${user?.username}\n` +
           `Motiv: ${material}\n` +
           `Istoric: ${historyText}\n` +
           `Dat de: ${session!.user.name}`,
@@ -149,12 +149,25 @@ export async function POST(req: NextRequest) {
     })
 
   } else {
-    // Salveaza log amendă
     const user = await prisma.user.findUnique({
       where:  { id: userId },
-      select: { username: true },
+      select: { username: true, discordId: true },
     })
 
+    // Mesaj Discord Amendă
+    await sendDiscordMessage(
+      AMENDA_CHANNEL_ID,
+      `## ⚠️ Amendă — ${user?.username || 'Necunoscut'}\n` +
+      `${DIVIDER}\n` +
+      `> 👤 **Membru:** <@${user?.discordId}>\n` +
+      `> 📋 **Motiv:** ${material}\n` +
+      `${bucati ? `> 📦 **Cantitate:** ${bucati} buc\n` : ''}` +
+      `${termen ? `> ⏰ **Termen:** ${termen}\n` : ''}` +
+      `> 👮 **Dat de:** ${session!.user.name}\n` +
+      `${DIVIDER}`
+    )
+
+    // Log Amendă
     await (prisma as any).botLog.create({
       data: {
         categorie: 'jafuri',
