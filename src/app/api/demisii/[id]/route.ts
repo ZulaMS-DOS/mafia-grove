@@ -18,22 +18,25 @@ export async function PATCH(
   const { id } = await context.params
 
   const demisie = await prisma.resignation.update({
-    where: { id },
-    data:  { status, approvedBy: session!.user.id, approvedAt: new Date() },
+    where:   { id },
+    data:    { status, approvedBy: session!.user.id, approvedAt: new Date() },
     include: {
       user:     { select: { id: true, username: true } },
       approver: { select: { username: true } },
     },
   })
 
-  await notify({
-    userId:  demisie.user.id,
-    type:    'resignation',
-    title:   status === 'ACCEPTED' ? '✅ Demisie Acceptată' : '❌ Demisie Respinsă',
-    message: status === 'ACCEPTED'
-      ? `Demisia ta a fost acceptată de ${demisie.approver?.username}.`
-      : `Demisia ta a fost respinsă de ${demisie.approver?.username}.`,
-  })
+  // Notifica userul doar daca inca exista in DB
+  if (demisie.user?.id) {
+    await notify({
+      userId:  demisie.user.id,
+      type:    'resignation',
+      title:   status === 'ACCEPTED' ? '✅ Demisie Acceptată' : '❌ Demisie Respinsă',
+      message: status === 'ACCEPTED'
+        ? `Demisia ta a fost acceptată de ${demisie.approver?.username}.`
+        : `Demisia ta a fost respinsă de ${demisie.approver?.username}.`,
+    })
+  }
 
   return NextResponse.json({ demisie })
 }
