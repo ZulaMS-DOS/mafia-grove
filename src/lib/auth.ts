@@ -117,7 +117,19 @@ export const authOptions: AuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60,  // sesiunea tine normal 30 de zile
+    maxAge:   30 * 24 * 60 * 60,
+  },
+  cookies: {
+    sessionToken: {
+      name:    'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax' as const,
+        path:     '/',
+        secure:   true,
+        // Fara 'expires' = cookie de sesiune — dispare la inchiderea browserului
+      },
+    },
   },
   secret: process.env.NEXTAUTH_SECRET,
 }
