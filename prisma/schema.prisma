@@ -52,7 +52,8 @@ model WorkSession {
 
 model LeaveRequest {
   id         String      @id @default(cuid())
-  userId     String
+  userId     String?
+  username   String?
   reason     String
   startDate  DateTime
   endDate    DateTime
@@ -61,20 +62,21 @@ model LeaveRequest {
   approvedAt DateTime?
   createdAt  DateTime    @default(now())
 
-  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User? @relation(fields: [userId], references: [id], onDelete: SetNull)
   approver User? @relation("ApprovedLeaves", fields: [approvedBy], references: [id])
 }
 
 model Resignation {
-  id         String           @id @default(cuid())
-  userId     String
+  id         String            @id @default(cuid())
+  userId     String?
+  username   String?
   reason     String
   status     ResignationStatus @default(PENDING)
   approvedBy String?
   approvedAt DateTime?
-  createdAt  DateTime         @default(now())
+  createdAt  DateTime          @default(now())
 
-  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User? @relation(fields: [userId], references: [id], onDelete: SetNull)
   approver User? @relation("ApprovedResigns", fields: [approvedBy], references: [id])
 }
 
