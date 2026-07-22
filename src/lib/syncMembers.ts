@@ -2,7 +2,6 @@ import { prisma } from '@/lib/prisma'
 
 const DISCORD_GUILD_ID  = process.env.DISCORD_GUILD_ID!
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
-const NEXTAUTH_URL      = process.env.NEXTAUTH_URL!
 const MUNCITOR_ROLE_ID  = '1342912254542348298'
 const MEMBRU_ROLE_ID    = '1501319885488390184'
 const NOTIFY_CHANNEL_ID = '1525258100599165008'
@@ -34,9 +33,8 @@ async function saveLog(categorie: string, titlu: string, continut: string) {
   } catch {}
 }
 
-async function sendDiscordMessage(content: string) {
+async function deleteOldMessages() {
   try {
-    // Sterge mesajele vechi ale botului din canal
     const existing = await fetch(
       `https://discord.com/api/v10/channels/${NOTIFY_CHANNEL_ID}/messages?limit=10`,
       { headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` } }
@@ -53,8 +51,12 @@ async function sendDiscordMessage(content: string) {
         }
       }
     }
+  } catch {}
+}
 
-    // Trimite mesaj nou
+async function sendDiscordMessage(content: string) {
+  try {
+    await deleteOldMessages()
     await fetch(`https://discord.com/api/v10/channels/${NOTIFY_CHANNEL_ID}/messages`, {
       method:  'POST',
       headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
@@ -65,20 +67,32 @@ async function sendDiscordMessage(content: string) {
 
 async function addRole(discordId: string, roleId: string) {
   try {
-    await fetch(
+    const res = await fetch(
       `https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members/${discordId}/roles/${roleId}`,
       { method: 'PUT', headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` } }
     )
-  } catch {}
+    if (!res.ok) {
+      const err = await res.json()
+      console.error('Eroare addRole:', err)
+    }
+  } catch (e: any) {
+    console.error('Eroare addRole fetch:', e.message)
+  }
 }
 
 async function removeRole(discordId: string, roleId: string) {
   try {
-    await fetch(
+    const res = await fetch(
       `https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members/${discordId}/roles/${roleId}`,
       { method: 'DELETE', headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` } }
     )
-  } catch {}
+    if (!res.ok) {
+      const err = await res.json()
+      console.error('Eroare removeRole:', err)
+    }
+  } catch (e: any) {
+    console.error('Eroare removeRole fetch:', e.message)
+  }
 }
 
 function getWeekStart() {
@@ -133,6 +147,7 @@ export async function syncDiscordMembers() {
     }
   }
 
+  // Stergere useri plecati — DOAR cei fara demisii/invoiri active
   const dbUsers  = await prisma.user.findMany({ select: { id: true, discordId: true } })
   const toDelete = dbUsers.filter((u: any) => !discordIds.has(u.discordId))
   if (toDelete.length) {
@@ -186,6 +201,7 @@ export async function syncDiscordMembers() {
       await sendDiscordMessage(reminderMsg)
       await saveLog('muncitori', '⚠️ Reminder Perioadă Probă', reminderMsg)
 
+      // Marker ca sa nu trimita de mai multe ori azi
       const leaders = await prisma.user.findMany({
         where:  { roleIds: { hasSome: ['955126889171804170', '955126890472022066'] } },
         select: { id: true },
@@ -196,7 +212,8 @@ export async function syncDiscordMembers() {
             userId:  leaders[0].id,
             type:    'task',
             title:   '⚠️ Muncitori — Reminder Perioadă Probă',
-            message: `${reminderMuncitori.length} muncitori au perioada de probă ce expiră mâine.`,
+            message: `${reminderMuncitori.length} muncitori expira maine.`,
+            read:    true, // marcam ca citit automat — nu apare ca notificare
           },
         })
       }
@@ -277,6 +294,7 @@ export async function syncDiscordMembers() {
       await sendDiscordMessage(message)
       await saveLog('muncitori', '⏰ Perioadă Probă Expirată', message)
 
+      // Marker citit automat
       const leaders = await prisma.user.findMany({
         where:  { roleIds: { hasSome: ['955126889171804170', '955126890472022066'] } },
         select: { id: true },
@@ -288,6 +306,7 @@ export async function syncDiscordMembers() {
             type:    'task',
             title:   '⏰ Muncitori — Perioadă Probă Expirată',
             message: `${promotati.length} promovați, ${nepromotati.length} necesită decizie manuală.`,
+            read:    true,
           },
         })
       }
