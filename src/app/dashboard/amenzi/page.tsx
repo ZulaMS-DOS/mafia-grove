@@ -24,7 +24,24 @@ export default function AmenziPage() {
   useEffect(() => { load() }, [load])
 
   const amenzi = fines.filter(f => f.tip === 'amenda' || !f.tip)
-  const fwuri  = fines.filter(f => f.tip === 'fw')
+  const fwuri  = fines.filter(f => f.tip === 'fw').sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  )
+
+  // Calculeaza totalul FW cumulat
+  const totalFw = Math.min(
+    fwuri.reduce((sum, f) => sum + (f.fwLevel || 1), 0),
+    3
+  )
+
+  // Construieste istoricul combinat
+  const fwHistory = fwuri.map(f => `FW ${f.fwLevel}/3`)
+  const fwHistoryText = fwHistory.length > 1
+    ? `${fwHistory.join(' + ')} = FW ${totalFw}/3`
+    : fwHistory.length === 1 ? `FW ${totalFw}/3` : ''
+
+  const fwColor = totalFw === 3 ? 'text-red-400' : totalFw === 2 ? 'text-orange-400' : 'text-yellow-400'
+  const fwBorder = totalFw === 3 ? 'border-red-500/20 bg-red-500/5' : totalFw === 2 ? 'border-orange-500/20 bg-orange-500/5' : 'border-yellow-500/20 bg-yellow-500/5'
 
   return (
     <div className="space-y-5 animate-slide-up max-w-2xl">
@@ -54,7 +71,7 @@ export default function AmenziPage() {
           <Shield size={14} /> Faction Warn
           {fwuri.length > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
-              {fwuri.length}
+              {totalFw}/3
             </span>
           )}
         </button>
@@ -101,16 +118,31 @@ export default function AmenziPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {fwuri.map(f => (
-              <div key={f.id} className="grove-card border-orange-500/20 bg-orange-500/5">
+            {/* Card principal cu totalul */}
+            <div className={`grove-card ${fwBorder}`}>
+              <div className="flex items-center gap-3 mb-3">
+                <Shield size={24} className={fwColor} />
+                <div>
+                  <div className={`text-xl font-black ${fwColor}`}>FW {totalFw}/3</div>
+                  {fwHistoryText && (
+                    <div className="text-xs text-zinc-500 mt-0.5">{fwHistoryText}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Istoricul individual al FW-urilor */}
+            <div className="text-xs text-zinc-600 uppercase tracking-widest px-1">Istoric Detaliat</div>
+            {fwuri.map((f, i) => (
+              <div key={f.id} className="grove-card border-dark-border bg-dark-hover">
                 <div className="flex items-start gap-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <Shield size={14} className="text-orange-400 shrink-0" />
-                      <span className="text-orange-400 font-bold text-base">FW {f.fwLevel}/3</span>
+                      <span className="text-xs text-zinc-600 font-mono">#{i + 1}</span>
+                      <span className={`font-bold text-sm ${fwColor}`}>FW {f.fwLevel}/3</span>
                     </div>
-                    <div className="text-sm text-zinc-400 mt-1">{f.material}</div>
-                    <div className="text-xs text-zinc-600 mt-2">
+                    <div className="text-sm text-zinc-400">{f.material}</div>
+                    <div className="text-xs text-zinc-600 mt-1">
                       De la {f.givenByName} · {format(new Date(f.createdAt), 'dd MMM yyyy HH:mm', { locale: ro })}
                     </div>
                   </div>
