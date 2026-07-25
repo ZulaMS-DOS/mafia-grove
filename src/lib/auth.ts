@@ -60,10 +60,12 @@ export const authOptions: AuthOptions = {
       return true
     },
 
-        async jwt({ token, account, profile }) {
+            async jwt({ token, account, profile }) {
       if (account && profile) {
         const discordId = (profile as any).id as string
         console.log(`[JWT] Looking up user: ${discordId}`)
+        // Delay mic ca sa astepte upsert-ul din signIn
+        await new Promise(r => setTimeout(r, 500))
         const user      = await prisma.user.findUnique({ where: { discordId } })
         console.log(`[JWT] User found:`, user ? user.id : 'null')
         if (user) {
