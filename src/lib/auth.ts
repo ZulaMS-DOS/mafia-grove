@@ -60,10 +60,12 @@ export const authOptions: AuthOptions = {
       return true
     },
 
-    async jwt({ token, account, profile }) {
+        async jwt({ token, account, profile }) {
       if (account && profile) {
         const discordId = (profile as any).id as string
+        console.log(`[JWT] Looking up user: ${discordId}`)
         const user      = await prisma.user.findUnique({ where: { discordId } })
+        console.log(`[JWT] User found:`, user ? user.id : 'null')
         if (user) {
           token.userId       = user.id
           token.discordId    = discordId
