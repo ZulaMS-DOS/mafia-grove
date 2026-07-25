@@ -9,7 +9,7 @@ const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
 
 interface Demisie {
   id: string; reason: string; status: string; createdAt: string; approvedAt: string | null
-  user: { username: string }; approver: { username: string } | null
+  user: { username: string } | null; approver: { username: string } | null
 }
 
 type StatusTab = 'PENDING' | 'ACCEPTED' | 'REJECTED'
@@ -142,7 +142,9 @@ export default function DemisiiPage() {
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="font-semibold text-white">{d.user.username}</span>
+                  <span className="font-semibold text-white">
+                    {d.user?.username || 'Utilizator șters'}
+                  </span>
                   {statusBadge(d.status)}
                 </div>
                 <p className="text-zinc-400 text-sm mb-2">{d.reason}</p>
