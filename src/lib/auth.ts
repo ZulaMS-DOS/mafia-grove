@@ -13,22 +13,40 @@ export const authOptions: AuthOptions = {
   ],
   callbacks: {
     async signIn({ account, profile }) {
-      if (!account || !profile) return false
+      if (!account || !profile) {
+        console.log('[AUTH] No account or profile')
+        return false
+      }
 
       const discordId = (profile as any).id as string
+      console.log(`[AUTH] Login attempt: ${discordId}`)
 
       let member
-      try { member = await getGuildMember(discordId) } catch { return '/auth/error?error=bot_error' }
-      if (!member) return '/auth/error?error=not_in_guild'
+      try {
+        member = await getGuildMember(discordId)
+        console.log(`[AUTH] Member found:`, member ? 'yes' : 'no')
+      } catch (e) {
+        console.log(`[AUTH] Bot error:`, e)
+        return '/auth/error?error=bot_error'
+      }
+
+      if (!member) {
+        console.log(`[AUTH] Not in guild: ${discordId}`)
+        return '/auth/error?error=not_in_guild'
+      }
 
       const roleIds: string[] = member.roles || []
+      console.log(`[AUTH] RoleIds:`, roleIds)
+      console.log(`[AUTH] hasMinimumAccess:`, hasMinimumAccess(roleIds))
 
       const existingUser = await prisma.user.findUnique({ where: { discordId } })
       if (existingUser?.banned) {
+        console.log(`[AUTH] User is banned: ${discordId}`)
         return '/auth/error?error=banned'
       }
 
       if (!hasMinimumAccess(roleIds)) {
+        console.log(`[AUTH] No grade: ${discordId}`)
         return '/auth/error?error=no_grade'
       }
 
@@ -38,6 +56,7 @@ export const authOptions: AuthOptions = {
         create: { discordId, username: (profile as any).username, avatar: (profile as any).avatar, roleIds },
       })
 
+      console.log(`[AUTH] Login success: ${discordId}`)
       return true
     },
 
@@ -57,7 +76,6 @@ export const authOptions: AuthOptions = {
         return token
       }
 
-      // Re-verifica o data pe zi daca userul mai e pe server si mai are gradul minim
       const lastVerified = (token.lastVerified as number) || 0
       const oneDay        = 24 * 60 * 60 * 1000
 
@@ -67,19 +85,13 @@ export const authOptions: AuthOptions = {
           let member
           try { member = await getGuildMember(discordId) } catch { member = null }
 
-          if (!member) {
-            return { ...token, invalid: true }
-          }
+          if (!member) return { ...token, invalid: true }
 
           const roleIds: string[] = member.roles || []
-          if (!hasMinimumAccess(roleIds)) {
-            return { ...token, invalid: true }
-          }
+          if (!hasMinimumAccess(roleIds)) return { ...token, invalid: true }
 
           const user = await prisma.user.findUnique({ where: { discordId } })
-          if (user?.banned) {
-            return { ...token, invalid: true }
-          }
+          if (user?.banned) return { ...token, invalid: true }
 
           token.roleIds      = roleIds
           token.isLeadership = isLeadership(roleIds)
@@ -127,7 +139,6 @@ export const authOptions: AuthOptions = {
         sameSite: 'lax' as const,
         path:     '/',
         secure:   true,
-        // Fara 'expires' = cookie de sesiune — dispare la inchiderea browserului
       },
     },
   },
