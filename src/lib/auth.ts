@@ -13,7 +13,7 @@ export const authOptions: AuthOptions = {
   ],
   session: { strategy: 'jwt' as const, maxAge: 30 * 24 * 60 * 60 },
   secret: process.env.NEXTAUTH_SECRET,
-  trustHost: true,
+  // FIX: Am eliminat linia trustHost de aici pentru ca Next-Auth v4 sa nu mai dea eroare la build
   callbacks: {
     async signIn({ account, profile }) {
       if (!account || !profile) return false
