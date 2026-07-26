@@ -20,7 +20,8 @@
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "cloudinary": "^2.5.1",
-    "tweetnacl": "^1.0.3"
+    "tweetnacl": "^1.0.3",
+    "@next-auth/prisma-adapter": "^1.0.7"
   },
   "devDependencies": {
     "@types/node": "^20",
