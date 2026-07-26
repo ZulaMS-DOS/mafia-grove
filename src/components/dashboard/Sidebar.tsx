@@ -40,13 +40,16 @@ const liderNav = [
   { href: '/dashboard/lider/shop',      icon: ShoppingCart,  label: 'Gestionare Shop'   },
   { href: '/dashboard/lider/wheel',     icon: Dices,         label: 'Fortune Wheel'     },
   { href: '/dashboard/lider/tasks',     icon: ListTodo,      label: 'Tasks'             },
-  { href: '/dashboard/lider/puncte',    icon: Coins,         label: 'Gestionare Puncte' },
   { href: '/dashboard/lider/members',   icon: Users,         label: 'Membri'            },
   { href: '/dashboard/lider/whitelist', icon: Shield,        label: 'Whitelist'         },
   { href: '/dashboard/lider/anunturi',  icon: Megaphone,     label: 'Postează Anunț'    },
   { href: '/dashboard/lider/taxa',      icon: Coins,         label: 'Taxa Sindicat'     },
   { href: '/dashboard/lider/ban',       icon: Shield,        label: 'Gestionare Acces'  },
   { href: '/dashboard/lider/logs',      icon: ScrollText,    label: 'Logs Bot'          },
+]
+
+const superAdminNav = [
+  { href: '/dashboard/lider/puncte', icon: Coins, label: 'Gestionare Puncte' },
 ]
 
 interface SidebarProps {
@@ -126,6 +129,9 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
           <>
             <div className="text-xs text-grove-green/50 uppercase tracking-widest px-4 py-2 mt-3">⭐ Lider</div>
             {liderNav.map(item => <NavItem key={item.href} {...item} />)}
+            {session?.user.discordId === '949760812518617138' && (
+              superAdminNav.map(item => <NavItem key={item.href} {...item} />)
+            )}
           </>
         )}
       </nav>
