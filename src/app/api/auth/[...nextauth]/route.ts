@@ -9,8 +9,7 @@ const authOptions = {
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID || '',
       clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
-      // Îi cerem lui Discord să ne dea și comunitățile (guilds) la logare
-      authorization: { params: { scope: 'identify email guilds' } },
+      authorization: { params: { scope: 'identify email' } },
     }),
   ],
   session: {
@@ -20,27 +19,46 @@ const authOptions = {
   trustHost: true,
   callbacks: {
     async signIn({ account }: any) {
-      // Permitem trecerea inițială pentru a evita erorile de rețea în browser
       return true
     },
     async jwt({ token, account, profile }: any) {
+      // 1. Când utilizatorul se loghează, interogăm API-ul Discord prin Bot pentru a-i lua gradele reale
       if (account && profile) {
         token.discordId = profile.id
-        token.userRoles = (profile as any).roles || []
+        let fetchedRoles: string[] = []
+
+        try {
+          const guildId = process.env.DISCORD_GUILD_ID
+          const botToken = process.env.DISCORD_BOT_TOKEN
+
+          if (guildId && botToken) {
+            const url = "https://discord.com" + guildId + "/members/" + profile.id
+            const response = await fetch(url, {
+              headers: { Authorization: "Bot " + botToken },
+            })
+
+            if (response.ok) {
+              const memberData = await response.json()
+              if (memberData.roles && Array.isArray(memberData.roles)) {
+                fetchedRoles = memberData.roles.map((r: any) => String(r).trim())
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Eroare la preluarea gradelor din Discord:", err)
+        }
+
+        // Salvăm gradele direct în token-ul securizat JWT
+        token.userRoles = fetchedRoles
       }
       return token
     },
     async session({ session, token }: any) {
       if (session?.user && token?.discordId) {
-        // Preluăm rolurile permise din setările Railway
-        const allowedRolesString = process.env.DISCORD_LEADERSHIP_ROLES || '';
-        const allowedRoles = allowedRolesString.split(',').map(r => String(r).trim());
-
-        // Verificăm gradele trimise direct în token-ul securizat de Discord
-        const userRoles: string[] = token.userRoles || [];
-        const hasMinimumAccess = userRoles.some((roleId: string) => allowedRoles.includes(roleId));
+        const userRoles = token.userRoles || []
 
         try {
+          // 2. Sincronizăm baza de date PostgreSQL cu gradele proaspete luate prin Bot
           const dbUser = await prisma.user.findUnique({
             where: { discordId: token.discordId }
           })
@@ -67,13 +85,12 @@ const authOptions = {
             session.user.roleIds = updatedUser.roleIds
           }
         } catch (error) {
-          console.error("Eroare la sincronizarea bazei de date:", error)
+          console.error("Eroare la scrierea gradelor în baza de date:", error)
         }
 
-        // Dacă după verificare utilizatorul nu are grad, îi punem marcajul de redirecționare
-        if (!hasMinimumAccess) {
-          session.user.noGradeRedirect = true;
-        }
+        // 3. Injectăm stabil matricea de roluri în sesiune pentru ca panourile să o poată citi corect
+        session.user.roleIds = userRoles
+        session.user.username = session.user.name
       }
       return session
     },
