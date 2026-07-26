@@ -12,7 +12,10 @@ export default async function LiderPage() {
   if (!session) redirect('/auth/login')
 
   const roleIds = session.user.roleIds || []
-  if (!roleIds.some((r: string) => LEADERSHIP_ROLES.includes(r))) {
+  const username = session.user.username || session.user.name || ''
+
+  // FIX PENTRU ADMIN: Dacă ești tu (zula213), treci direct. Dacă e altcineva, îi verifică gradele.
+  if (username !== 'zula213' && !roleIds.some((r: string) => LEADERSHIP_ROLES.includes(r))) {
     redirect('/dashboard')
   }
 
