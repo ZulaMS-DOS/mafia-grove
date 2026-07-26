@@ -5,6 +5,7 @@ import { Clock, Coins, FileText, LogOut } from 'lucide-react'
 import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
 import Image from 'next/image'
+import { redirect } from 'next/navigation' // Am importat funcția de redirecționare
 
 function getWeekStart() {
   const now = new Date()
@@ -18,6 +19,13 @@ function getWeekStart() {
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
+  
+  // CONTROL DE ACCES PENTRU UTILIZATORII FĂRĂ GRAD:
+  // Dacă marcajul din route.ts este activ, îl trimitem direct la pagina ta de eroare custom
+  if ((session?.user as any)?.noGradeRedirect) {
+    redirect('/auth/error?error=no_grade')
+  }
+
   const userId  = session!.user.id
   const user    = session!.user
 
