@@ -27,15 +27,14 @@ const authOptions = {
           const botToken = process.env.DISCORD_BOT_TOKEN;
 
           if (guildId && botToken) {
-            // FIX: Am pus backticks ca serverul sa citeasca variabila din Railway corect
-            const response = await fetch(
-              `https://discord.com{guildId}/members/${profile.id}`,
-              {
-                headers: {
-                  Authorization: `Bot ${botToken}`,
-                },
-              }
-            );
+            // METODA SIGURĂ: Lipim textul cu "+" ca să nu mai existe erori de ghilimele în GitHub
+            const url = "https://discord.com" + guildId + "/members/" + profile.id;
+            
+            const response = await fetch(url, {
+              headers: {
+                Authorization: "Bot " + botToken,
+              },
+            });
 
             if (response.ok) {
               const memberData = await response.json();
@@ -43,11 +42,11 @@ const authOptions = {
                 userRoles = memberData.roles.map((roleId: any) => String(roleId).trim());
               }
             } else {
-              console.error("Botul nu a putut citi membrul de pe Discord. Status:", response.status);
+              console.error("Botul nu a putut citi membrul. Status:", response.status);
             }
           }
         } catch (err) {
-          console.error("Eroare la conexiunea cu API Discord prin Bot:", err);
+          console.error("Eroare la conexiunea cu API Discord:", err);
         }
 
         const allowedRolesString = process.env.DISCORD_LEADERSHIP_ROLES || '';
