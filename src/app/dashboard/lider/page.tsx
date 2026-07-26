@@ -11,10 +11,10 @@ export default async function LiderPage() {
   const session = await getServerSession(authOptions)
   if (!session) redirect('/auth/login')
 
-  const roleIds = session.user.roleIds || []
-  const username = session.user.username || session.user.name || ''
+  const roleIds = (session.user as any).roleIds || []
+  const username = (session.user as any).username || session.user.name || ''
 
-  // FIX PENTRU ADMIN: Dacă ești tu (zula213), treci direct. Dacă e altcineva, îi verifică gradele.
+  // FIX PENTRU COMPILARE: Am adăugat "(session.user as any)" ca TypeScript să nu mai dea eroare de tipuri
   if (username !== 'zula213' && !roleIds.some((r: string) => LEADERSHIP_ROLES.includes(r))) {
     redirect('/dashboard')
   }
