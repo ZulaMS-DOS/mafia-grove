@@ -12,12 +12,10 @@ const extendedAuthOptions = {
     async signIn({ profile, account }: any) {
       if (account?.provider === 'discord' && profile) {
         try {
-          // 1. Căutăm dacă utilizatorul există deja după ID-ul de Discord
           const existingUser = await prisma.user.findUnique({
             where: { discordId: profile.id }
           })
 
-          // 2. Dacă nu există, îl creăm noi manual chiar acum
           if (!existingUser) {
             await prisma.user.create({
               data: {
@@ -32,11 +30,23 @@ const extendedAuthOptions = {
           }
         } catch (error) {
           console.error("Eroare la salvarea utilizatorului nou Prisma:", error)
-          // Returnăm true chiar și la eroare pentru a nu bloca navigarea, Next-Auth va face fallback session
           return true 
         }
       }
       return true
+    },
+    async session({ session, token }: any) {
+      // Forțăm Next-Auth să recunoască utilizatorul nou prin injectarea ID-ului corect din baza de date
+      if (session?.user && token?.sub) {
+        const dbUser = await prisma.user.findUnique({
+          where: { discordId: token.sub }
+        })
+        if (dbUser) {
+          session.user.id = dbUser.id
+          session.user.username = dbUser.username
+        }
+      }
+      return session
     },
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
       if (url.startsWith("/")) return `${baseUrl}${url}`;
