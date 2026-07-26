@@ -23,7 +23,6 @@ const authOptions = {
         let userRoles: string[] = [];
 
         try {
-          // Folosim BOT-ul tău de Discord configurat în Railway pentru a interoga serverul tău securizat
           const guildId = process.env.DISCORD_GUILD_ID;
           const botToken = process.env.DISCORD_BOT_TOKEN;
 
@@ -39,7 +38,10 @@ const authOptions = {
 
             if (response.ok) {
               const memberData = await response.json();
-              userRoles = memberData.roles || []; // Aici preluăm gradele reale și sigure ale omului!
+              // FIX CRITIC: Forțăm transformarea ID-urilor de roluri în String curat
+              if (memberData.roles && Array.isArray(memberData.roles)) {
+                userRoles = memberData.roles.map((roleId: any) => String(roleId).trim());
+              }
             } else {
               console.error("Botul nu a putut citi membrul de pe Discord. Status:", response.status);
             }
@@ -48,20 +50,19 @@ const authOptions = {
           console.error("Eroare la conexiunea cu API Discord prin Bot:", err);
         }
 
-        // Preluăm gradele permise din variabila ta din Railway
+        // Preluăm gradele permise din variabila ta din Railway și le curățăm ca text
         const allowedRolesString = process.env.DISCORD_LEADERSHIP_ROLES || '';
-        const allowedRoles = allowedRolesString.split(',').map(r => r.trim());
+        const allowedRoles = allowedRolesString.split(',').map(r => String(r).trim());
 
-        // Verificăm dacă deține cel puțin un grad autorizat
+        // Verificăm dacă utilizatorul are cel puțin un grad valid din lista de text
         const hasMinimumAccess = userRoles.some((roleId: string) => allowedRoles.includes(roleId));
 
         if (!hasMinimumAccess) {
-          // Dacă NU are gradul, îl trimitem la pagina de eroare
+          // Trimite forțat utilizatorii fără grad pe pagina de eroare configurată
           return '/auth/error?error=no_grade';
         }
 
         try {
-          // Dacă are gradul, îl salvăm sau îi actualizăm profilul
           const existingUser = await prisma.user.findUnique({
             where: { discordId: profile.id }
           })
@@ -78,7 +79,7 @@ const authOptions = {
               }
             })
           } else {
-            // Sincronizăm gradele noi primite pe Discord
+            // Sincronizăm gradele noi primite pe Discord în tabelul PostgreSQL
             await prisma.user.update({
               where: { discordId: profile.id },
               data: { roleIds: userRoles }
