@@ -9,7 +9,7 @@ const authOptions = {
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID || '',
       clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
-      authorization: { params: { scope: 'identify email guilds.members.read' } },
+      authorization: { params: { scope: 'identify email' } },
     }),
   ],
   session: {
@@ -20,24 +20,48 @@ const authOptions = {
   callbacks: {
     async signIn({ profile, account }: any) {
       if (account?.provider === 'discord' && profile) {
-        // 1. Preluăm gradele autorizate din variabila ta din Railway
+        let userRoles: string[] = [];
+
+        try {
+          // Folosim BOT-ul tău de Discord configurat în Railway pentru a interoga serverul tău securizat
+          const guildId = process.env.DISCORD_GUILD_ID;
+          const botToken = process.env.DISCORD_BOT_TOKEN;
+
+          if (guildId && botToken) {
+            const response = await fetch(
+              `https://discord.com{guildId}/members/${profile.id}`,
+              {
+                headers: {
+                  Authorization: `Bot ${botToken}`,
+                },
+              }
+            );
+
+            if (response.ok) {
+              const memberData = await response.json();
+              userRoles = memberData.roles || []; // Aici preluăm gradele reale și sigure ale omului!
+            } else {
+              console.error("Botul nu a putut citi membrul de pe Discord. Status:", response.status);
+            }
+          }
+        } catch (err) {
+          console.error("Eroare la conexiunea cu API Discord prin Bot:", err);
+        }
+
+        // Preluăm gradele permise din variabila ta din Railway
         const allowedRolesString = process.env.DISCORD_LEADERSHIP_ROLES || '';
         const allowedRoles = allowedRolesString.split(',').map(r => r.trim());
 
-        // 2. Citim rolurile utilizatorului trimise securizat de Discord la logare
-        // Next-Auth v4 pune rolurile din token-ul Discord direct în profile.roles
-        const userRoles = profile.roles || [];
-
-        // 3. Verificăm dacă utilizatorul deține cel puțin un grad autorizat
+        // Verificăm dacă deține cel puțin un grad autorizat
         const hasMinimumAccess = userRoles.some((roleId: string) => allowedRoles.includes(roleId));
 
         if (!hasMinimumAccess) {
-          // Dacă NU are gradul, îl trimitem direct către pagina ta cu cheia 'no_grade'
+          // Dacă NU are gradul, îl trimitem la pagina de eroare
           return '/auth/error?error=no_grade';
         }
 
         try {
-          // Dacă are gradul, îl salvăm sau îi actualizăm datele în PostgreSQL
+          // Dacă are gradul, îl salvăm sau îi actualizăm profilul
           const existingUser = await prisma.user.findUnique({
             where: { discordId: profile.id }
           })
@@ -54,14 +78,14 @@ const authOptions = {
               }
             })
           } else {
-            // Îi actualizăm rolurile în baza de date în caz că a primit grade noi pe Discord
+            // Sincronizăm gradele noi primite pe Discord
             await prisma.user.update({
               where: { discordId: profile.id },
               data: { roleIds: userRoles }
             })
           }
         } catch (error) {
-          console.error("Eroare la procesarea utilizatorului Prisma:", error)
+          console.error("Eroare la salvarea în baza de date:", error)
         }
       }
       return true
