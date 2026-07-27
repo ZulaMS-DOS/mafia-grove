@@ -9,6 +9,7 @@ const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
 
 interface Demisie {
   id: string; reason: string; status: string; createdAt: string; approvedAt: string | null
+  username: string | null
   user: { username: string } | null; approver: { username: string } | null
 }
 
