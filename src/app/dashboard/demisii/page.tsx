@@ -142,8 +142,8 @@ export default function DemisiiPage() {
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="font-semibold text-white">
-                    {d.user?.username || 'Utilizator șters'}
+                                    <span className="font-semibold text-white">
+                    {d.user?.username || d.username || 'Utilizator șters'}
                   </span>
                   {statusBadge(d.status)}
                 </div>
