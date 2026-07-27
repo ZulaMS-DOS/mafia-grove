@@ -9,11 +9,10 @@ export async function GET() {
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const userId     = session!.user.id
-  const roleIds    = session!.user.roleIds || []
-  const isLeader   = roleIds.some((r: string) => LEADERSHIP_ROLES.includes(r))
+  const userId   = session!.user.id
+  const roleIds  = session!.user.roleIds || []
+  const isLeader = roleIds.some((r: string) => LEADERSHIP_ROLES.includes(r))
 
-  // Lider/Co-Lider vad toate, restul doar ale lor
   const demisii = await prisma.resignation.findMany({
     where:   isLeader ? {} : { userId },
     orderBy: { createdAt: 'desc' },
@@ -34,12 +33,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Motivul este obligatoriu' }, { status: 400 })
   }
 
+  // Salveaza username-ul in demisie ca sa ramana vizibil daca userul pleaca
   const demisie = await prisma.resignation.create({
-    data: { userId: session!.user.id, reason },
+    data: {
+      userId:   session!.user.id,
+      username: session!.user.name,
+      reason,
+    },
     include: { user: { select: { username: true, avatar: true } } },
   })
 
-  // Notifica doar liderii
   const lideri = await prisma.user.findMany({
     where:  { roleIds: { hasSome: LEADERSHIP_ROLES } },
     select: { id: true },
