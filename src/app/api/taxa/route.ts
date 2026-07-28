@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/middleware'
 import { notify } from '@/lib/notifications'
@@ -67,14 +67,16 @@ async function buildUnpaidList(item: any, weekStart: Date): Promise<string[]> {
     .map((u: any) => `> ❌ <@${u.discordId}> (${u.username})`)
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const weekStart = getWeekStart()
-  const userId    = session!.user.id
-  const myRoleIds = session!.user.roleIds || []
-  const now       = new Date()
+  const weekStart    = getWeekStart()
+  const userId       = session!.user.id
+  const myRoleIds    = session!.user.roleIds || []
+  const now          = new Date()
+  // Filtreaza dupa un grad specific (ex: doar Muncitor sau doar Grove Killer)
+  const filterRole   = req.nextUrl.searchParams.get('role')
 
   const [allItems, payment] = await Promise.all([
     (prisma as any).taxItem.findMany({
@@ -87,9 +89,12 @@ export async function GET() {
   ])
 
   // Filtreaza dupa gradul userului
-  const filtered = allItems.filter((item: any) =>
-    !item.targetRoles?.length || item.targetRoles.some((r: string) => myRoleIds.includes(r))
-  )
+  const filtered = allItems.filter((item: any) => {
+    if (!item.targetRoles?.length) return true
+    // Daca e specificat un rol anume, filtreaza doar dupa el
+    if (filterRole) return item.targetRoles.includes(filterRole)
+    return item.targetRoles.some((r: string) => myRoleIds.includes(r))
+  })
 
   const items = filtered.map((item: any) => ({
     ...item,
