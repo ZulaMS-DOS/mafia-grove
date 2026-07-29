@@ -17,7 +17,7 @@ export default function SagetiPage() {
   const [lastUpdate, setLast] = useState(new Date())
 
   const load = useCallback(async () => {
-    const r = await fetch('/api/taxa')
+        const r = await fetch('/api/taxa?role=1342912254542348298')
     const d = await r.json()
     // Afiseaza doar materialele relevante pentru Muncitor (filtrate deja server-side)
     setItems(d.items || [])
