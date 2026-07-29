@@ -31,7 +31,7 @@ export default function TaskSaptamanalPage() {
   const [lastUpdate, setLast] = useState(new Date())
 
   const load = useCallback(async () => {
-    const r = await fetch('/api/taxa')
+    const r = await fetch('/api/taxa?role=955126892984410162')
     const d = await r.json()
     setItems(d.items || [])
     setPaid(d.paid)
