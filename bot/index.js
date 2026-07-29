@@ -219,7 +219,31 @@ function connect() {
         console.log(`Bot gata: ${d.user.username}`)
         scheduleReports()
       }
+// MESSAGE_REACTION_ADD — detecteaza cand se pune o reactie
+      if (t === 'MESSAGE_REACTION_ADD') {
+        const channelId   = d.channel_id
+        const messageId   = d.message_id
+        const emojiName   = d.emoji?.name
+        const reactorRoles = d.member?.roles || []
 
+        const isAuthorized = reactorRoles.includes('955126889171804170') || // Lider
+                             reactorRoles.includes('955126890472022066') || // Co-Lider
+                             reactorRoles.includes('1462444666958909583')   // Responsabil Resurse
+
+        if (channelId === CHANNEL_ID && emojiName === '✅' && isAuthorized) {
+          // Sterge reactia cu ceasul de pe mesaj
+          try {
+            const encoded = encodeURIComponent('⏲️')
+            await fetch(
+              `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/${encoded}/@me`,
+              { method: 'DELETE', headers: { 'Authorization': `Bot ${TOKEN}` } }
+            )
+            console.log(`Reaction ⏲️ scoasa de pe mesajul ${messageId}`)
+          } catch (e) {
+            console.error('Eroare stergere reaction:', e)
+          }
+        }
+      }
       // MESSAGE_CREATE
       if (t === 'MESSAGE_CREATE') {
         const channelId   = d.channel_id
