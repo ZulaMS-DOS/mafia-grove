@@ -194,7 +194,7 @@ function connect() {
           op: 2,
           d: {
             token:      TOKEN,
-            intents:    33280 | 8192, // 8192 = GUILD_MESSAGE_REACTIONS
+            intents:    33280 | 8192 | 65536, // GUILD_MESSAGES + GUILD_MESSAGE_REACTIONS + MESSAGE_CONTENT
             properties: { os: 'linux', browser: 'grove-bot', device: 'grove-bot' },
           },
         }))
