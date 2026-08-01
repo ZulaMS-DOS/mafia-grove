@@ -8,13 +8,23 @@ const EMOJI_DEFAULT            = '⏲️'
 const EMOJI_RESPONSABIL        = '✅'
 const RESPONSABIL_RESURSE_ROLE = '1462444666958909583'
 
+const LIDER_ROLE     = '955126889171804170'
+const CO_LIDER_ROLE  = '955126890472022066'
+
 let ws               = null
 let heartbeatInterval = null
 let lastSequence      = null
-let reconnectDelay    = 10000  // incepe cu 10 secunde
+let reconnectDelay    = 10000
 let isConnecting      = false
 let reportScheduled   = false
 let reconnectTimeout  = null
+
+// Intents:
+// 512   = GUILD_MESSAGES
+// 32768 = MESSAGE_CONTENT
+// 8192  = GUILD_MESSAGE_REACTIONS
+// Total = 41472
+const INTENTS = 512 | 32768 | 8192
 
 function scheduleReports() {
   if (reportScheduled) return
@@ -73,9 +83,9 @@ async function sendReport(isMorning) {
       }
     }
 
-    const emoji   = isMorning ? '☀️' : '🌙'
-    const period  = isMorning ? 'Dimineață' : 'Seară'
-    const divider = '━━━━━━━━━━━━━━━━━━━━'
+    const emoji    = isMorning ? '☀️' : '🌙'
+    const period   = isMorning ? 'Dimineață' : 'Seară'
+    const divider  = '━━━━━━━━━━━━━━━━━━━━'
     const pingRole = `<@&${RESPONSABIL_RESURSE_ROLE}>`
 
     let content
@@ -129,6 +139,24 @@ async function addReaction(channelId, messageId, emoji) {
   }
 }
 
+async function removeReaction(channelId, messageId, emoji) {
+  try {
+    const encoded = encodeURIComponent(emoji)
+    const res = await fetch(
+      `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/${encoded}/@me`,
+      { method: 'DELETE', headers: { 'Authorization': `Bot ${TOKEN}` } }
+    )
+    if (res.ok) {
+      console.log(`Reaction ${emoji} scoasa de pe mesajul ${messageId}`)
+    } else {
+      const err = await res.json()
+      console.error('Eroare stergere reaction:', err)
+    }
+  } catch (e) {
+    console.error('Eroare fetch removeReaction:', e.message)
+  }
+}
+
 function cleanup() {
   if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null }
   if (reconnectTimeout)  { clearTimeout(reconnectTimeout);   reconnectTimeout  = null }
@@ -141,7 +169,7 @@ function cleanup() {
 function safeReconnect(delay) {
   if (isConnecting) return
   cleanup()
-  const actualDelay = Math.min(delay, 300000) // max 5 minute
+  const actualDelay = Math.min(delay, 300000)
   console.log(`Reconectare in ${actualDelay / 1000}s...`)
   reconnectTimeout = setTimeout(connect, actualDelay)
 }
@@ -170,7 +198,7 @@ function connect() {
     clearTimeout(connectTimeout)
     console.log('Gateway conectat')
     isConnecting   = false
-    reconnectDelay = 10000 // reset la succes
+    reconnectDelay = 10000
   })
 
   ws.on('message', async (data) => {
@@ -180,7 +208,6 @@ function connect() {
 
       if (s) lastSequence = s
 
-      // HELLO
       if (op === 10) {
         const interval = d.heartbeat_interval
         if (heartbeatInterval) clearInterval(heartbeatInterval)
@@ -194,56 +221,59 @@ function connect() {
           op: 2,
           d: {
             token:      TOKEN,
-            intents:    98304 | 33280,// GUILD_MESSAGES + GUILD_MESSAGE_REACTIONS + MESSAGE_CONTENT
+            intents:    INTENTS,
             properties: { os: 'linux', browser: 'grove-bot', device: 'grove-bot' },
           },
         }))
       }
 
-      // RECONNECT
       if (op === 7) {
         console.log('Discord cere reconnect')
         isConnecting = false
         safeReconnect(5000)
       }
 
-      // INVALID SESSION — asteapta mai mult
       if (op === 9) {
         console.log('Sesiune invalida')
         isConnecting = false
         safeReconnect(30000)
       }
 
-      // READY
       if (t === 'READY') {
         console.log(`Bot gata: ${d.user.username}`)
         scheduleReports()
       }
-// MESSAGE_REACTION_ADD — detecteaza cand se pune o reactie
+
+      // MESSAGE_REACTION_ADD
       if (t === 'MESSAGE_REACTION_ADD') {
-        const channelId   = d.channel_id
-        const messageId   = d.message_id
-        const emojiName   = d.emoji?.name
-        const reactorRoles = d.member?.roles || []
+        console.log('Reactie detectata:', d.emoji?.name, 'pe canal:', d.channel_id)
+        const channelId    = d.channel_id
+        const messageId    = d.message_id
+        const emojiName    = d.emoji?.name
 
-        const isAuthorized = reactorRoles.includes('955126889171804170') || // Lider
-                             reactorRoles.includes('955126890472022066') || // Co-Lider
-                             reactorRoles.includes('1462444666958909583')   // Responsabil Resurse
-
-        if (channelId === CHANNEL_ID && emojiName === '✅' && isAuthorized) {
-          // Sterge reactia cu ceasul de pe mesaj
+        if (channelId === CHANNEL_ID && emojiName === '✅') {
+          // Fetch member roles din Discord API
           try {
-            const encoded = encodeURIComponent('⏲️')
-            await fetch(
-              `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/${encoded}/@me`,
-              { method: 'DELETE', headers: { 'Authorization': `Bot ${TOKEN}` } }
+            const memberRes = await fetch(
+              `https://discord.com/api/v10/guilds/${d.guild_id}/members/${d.user_id}`,
+              { headers: { 'Authorization': `Bot ${TOKEN}` } }
             )
-            console.log(`Reaction ⏲️ scoasa de pe mesajul ${messageId}`)
+            const member = await memberRes.json()
+            const roles  = member.roles || []
+
+            const isAuthorized = roles.includes(LIDER_ROLE) ||
+                                 roles.includes(CO_LIDER_ROLE) ||
+                                 roles.includes(RESPONSABIL_RESURSE_ROLE)
+
+            if (isAuthorized) {
+              await removeReaction(channelId, messageId, '⏲️')
+            }
           } catch (e) {
-            console.error('Eroare stergere reaction:', e)
+            console.error('Eroare fetch member:', e.message)
           }
         }
       }
+
       // MESSAGE_CREATE
       if (t === 'MESSAGE_CREATE') {
         const channelId   = d.channel_id
@@ -257,25 +287,25 @@ function connect() {
           await addReaction(channelId, messageId, emoji)
         }
       }
+
     } catch (e) {
       console.error('Eroare procesare mesaj:', e.message)
     }
   })
 
-  ws.on('close', (code, reason) => {
+  ws.on('close', (code) => {
     clearTimeout(connectTimeout)
     console.log(`Gateway inchis: ${code}`)
     isConnecting = false
 
-    // Coduri fatale — nu reconecta
     const fatalCodes = [4004, 4010, 4011, 4012, 4013, 4014]
     if (fatalCodes.includes(code)) {
       console.error(`Cod fatal ${code} — opresc botul`)
-      process.exit(1) // Railway va reporni containerul dupa un delay
+      process.exit(1)
       return
     }
 
-    reconnectDelay = Math.min(reconnectDelay * 2, 300000) // max 5 minute
+    reconnectDelay = Math.min(reconnectDelay * 2, 300000)
     safeReconnect(reconnectDelay)
   })
 
@@ -286,5 +316,4 @@ function connect() {
   })
 }
 
-// Start
 connect()
