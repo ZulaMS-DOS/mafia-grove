@@ -39,25 +39,19 @@ interface Payment {
 }
 interface Member { id: string; username: string; avatar: string | null; discordId: string; roleIds: string[] }
 
-function getGrade(roleIds: string[]) {
-  for (const g of GRADE_OPTIONS) {
-    if (roleIds.includes(g.id)) return g
-  }
-  return { label: 'Fără Grad', color: 'text-zinc-600 border-zinc-700/30 bg-zinc-700/10' }
-}
-
 const emptyItem = (): TaxItem => ({ name: '', bucati: 0, termen: '', targetRoles: [], jafuri: null })
 
 export default function LiderTaxaPage() {
-  const [items, setItems]       = useState<TaxItem[]>([emptyItem()])
-  const [payments, setPayments] = useState<Payment[]>([])
-  const [members, setMembers]   = useState<Member[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [saving, setSaving]     = useState(false)
-  const [deleting, setDeleting] = useState<number | null>(null)
-  const [toggling, setToggling] = useState<string | null>(null)
-  const [msg, setMsg]           = useState('')
-  const [tab, setTab]           = useState<'seteaza' | 'status'>('seteaza')
+  const [items, setItems]         = useState<TaxItem[]>([emptyItem()])
+  const [payments, setPayments]   = useState<Payment[]>([])
+  const [members, setMembers]     = useState<Member[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [saving, setSaving]       = useState(false)
+  const [deleting, setDeleting]   = useState<number | null>(null)
+  const [toggling, setToggling]   = useState<string | null>(null)
+  const [msg, setMsg]             = useState('')
+  const [tab, setTab]             = useState<'seteaza' | 'status'>('seteaza')
+  const [activeGrade, setActiveGrade] = useState<string>(GRADE_OPTIONS[0].id)
 
   const itemsRef = useRef<TaxItem[]>(items)
   useEffect(() => { itemsRef.current = items }, [items])
@@ -111,7 +105,6 @@ export default function LiderTaxaPage() {
       if (j !== idx) return item
       const has = item.targetRoles.includes(roleId)
       const newRoles = has ? item.targetRoles.filter(r => r !== roleId) : [...item.targetRoles, roleId]
-      // Daca adaugam Grove Killer si nu exista jafuri, initializam lista goala
       const newJafuri = newRoles.includes(GROVE_KILLER_ID) && !item.jafuri ? [] : item.jafuri
       return { ...item, targetRoles: newRoles, jafuri: newJafuri }
     }))
@@ -120,17 +113,14 @@ export default function LiderTaxaPage() {
   const addJaf = (idx: number) => {
     setItems(prev => prev.map((item, j) => {
       if (j !== idx) return item
-      const jafuri = item.jafuri || []
-      return { ...item, jafuri: [...jafuri, { type: 'alta', count: 1 }] }
+      return { ...item, jafuri: [...(item.jafuri || []), { type: 'alta', count: 1 }] }
     }))
   }
 
   const updateJaf = (idx: number, jafIdx: number, field: 'type' | 'count', value: string | number) => {
     setItems(prev => prev.map((item, j) => {
       if (j !== idx) return item
-      const jafuri = (item.jafuri || []).map((jaf, k) =>
-        k === jafIdx ? { ...jaf, [field]: value } : jaf
-      )
+      const jafuri = (item.jafuri || []).map((jaf, k) => k === jafIdx ? { ...jaf, [field]: value } : jaf)
       return { ...item, jafuri }
     }))
   }
@@ -167,13 +157,20 @@ export default function LiderTaxaPage() {
     setToggling(null)
   }
 
-  const allTargetRoles  = new Set(items.flatMap(i => i.targetRoles))
-  const relevantMembers = allTargetRoles.size === 0
-    ? members
-    : members.filter(m => m.roleIds.some(r => allTargetRoles.has(r)))
-  const paidCount  = payments.filter(p => p.paid).length
-  const totalCount = relevantMembers.length
-  const paidMap    = new Map(payments.map(p => [p.user.username, p]))
+  const paidMap = new Map(payments.map(p => [p.user.username, p]))
+
+  // Grupeaza membrii per grad
+  const gradesWithMembers = GRADE_OPTIONS.map(grade => {
+    const gradeMembers = members.filter(m => m.roleIds.includes(grade.id))
+    const paidCount    = gradeMembers.filter(m => paidMap.get(m.username)?.paid).length
+    return { ...grade, members: gradeMembers, paidCount, total: gradeMembers.length }
+  }).filter(g => g.total > 0)
+
+  const totalPaid  = payments.filter(p => p.paid).length
+  const totalCount = members.length
+
+  // Gradul activ pentru status
+  const activeGradeData = gradesWithMembers.find(g => g.id === activeGrade) || gradesWithMembers[0]
 
   return (
     <div className="space-y-5 animate-slide-up">
@@ -188,21 +185,21 @@ export default function LiderTaxaPage() {
       </div>
 
       <div className="flex gap-1 border-b border-dark-border">
-        {(['seteaza', 'status'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-5 py-2.5 text-sm font-medium transition-all ${
-              tab === t ? 'text-grove-green border-b-2 border-grove-green' : 'text-zinc-500 hover:text-white'
-            }`}>
-            {t === 'seteaza' ? '📋 Setează Taxa' : (
-              <span className="flex items-center gap-2">
-                <Users size={14} /> Status Membri
-                <span className="text-xs px-1.5 py-0.5 rounded-full bg-grove-dim text-grove-green border border-grove-border">
-                  {paidCount}/{totalCount}
-                </span>
-              </span>
-            )}
-          </button>
-        ))}
+        <button onClick={() => setTab('seteaza')}
+          className={`px-5 py-2.5 text-sm font-medium transition-all ${
+            tab === 'seteaza' ? 'text-grove-green border-b-2 border-grove-green' : 'text-zinc-500 hover:text-white'
+          }`}>
+          📋 Setează Taxa
+        </button>
+        <button onClick={() => setTab('status')}
+          className={`px-5 py-2.5 text-sm font-medium transition-all flex items-center gap-2 ${
+            tab === 'status' ? 'text-grove-green border-b-2 border-grove-green' : 'text-zinc-500 hover:text-white'
+          }`}>
+          <Users size={14} /> Status Membri
+          <span className="text-xs px-1.5 py-0.5 rounded-full bg-grove-dim text-grove-green border border-grove-border">
+            {totalPaid}/{totalCount}
+          </span>
+        </button>
       </div>
 
       {msg && <div className="p-3 bg-dark-hover rounded-xl text-sm text-grove-green border border-grove-border">{msg}</div>}
@@ -234,7 +231,6 @@ export default function LiderTaxaPage() {
                   </button>
                 </div>
 
-                {/* Grade selector */}
                 <div>
                   <div className="text-xs text-zinc-600 uppercase tracking-wider mb-1.5 px-1">Pentru ce grade?</div>
                   <div className="flex flex-wrap gap-2">
@@ -255,7 +251,6 @@ export default function LiderTaxaPage() {
                   )}
                 </div>
 
-                {/* Selector jafuri — doar daca e selectat Grove Killer */}
                 {isGroveKiller && (
                   <div className="space-y-2 p-3 rounded-xl bg-red-500/5 border border-red-500/20">
                     <div className="flex items-center justify-between">
@@ -265,7 +260,6 @@ export default function LiderTaxaPage() {
                         <Plus size={11} /> Adaugă jaf
                       </button>
                     </div>
-
                     {(!item.jafuri || item.jafuri.length === 0) ? (
                       <p className="text-xs text-zinc-600 text-center py-2">Apasă "Adaugă jaf" pentru a specifica cerințele</p>
                     ) : (
@@ -319,63 +313,87 @@ export default function LiderTaxaPage() {
       )}
 
       {tab === 'status' && (
-        <div className="grove-card p-0 overflow-hidden">
-          <div className="px-5 py-3 border-b border-dark-border space-y-2">
-            <div className="flex justify-between text-xs text-zinc-500">
-              <span>{paidCount} din {totalCount} au plătit</span>
-              <span>{totalCount ? Math.round((paidCount/totalCount)*100) : 0}%</span>
-            </div>
-            <div className="w-full h-2 bg-dark-border rounded-full overflow-hidden">
-              <div className="h-full bg-grove-green rounded-full transition-all duration-500"
-                style={{ width: totalCount ? `${(paidCount/totalCount)*100}%` : '0%' }} />
-            </div>
+        <div className="space-y-4">
+          {/* Selectie grad */}
+          <div className="flex flex-wrap gap-2">
+            {gradesWithMembers.map(g => (
+              <button key={g.id} onClick={() => setActiveGrade(g.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                  activeGrade === g.id ? g.color : 'text-zinc-600 border-dark-border bg-dark-hover hover:text-white'
+                }`}>
+                {g.label}
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                  activeGrade === g.id ? 'bg-white/20' : 'bg-dark-border'
+                }`}>
+                  {g.paidCount}/{g.total}
+                </span>
+              </button>
+            ))}
           </div>
-          {loading ? (
-            <div className="text-center py-8 text-zinc-600">Se încarcă...</div>
-          ) : (
-            <div className="divide-y divide-dark-border/50">
-              {relevantMembers.map(m => {
-                const payment    = paidMap.get(m.username)
-                const hasPaid    = payment?.paid ?? false
-                const isToggling = toggling === m.id
-                const grade      = getGrade(m.roleIds)
-                return (
-                  <div key={m.id} className="flex items-center justify-between px-5 py-3 hover:bg-dark-hover transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full border border-dark-border overflow-hidden bg-dark-muted flex items-center justify-center shrink-0">
-                        {m.avatar
-                          ? <Image src={m.avatar} alt={m.username} width={36} height={36} className="object-cover" unoptimized />
-                          : <span className="text-sm">👤</span>
-                        }
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-white">{m.username}</div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-xs px-2 py-0.5 rounded-full border font-semibold ${grade.color}`}>
-                            {grade.label}
-                          </span>
-                          {hasPaid && payment?.paidAt && (
-                            <span className="text-xs text-zinc-600">
-                              {format(new Date(payment.paidAt), 'dd MMM HH:mm', { locale: ro })}
-                            </span>
-                          )}
+
+          {/* Progres grad selectat */}
+          {activeGradeData && (
+            <div className="grove-card p-0 overflow-hidden">
+              <div className="px-5 py-3 border-b border-dark-border space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className={`text-sm font-bold ${activeGradeData.color.split(' ')[0]}`}>
+                    {activeGradeData.label}
+                  </span>
+                  <span className="text-xs text-zinc-500">
+                    {activeGradeData.paidCount} din {activeGradeData.total} au plătit
+                    ({activeGradeData.total ? Math.round((activeGradeData.paidCount / activeGradeData.total) * 100) : 0}%)
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-dark-border rounded-full overflow-hidden">
+                  <div className="h-full bg-grove-green rounded-full transition-all duration-500"
+                    style={{ width: activeGradeData.total ? `${(activeGradeData.paidCount / activeGradeData.total) * 100}%` : '0%' }} />
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="text-center py-8 text-zinc-600">Se încarcă...</div>
+              ) : activeGradeData.members.length === 0 ? (
+                <div className="text-center py-8 text-zinc-600 text-sm">Niciun membru în acest grad</div>
+              ) : (
+                <div className="divide-y divide-dark-border/50">
+                  {activeGradeData.members.map(m => {
+                    const payment    = paidMap.get(m.username)
+                    const hasPaid    = payment?.paid ?? false
+                    const isToggling = toggling === m.id
+                    return (
+                      <div key={m.id} className="flex items-center justify-between px-5 py-3 hover:bg-dark-hover transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full border border-dark-border overflow-hidden bg-dark-muted flex items-center justify-center shrink-0">
+                            {m.avatar
+                              ? <Image src={m.avatar} alt={m.username} width={36} height={36} className="object-cover" unoptimized />
+                              : <span className="text-sm">👤</span>
+                            }
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-white">{m.username}</div>
+                            {hasPaid && payment?.paidAt && (
+                              <div className="text-xs text-zinc-600">
+                                {format(new Date(payment.paidAt), 'dd MMM HH:mm', { locale: ro })}
+                              </div>
+                            )}
+                          </div>
                         </div>
+                        <button onClick={() => togglePaid(m.id, hasPaid)} disabled={isToggling}
+                          className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                            hasPaid
+                              ? 'text-green-400 border-green-500/30 bg-green-500/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30'
+                              : 'text-red-400 border-red-500/30 bg-red-500/10 hover:bg-green-500/10 hover:text-green-400 hover:border-green-500/30'
+                          } disabled:opacity-50`}>
+                          {isToggling
+                            ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                            : hasPaid ? '✓ Achitat' : '✗ Neachitat'
+                          }
+                        </button>
                       </div>
-                    </div>
-                    <button onClick={() => togglePaid(m.id, hasPaid)} disabled={isToggling}
-                      className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-                        hasPaid
-                          ? 'text-green-400 border-green-500/30 bg-green-500/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30'
-                          : 'text-red-400 border-red-500/30 bg-red-500/10 hover:bg-green-500/10 hover:text-green-400 hover:border-green-500/30'
-                      } disabled:opacity-50`}>
-                      {isToggling
-                        ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-                        : hasPaid ? '✓ Achitat' : '✗ Neachitat'
-                      }
-                    </button>
-                  </div>
-                )
-              })}
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
