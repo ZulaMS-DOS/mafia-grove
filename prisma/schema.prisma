@@ -254,6 +254,7 @@ model Fine {
   id          String   @id @default(cuid())
   userId      String
   tip         String   @default("amenda") // "amenda" sau "fw"
+  motiv       String   @default("")
   material    String
   bucati      Int      @default(0)
   termen      String   @default("")
