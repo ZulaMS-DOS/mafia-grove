@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { useSession } from 'next-auth/react'
 
 interface Fine {
-  id: string; tip: string; material: string; bucati: number; termen: string
+  id: string; tip: string; motiv: string; material: string; bucati: number; termen: string
   fwLevel: number | null; givenByName: string; createdAt: string
   user: { username: string; avatar: string | null; discordId: string }
 }
@@ -30,16 +30,19 @@ export default function LiderAmenziPage() {
   const isLeader = roleIds.some((r: string) => LEADER_ROLES.includes(r))
   const isTester = roleIds.includes(TESTER_ROLE) && !isLeader
 
+  // Form amenda
   const [userId, setUserId]     = useState('')
+  const [motiv, setMotiv]       = useState('')
   const [material, setMaterial] = useState('')
   const [bucati, setBucati]     = useState('')
   const [termen, setTermen]     = useState('')
 
+  // Form fw
   const [fwUserId, setFwUserId] = useState('')
   const [fwMotiv, setFwMotiv]   = useState('')
   const [fwNivel, setFwNivel]   = useState('1')
 
-  const resetAmenda = () => { setUserId(''); setMaterial(''); setBucati(''); setTermen('') }
+  const resetAmenda = () => { setUserId(''); setMotiv(''); setMaterial(''); setBucati(''); setTermen('') }
   const resetFw     = () => { setFwUserId(''); setFwMotiv(''); setFwNivel('1') }
 
   const load = useCallback(async () => {
@@ -61,7 +64,10 @@ export default function LiderAmenziPage() {
     const r = await fetch('/api/amenzi', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ userId, tip: 'amenda', material, bucati: parseInt(bucati) || 0, termen }),
+      body:    JSON.stringify({
+        userId, tip: 'amenda', motiv,
+        material, bucati: parseInt(bucati) || 0, termen,
+      }),
     })
     if (r.ok) { showMsg('✅ Amendă aplicată!'); resetAmenda(); await load() }
     else       { showMsg('❌ Eroare la aplicare') }
@@ -74,7 +80,10 @@ export default function LiderAmenziPage() {
     const r = await fetch('/api/amenzi', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ userId: fwUserId, tip: 'fw', material: fwMotiv, bucati: 0, termen: '', fwLevel: parseInt(fwNivel) }),
+      body:    JSON.stringify({
+        userId: fwUserId, tip: 'fw', material: fwMotiv,
+        bucati: 0, termen: '', fwLevel: parseInt(fwNivel),
+      }),
     })
     if (r.ok) { showMsg('✅ Faction Warn aplicat!'); resetFw(); await load() }
     else       { showMsg('❌ Eroare la aplicare') }
@@ -99,7 +108,6 @@ export default function LiderAmenziPage() {
     return acc
   }, {})
 
-  // Toate sancțiunile pentru tab logs
   const allSorted = [...amenzi, ...fwuri].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   )
@@ -114,10 +122,11 @@ export default function LiderAmenziPage() {
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-white font-semibold text-sm">{f.user.username}</div>
+        {f.motiv && <div className="text-xs text-zinc-400">📝 {f.motiv}</div>}
         <div className="text-xs text-zinc-500 flex items-center gap-2 flex-wrap">
           <span>{f.material}</span>
           {f.bucati > 0 && <span>· {f.bucati} buc</span>}
-          {f.termen && <span>· {f.termen}</span>}
+          {f.termen && <span>· ⏰ {f.termen}</span>}
         </div>
         <div className="text-xs text-zinc-700 mt-0.5">
           {f.givenByName} · {format(new Date(f.createdAt), 'dd MMM HH:mm', { locale: ro })}
@@ -194,8 +203,13 @@ export default function LiderAmenziPage() {
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="grove-label">Material / Tip Amendă *</label>
-                <input className="grove-input text-sm" placeholder="ex: Posesie ilegală armă"
+                <label className="grove-label">Motiv</label>
+                <input className="grove-input text-sm" placeholder="ex: Nerespectarea regulamentului"
+                  value={motiv} onChange={e => setMotiv(e.target.value)} />
+              </div>
+              <div className="md:col-span-2">
+                <label className="grove-label">Material / Amendă *</label>
+                <input className="grove-input text-sm" placeholder="ex: 500 Monede Sindicat"
                   value={material} onChange={e => setMaterial(e.target.value)} />
               </div>
               <div>
@@ -232,7 +246,7 @@ export default function LiderAmenziPage() {
         </div>
       )}
 
-      {/* Tab FW — grupat per user cu suprapunere */}
+      {/* Tab FW */}
       {tab === 'fw' && !isTester && (
         <div className="space-y-4">
           <div className="grove-card space-y-3">
@@ -264,7 +278,6 @@ export default function LiderAmenziPage() {
             </button>
           </div>
 
-          {/* FW-uri grupate per user */}
           <div className="grove-card p-0 overflow-hidden">
             <div className="px-5 py-3 border-b border-dark-border">
               <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-widest">
@@ -330,7 +343,7 @@ export default function LiderAmenziPage() {
         </div>
       )}
 
-      {/* Tab Logs — toate sancțiunile */}
+      {/* Tab Logs */}
       {tab === 'logs' && (
         <div className="grove-card p-0 overflow-hidden">
           <div className="px-5 py-3 border-b border-dark-border">
@@ -361,6 +374,7 @@ export default function LiderAmenziPage() {
                         {f.tip === 'fw' ? `FW ${f.fwLevel}/3` : 'Amendă'}
                       </span>
                     </div>
+                    {f.motiv && <div className="text-xs text-zinc-400 truncate">📝 {f.motiv}</div>}
                     <div className="text-xs text-zinc-500 truncate">{f.material}</div>
                     <div className="text-xs text-zinc-700 mt-0.5">
                       {f.givenByName} · {format(new Date(f.createdAt), 'dd MMM HH:mm', { locale: ro })}
