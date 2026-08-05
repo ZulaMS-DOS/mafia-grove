@@ -4,18 +4,23 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '://discordapp.com',
-        port: '',
+        hostname: 'cdn.discordapp.com',
+        port:     '',
         pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: '://cloudinary.com',
-        port: '',
+        hostname: 'discordapp.com',
+        port:     '',
         pathname: '/**',
-      }
+      },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        port:     '',
+        pathname: '/**',
+      },
     ],
   },
 }
-
 module.exports = nextConfig
