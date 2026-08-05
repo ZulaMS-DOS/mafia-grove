@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   const { session, error } = await requireFineGiver()
   if (error) return error
 
-  const { userId, tip, material, bucati, termen, fwLevel } = await req.json()
+ const { userId, tip, motiv, material, bucati, termen, fwLevel } = await req.json()
   if (!userId || !material) {
     return NextResponse.json({ error: 'Membru și material obligatorii' }, { status: 400 })
   }
@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
     data: {
       userId,
       tip:         tipFinal,
+      motiv:       motiv?.trim() || '',
       material,
       bucati:      parseInt(bucati) || 0,
       termen:      termen?.trim()   || '',
