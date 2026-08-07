@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, Settings, Package, Coins } from 'lucide-react'
+import { Plus, Trash2, Settings, Package, Coins, Edit3, Save, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
 
@@ -19,7 +19,6 @@ export default function LiderWheelPage() {
   const [saving, setSaving]     = useState(false)
   const [msg, setMsg]           = useState('')
   const [tab, setTab]           = useState<'premii'|'config'|'istoric'>('premii')
-
   const [prizeKind, setPrizeKind] = useState<'points' | 'shop'>('points')
   const [label, setLabel]   = useState('')
   const [value, setValue]   = useState('10')
@@ -27,10 +26,17 @@ export default function LiderWheelPage() {
   const [chance, setChance] = useState('10')
   const [color, setColor]   = useState(COLORS[0])
 
+  // Editare
+  const [editing, setEditing]       = useState<string | null>(null)
+  const [editLabel, setEditLabel]   = useState('')
+  const [editValue, setEditValue]   = useState('10')
+  const [editChance, setEditChance] = useState('10')
+  const [editColor, setEditColor]   = useState(COLORS[0])
+
   const resetForm = () => { setPrizeKind('points'); setLabel(''); setValue('10'); setItemId(''); setChance('10'); setColor(COLORS[0]) }
 
   const load = useCallback(async () => {
-    const wRes = await fetch('/api/wheel/admin')
+    const wRes  = await fetch('/api/wheel/admin')
     const wData = await wRes.json()
     setPrizes(wData.prizes     || [])
     setSpinCost(wData.spinCost || 10)
@@ -43,9 +49,7 @@ export default function LiderWheelPage() {
 
   const showMsg = (text: string) => { setMsg(text); setTimeout(() => setMsg(''), 3000) }
 
-  const totalWeight = prizes.reduce((a, p) => a + p.chance, 0)
-
-  // Calculeaza sansa reala procentuala pentru fiecare premiu
+  const totalWeight  = prizes.reduce((a, p) => a + p.chance, 0)
   const getRealChance = (weight: number) =>
     totalWeight > 0 ? ((weight / totalWeight) * 100).toFixed(1) : '0'
 
@@ -59,10 +63,8 @@ export default function LiderWheelPage() {
     if (prizeKind === 'points' && !label.trim()) { showMsg('⚠️ Completează eticheta!'); return }
     if (prizeKind === 'shop' && !itemId)          { showMsg('⚠️ Selectează un produs din shop!'); return }
     if (!chance || parseInt(chance) < 1)          { showMsg('⚠️ Ponderea trebuie să fie cel puțin 1!'); return }
-
     setSaving(true)
     const finalLabel = prizeKind === 'shop' ? (shopItems.find(i => i.id === itemId)?.name || label) : label
-
     const r = await fetch('/api/wheel/admin', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -80,15 +82,46 @@ export default function LiderWheelPage() {
     setSaving(false)
   }
 
+  const startEdit = (p: Prize) => {
+    setEditing(p.id)
+    setEditLabel(p.label)
+    setEditValue(String(p.value))
+    setEditChance(String(p.chance))
+    setEditColor(p.color)
+  }
+
+  const saveEdit = async (id: string) => {
+    setSaving(true)
+    const r = await fetch(`/api/wheel/admin/${id}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        label:  editLabel,
+        value:  parseInt(editValue)  || 0,
+        chance: parseInt(editChance) || 10,
+        color:  editColor,
+      }),
+    })
+    if (r.ok) { showMsg('✅ Premiu actualizat!'); setEditing(null); await load() }
+    else       { showMsg('❌ Eroare la salvare') }
+    setSaving(false)
+  }
+
   const deletePrize = async (id: string) => {
-    await fetch('/api/wheel/admin', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    await fetch('/api/wheel/admin', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    })
     showMsg('🗑️ Premiu șters!')
     await load()
   }
 
   const saveCost = async () => {
     setSaving(true)
-    await fetch('/api/wheel/admin', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spinCost }) })
+    await fetch('/api/wheel/admin', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ spinCost })
+    })
     showMsg('✅ Cost salvat!')
     setSaving(false)
   }
@@ -117,7 +150,6 @@ export default function LiderWheelPage() {
 
       {tab === 'premii' && (
         <div className="space-y-4">
-
           <div className="grove-card">
             <p className="text-xs text-zinc-500 leading-relaxed">
               💡 <strong className="text-zinc-300">Sistem de ponderi</strong> — nu mai există limita de 100%.
@@ -129,7 +161,6 @@ export default function LiderWheelPage() {
 
           <div className="grove-card space-y-3">
             <h2 className="text-sm font-semibold text-grove-green uppercase tracking-widest">+ Adaugă Premiu</h2>
-
             <div className="flex gap-2">
               <button onClick={() => setPrizeKind('points')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
@@ -144,17 +175,18 @@ export default function LiderWheelPage() {
                 <Package size={14} /> Produs din Shop
               </button>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {prizeKind === 'points' ? (
                 <>
                   <div>
                     <label className="grove-label">Etichetă *</label>
-                    <input className="grove-input text-sm" placeholder="ex: 50 Coins" value={label} onChange={e => setLabel(e.target.value)} />
+                    <input className="grove-input text-sm" placeholder="ex: 50 Coins"
+                      value={label} onChange={e => setLabel(e.target.value)} />
                   </div>
                   <div>
                     <label className="grove-label">Puncte acordate</label>
-                    <input type="number" className="grove-input text-sm" placeholder="50" value={value} onChange={e => setValue(e.target.value)} />
+                    <input type="number" className="grove-input text-sm" placeholder="50"
+                      value={value} onChange={e => setValue(e.target.value)} />
                   </div>
                 </>
               ) : (
@@ -172,10 +204,11 @@ export default function LiderWheelPage() {
                   )}
                 </div>
               )}
-
               <div>
                 <label className="grove-label">Pondere (orice număr pozitiv)</label>
-                <input type="number" min="1" className="grove-input text-sm" placeholder="ex: 10 (mai mare = mai des)" value={chance} onChange={e => setChance(e.target.value)} />
+                <input type="number" min="1" className="grove-input text-sm"
+                  placeholder="ex: 10 (mai mare = mai des)"
+                  value={chance} onChange={e => setChance(e.target.value)} />
               </div>
               <div>
                 <label className="grove-label">Culoare (fallback fără poză)</label>
@@ -205,25 +238,77 @@ export default function LiderWheelPage() {
             ) : (
               <div className="divide-y divide-dark-border/50">
                 {prizes.map(p => (
-                  <div key={p.id} className="flex items-center gap-3 px-5 py-3 hover:bg-dark-hover transition-colors">
-                    {p.itemId && getItemImage(p.itemId) ? (
-                      <img src={getItemImage(p.itemId)!} alt="" className="w-9 h-9 rounded-full object-cover border-2 border-grove-border shrink-0" />
-                    ) : (
-                      <div className="w-4 h-4 rounded-full shrink-0" style={{ background: p.color }} />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-white text-sm font-medium">{p.label}</div>
-                      <div className="text-xs text-zinc-600">
-                        {p.type === 'points' ? `+${p.value} pts` : 'Item shop'}
-                        {' · '}
-                        <span className="text-grove-green font-semibold">{getRealChance(p.chance)}% șansă reală</span>
-                        <span className="text-zinc-700"> (pondere: {p.chance})</span>
+                  <div key={p.id} className="px-5 py-3 hover:bg-dark-hover transition-colors">
+                    {editing === p.id ? (
+                      // Form editare inline
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="col-span-2">
+                            <label className="grove-label">Etichetă</label>
+                            <input className="grove-input text-sm" value={editLabel}
+                              onChange={e => setEditLabel(e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="grove-label">Valoare (pts)</label>
+                            <input type="number" className="grove-input text-sm" value={editValue}
+                              onChange={e => setEditValue(e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="grove-label">Pondere</label>
+                            <input type="number" className="grove-input text-sm" value={editChance}
+                              onChange={e => setEditChance(e.target.value)} />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="grove-label">Culoare</label>
+                            <div className="flex gap-2 flex-wrap mt-1">
+                              {COLORS.map(c => (
+                                <button key={c} onClick={() => setEditColor(c)}
+                                  className={`w-8 h-8 rounded-lg border-2 transition-all ${editColor === c ? 'border-white scale-110' : 'border-transparent'}`}
+                                  style={{ background: c }} />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => saveEdit(p.id)} disabled={saving}
+                            className="grove-btn flex items-center gap-2 text-xs">
+                            <Save size={12} /> {saving ? 'Se salvează...' : 'Salvează'}
+                          </button>
+                          <button onClick={() => setEditing(null)}
+                            className="grove-btn-outline flex items-center gap-2 text-xs">
+                            <X size={12} /> Anulare
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <button onClick={() => deletePrize(p.id)}
-                      className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20">
-                      <Trash2 size={13} />
-                    </button>
+                    ) : (
+                      // Afisare normala
+                      <div className="flex items-center gap-3">
+                        {p.itemId && getItemImage(p.itemId) ? (
+                          <img src={getItemImage(p.itemId)!} alt="" className="w-9 h-9 rounded-full object-cover border-2 border-grove-border shrink-0" />
+                        ) : (
+                          <div className="w-4 h-4 rounded-full shrink-0" style={{ background: p.color }} />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-white text-sm font-medium">{p.label}</div>
+                          <div className="text-xs text-zinc-600">
+                            {p.type === 'points' ? `+${p.value} pts` : 'Item shop'}
+                            {' · '}
+                            <span className="text-grove-green font-semibold">{getRealChance(p.chance)}% șansă reală</span>
+                            <span className="text-zinc-700"> (pondere: {p.chance})</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 shrink-0">
+                          <button onClick={() => startEdit(p)}
+                            className="p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20">
+                            <Edit3 size={13} />
+                          </button>
+                          <button onClick={() => deletePrize(p.id)}
+                            className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20">
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
