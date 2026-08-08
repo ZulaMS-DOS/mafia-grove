@@ -147,12 +147,12 @@ export default function LiderTaxaPage() {
     setTimeout(() => setMsg(''), 4000)
   }
 
-  const togglePaid = async (memberId: string, currentPaid: boolean) => {
+  const togglePaid = async (memberId: string, currentPaid: boolean, roleId: string) => {
     setToggling(memberId)
     await fetch('/api/taxa/admin', {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ userId: memberId, paid: !currentPaid }),
+      body:    JSON.stringify({ userId: memberId, roleId, paid: !currentPaid }),
     })
     await load()
     setToggling(null)
@@ -358,8 +358,8 @@ export default function LiderTaxaPage() {
               ) : (
                 <div className="divide-y divide-dark-border/50">
                   {activeGradeData.members.map(m => {
-                    const payment    = paidMap.get(m.username)
-                    const hasPaid    = payment?.paid ?? false
+                    const payment = payments.find(p => p.user?.username === m.username && p.roleId === activeGrade)
+                    const hasPaid = payment?.paid ?? false
                     const isToggling = toggling === m.id
                     return (
                       <div key={m.id} className="flex items-center justify-between px-5 py-3 hover:bg-dark-hover transition-colors">
@@ -379,7 +379,7 @@ export default function LiderTaxaPage() {
                             )}
                           </div>
                         </div>
-                        <button onClick={() => togglePaid(m.id, hasPaid)} disabled={isToggling}
+                        <button onClick={() => togglePaid(m.id, hasPaid, activeGrade)} disabled={isToggling}
                           className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
                             hasPaid
                               ? 'text-green-400 border-green-500/30 bg-green-500/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30'
