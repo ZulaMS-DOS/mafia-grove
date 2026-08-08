@@ -365,8 +365,43 @@ export default function LiderTaxaPage() {
               ) : activeGradeData.members.length === 0 ? (
                 <div className="text-center py-8 text-zinc-600 text-sm">Niciun membru în acest grad</div>
               ) : (
+               {/* Bara progres jafuri pentru Grove Killer */}
+                {activeGrade === GROVE_KILLER_ID && jafProgress.length > 0 && (
+                  <div className="px-5 py-4 border-b border-dark-border space-y-3">
+                    <div className="text-xs text-red-400 uppercase tracking-widest font-semibold">⚔️ Progres Jafuri Săptămânale</div>
+                    {jafProgress.map(u => (
+                      <div key={u.userId} className="space-y-1 pb-3 border-b border-dark-border/30 last:border-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white">{u.username}</span>
+                          {u.allCompleted && <span className="text-xs text-green-400 font-bold">✅ Complet</span>}
+                        </div>
+                        {u.itemProgress.map((item: any, i: number) => (
+                          <div key={i} className="space-y-1 mt-1">
+                            <div className="flex justify-between text-xs text-zinc-500">
+                              <span>{item.itemName}</span>
+                              <span className={item.completed ? 'text-green-400' : 'text-zinc-400'}>
+                                {item.totalDone}/{item.totalRequired}
+                              </span>
+                            </div>
+                            <div className="w-full h-1.5 bg-dark-border rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full transition-all ${item.completed ? 'bg-green-400' : 'bg-red-400'}`}
+                                style={{ width: item.totalRequired ? `${Math.min((item.totalDone / item.totalRequired) * 100, 100)}%` : '0%' }} />
+                            </div>
+                            {item.jafProgress.map((jaf: any, j: number) => (
+                              <div key={j} className="flex justify-between text-xs text-zinc-700 pl-2">
+                                <span>{jaf.type}</span>
+                                <span>{jaf.done}/{jaf.required}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="divide-y divide-dark-border/50">
                   {activeGradeData.members.map(m => {
+              
                     const payment = payments.find(p => p.user?.username === m.username && p.roleId === activeGrade)
                     const hasPaid = payment?.paid ?? false
                     const isToggling = toggling === m.id
