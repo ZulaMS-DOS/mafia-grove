@@ -108,7 +108,7 @@ function getWeekStart() {
 async function hasPaidTaxa(userId: string): Promise<boolean> {
   const weekStart = getWeekStart()
   const payment   = await (prisma as any).taxPayment.findUnique({
-    where: { userId_weekStart: { userId, weekStart } },
+    where: { userId_roleId_weekStart: { userId, roleId: 'all', weekStart } },
   })
   return payment?.paid ?? false
 }
