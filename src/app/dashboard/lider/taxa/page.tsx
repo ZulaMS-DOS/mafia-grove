@@ -172,7 +172,16 @@ export default function LiderTaxaPage() {
 
   // Gradul activ pentru status
   const activeGradeData = gradesWithMembers.find(g => g.id === activeGrade) || gradesWithMembers[0]
+  const [jafProgress, setJafProgress] = useState<any[]>([])
 
+  useEffect(() => {
+    if (activeGrade === GROVE_KILLER_ID && tab === 'status') {
+      fetch('/api/taxa/progress')
+        .then(r => r.json())
+        .then(d => setJafProgress(d.progress || []))
+    }
+  }, [activeGrade, tab])
+  
   return (
     <div className="space-y-5 animate-slide-up">
       <div className="flex items-center justify-between">
