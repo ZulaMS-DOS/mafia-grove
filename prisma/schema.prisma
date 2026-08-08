@@ -138,6 +138,7 @@ model TaxItem {
 model TaxPayment {
   id        String    @id @default(cuid())
   userId    String
+  roleId    String    @default("all")
   weekStart DateTime
   paid      Boolean   @default(false)
   paidAt    DateTime?
@@ -145,7 +146,7 @@ model TaxPayment {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, weekStart])
+  @@unique([userId, roleId, weekStart])
 }
 
 model ShopItem {
