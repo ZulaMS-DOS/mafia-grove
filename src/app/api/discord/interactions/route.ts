@@ -3,12 +3,13 @@ import nacl from 'tweetnacl'
 import { prisma } from '@/lib/prisma'
 import { notify } from '@/lib/notifications'
 
-const PUBLIC_KEY        = process.env.DISCORD_PUBLIC_KEY!
-const DISCORD_APP_ID    = process.env.DISCORD_CLIENT_ID!
-const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
-const LEADERSHIP_ROLES  = ['955126889171804170', '955126890472022066']
-const JAF_ALLOWED_ROLES = ['955126889171804170', '955126890472022066', '1348974812315258972']
-const SUPER_ADMIN_ID    = '949760812518617138'
+const PUBLIC_KEY           = process.env.DISCORD_PUBLIC_KEY!
+const DISCORD_APP_ID       = process.env.DISCORD_CLIENT_ID!
+const DISCORD_BOT_TOKEN    = process.env.DISCORD_BOT_TOKEN!
+const LEADERSHIP_ROLES     = ['955126889171804170', '955126890472022066']
+const JAF_ALLOWED_ROLES    = ['955126889171804170', '955126890472022066', '1348974812315258972']
+const SUPER_ADMIN_ID       = '949760812518617138'
+const GROVE_KILLER_ROLE_ID = '955126892984410162'
 
 const JAF_CONFIG: Record<string, { label: string; points: number }> = {
   vinewood:    { label: '🎬 Vinewood Bank',      points: 1.5 },
@@ -23,11 +24,20 @@ const JAF_CONFIG: Record<string, { label: string; points: number }> = {
   digital_den: { label: '💻 Digital Den',        points: 2   },
 }
 
+function getWeekStart() {
+  const now  = new Date()
+  const day  = now.getDay()
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1)
+  const monday = new Date(now)
+  monday.setDate(diff)
+  monday.setHours(0, 0, 0, 0)
+  return monday
+}
+
 async function verifySignature(req: NextRequest, rawBody: string) {
   const signature = req.headers.get('x-signature-ed25519')
   const timestamp = req.headers.get('x-signature-timestamp')
   if (!signature || !timestamp) return false
-
   return nacl.sign.detached.verify(
     Buffer.from(timestamp + rawBody),
     Buffer.from(signature, 'hex'),
@@ -64,6 +74,59 @@ async function sendDM(discordId: string, content: string) {
   } catch {}
 }
 
+async function checkAndMarkGroveKillerTax(userId: string) {
+  try {
+    const weekStart = getWeekStart()
+    const weekEnd   = new Date(weekStart)
+    weekEnd.setDate(weekEnd.getDate() + 7)
+
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { roleIds: true } })
+    if (!user?.roleIds.includes(GROVE_KILLER_ROLE_ID)) return
+
+    const taxItems = await (prisma as any).taxItem.findMany({
+      where: { weekStart, targetRoles: { has: GROVE_KILLER_ROLE_ID } },
+    })
+    if (!taxItems.length) return
+
+    const processedPoints = await prisma.pointHistory.findMany({
+      where: { userId, createdAt: { gte: weekStart, lt: weekEnd }, reason: { contains: '— procesat de' } },
+    })
+
+    const processedCounts: Record<string, number> = {}
+    for (const ph of processedPoints) {
+      for (const [, cfg] of Object.entries(JAF_CONFIG)) {
+        if (ph.reason.includes(cfg.label)) {
+          const key = Object.keys(JAF_CONFIG).find(k => JAF_CONFIG[k].label === cfg.label) || ''
+          if (key) processedCounts[key] = (processedCounts[key] || 0) + 1
+        }
+      }
+    }
+
+    let allCompleted = true
+    for (const item of taxItems) {
+      const jafuri: { type: string; count: number }[] = item.jafuri || []
+      for (const jaf of jafuri) {
+        if ((processedCounts[jaf.type] || 0) < jaf.count) {
+          allCompleted = false
+          break
+        }
+      }
+      if (!allCompleted) break
+    }
+
+    if (allCompleted) {
+      await (prisma as any).taxPayment.upsert({
+        where:  { userId_roleId_weekStart: { userId, roleId: GROVE_KILLER_ROLE_ID, weekStart } },
+        update: { paid: true, paidAt: new Date() },
+        create: { userId, roleId: GROVE_KILLER_ROLE_ID, weekStart, paid: true, paidAt: new Date() },
+      })
+      console.log(`Taxa Grove Killer marcata automat pentru ${userId}`)
+    }
+  } catch (e: any) {
+    console.error('Eroare checkAndMarkGroveKillerTax:', e.message)
+  }
+}
+
 async function awardPoints(userIds: string[], points: number, reasonLabel: string, callerName: string) {
   const successLines: string[] = []
   const failLines: string[]    = []
@@ -95,6 +158,9 @@ async function awardPoints(userIds: string[], points: number, reasonLabel: strin
     })
 
     successLines.push(`> ✅ <@${discordId}> **+${points} pts**`)
+
+    // Verifica daca taxa Grove Killer e completata
+    await checkAndMarkGroveKillerTax(user.id)
   }
 
   return { successLines, failLines }
@@ -129,7 +195,6 @@ export async function POST(req: NextRequest) {
     const options       = body.data.options || []
     const useriRaw      = options.find((o: any) => o.name === 'useri')?.value as string | undefined
 
-    // ── /jaf-procesat ──
     if (commandName === 'jaf-procesat') {
       if (!canProcessJaf) {
         return NextResponse.json({
@@ -143,7 +208,6 @@ export async function POST(req: NextRequest) {
       ;(async () => {
         try {
           const jafType = options.find((o: any) => o.name === 'tip-jaf')?.value as string | undefined
-
           if (!useriRaw || !jafType || !JAF_CONFIG[jafType]) {
             await sendFollowup(token, '⚠️ Trebuie să specifici tip-jaf și useri valizi.')
             return
@@ -159,18 +223,10 @@ export async function POST(req: NextRequest) {
           const { successLines, failLines } = await awardPoints(userIds, points, label, callerName)
           await sendFollowup(token, buildRichMessage(label, successLines, failLines, callerName, userIds.length))
 
-          // DM cu linii separatoare
           if (callerDiscordId && callerDiscordId !== SUPER_ADMIN_ID) {
             await sendDM(
               SUPER_ADMIN_ID,
-              `## 🏴 Jaf Procesat\n` +
-              `━━━━━━━━━━━━━━━━━━━━\n` +
-              `> **Procesat de:** ${callerName}\n` +
-              `> **Tip jaf:** ${label} (${points} pts)\n` +
-              `> **Useri recompensați:** ${userIds.length}\n` +
-              `━━━━━━━━━━━━━━━━━━━━\n` +
-              `${successLines.join('\n')}\n` +
-              `━━━━━━━━━━━━━━━━━━━━`
+              `## 🏴 Jaf Procesat\n━━━━━━━━━━━━━━━━━━━━\n> **Procesat de:** ${callerName}\n> **Tip jaf:** ${label} (${points} pts)\n> **Useri recompensați:** ${userIds.length}\n━━━━━━━━━━━━━━━━━━━━\n${successLines.join('\n')}\n━━━━━━━━━━━━━━━━━━━━`
             )
           }
         } catch (e) {
@@ -181,7 +237,6 @@ export async function POST(req: NextRequest) {
       return deferResponse
     }
 
-    // ── /taxa24h și /activitate — doar Lider/Co-Lider ──
     if (!isLeader) {
       return NextResponse.json({
         type: 4,
