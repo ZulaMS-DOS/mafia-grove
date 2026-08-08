@@ -30,40 +30,31 @@ async function sendDiscordMessage(content: string) {
   try {
     await fetch(`https://discord.com/api/v10/channels/${NOTIFY_CHANNEL_ID}/messages`, {
       method:  'POST',
-      headers: {
-        'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
-        'Content-Type':  'application/json',
-      },
-      body: JSON.stringify({ content }),
+      headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ content }),
     })
   } catch {}
 }
 
 async function buildUnpaidList(item: any, weekStart: Date): Promise<string[]> {
-  // Gaseste toti userii care trebuie sa plateasca aceasta taxa
   const targetRoles: string[] = item.targetRoles || []
-
   const allUsers = await prisma.user.findMany({
-    where: targetRoles.length > 0
-      ? { roleIds: { hasSome: targetRoles } }
-      : {},
+    where: targetRoles.length > 0 ? { roleIds: { hasSome: targetRoles } } : {},
     select: { id: true, username: true, discordId: true },
   })
 
-  // Gaseste cine a platit
   const payments = await (prisma as any).taxPayment.findMany({
     where: {
       weekStart,
       paid:   true,
       userId: { in: allUsers.map((u: any) => u.id) },
     },
-    select: { userId: true },
+    select: { userId: true, roleId: true },
   })
-  const paidIds = new Set(payments.map((p: any) => p.userId))
 
-  // Returneaza lista celor care NU au platit
+  const paidUserIds = new Set(payments.map((p: any) => p.userId))
   return allUsers
-    .filter((u: any) => !paidIds.has(u.id))
+    .filter((u: any) => !paidUserIds.has(u.id))
     .map((u: any) => `> ❌ <@${u.discordId}> (${u.username})`)
 }
 
@@ -75,23 +66,21 @@ export async function GET(req: NextRequest) {
   const userId       = session!.user.id
   const myRoleIds    = session!.user.roleIds || []
   const now          = new Date()
-  // Filtreaza dupa un grad specific (ex: doar Muncitor sau doar Grove Killer)
   const filterRole   = req.nextUrl.searchParams.get('role')
 
-  const [allItems, payment] = await Promise.all([
+  const [allItems, payments] = await Promise.all([
     (prisma as any).taxItem.findMany({
       where:   { weekStart },
       orderBy: { createdAt: 'asc' },
     }),
-    (prisma as any).taxPayment.findUnique({
-      where: { userId_weekStart: { userId, weekStart } },
+    (prisma as any).taxPayment.findMany({
+      where: { userId, weekStart },
     }),
   ])
 
   // Filtreaza dupa gradul userului
   const filtered = allItems.filter((item: any) => {
     if (!item.targetRoles?.length) return true
-    // Daca e specificat un rol anume, filtreaza doar dupa el
     if (filterRole) return item.targetRoles.includes(filterRole)
     return item.targetRoles.some((r: string) => myRoleIds.includes(r))
   })
@@ -101,13 +90,28 @@ export async function GET(req: NextRequest) {
     expired: item.termen ? new Date(item.termen) < now : false,
   }))
 
+  // Returneaza plati per grad
+  const paidByRole: Record<string, { paid: boolean; paidAt: string | null }> = {}
+  for (const p of payments) {
+    paidByRole[p.roleId] = { paid: p.paid, paidAt: p.paidAt }
+  }
+
+  // Daca e filtrat dupa un rol specific, returneaza plata pentru acel rol
+  const rolePayment = filterRole
+    ? (paidByRole[filterRole] || { paid: false, paidAt: null })
+    : (paidByRole['all'] || { paid: false, paidAt: null })
+
+  // Notificari taxe care expira
+  const todayStart = new Date(now)
+  todayStart.setHours(0, 0, 0, 0)
+
   const tomorrow = new Date(now)
   tomorrow.setDate(tomorrow.getDate() + 1)
   tomorrow.setHours(0, 0, 0, 0)
   const dayAfterTomorrow = new Date(tomorrow)
   dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1)
 
-  const today = new Date(now)
+  const today    = new Date(now)
   today.setHours(0, 0, 0, 0)
   const todayEnd = new Date(today)
   todayEnd.setDate(todayEnd.getDate() + 1)
@@ -124,110 +128,45 @@ export async function GET(req: NextRequest) {
     return t >= today && t < todayEnd
   })
 
-  // Notificari taxe care expira maine
   for (const item of expiringTomorrow) {
     const alreadyNotified = await (prisma as any).notification.findFirst({
-      where: {
-        type:      'tax',
-        title:     '⏰ Taxă Expiră Mâine',
-        message:   { contains: item.name },
-        createdAt: { gte: today },
-      },
+      where: { type: 'tax', title: '⏰ Taxă Expiră Mâine', message: { contains: item.name }, createdAt: { gte: todayStart } },
     })
-
     if (!alreadyNotified) {
-      const leaders = await prisma.user.findMany({
-        where:  { roleIds: { hasSome: LEADERSHIP_ROLES } },
-        select: { id: true },
-      })
-      await Promise.all(
-        leaders.map(l => notify({
-          userId:  l.id,
-          type:    'tax',
-          title:   '⏰ Taxă Expiră Mâine',
-          message: `Taxa "${item.name}" expiră mâine! Verifică plățile.`,
-        }))
-      )
-
-      // Construieste lista grade tinta
+      const leaders = await prisma.user.findMany({ where: { roleIds: { hasSome: LEADERSHIP_ROLES } }, select: { id: true } })
+      await Promise.all(leaders.map(l => notify({ userId: l.id, type: 'tax', title: '⏰ Taxă Expiră Mâine', message: `Taxa "${item.name}" expiră mâine!` })))
       const targetRoles: string[] = item.targetRoles || []
-      const gradeText = targetRoles.length > 0
-        ? targetRoles.map((r: string) => GRADE_LABELS[r] || r).join(', ')
-        : 'Toți membrii'
-
-      // Construieste lista neplatitori
+      const gradeText = targetRoles.length > 0 ? targetRoles.map((r: string) => GRADE_LABELS[r] || r).join(', ') : 'Toți membrii'
       const unpaidLines = await buildUnpaidList(item, weekStart)
-      const unpaidText = unpaidLines.length > 0
-        ? unpaidLines.join('\n')
-        : '> ✅ Toți au achitat!'
-
+      const unpaidText  = unpaidLines.length > 0 ? unpaidLines.join('\n') : '> ✅ Toți au achitat!'
       await sendDiscordMessage(
-        `## ⏰ Taxă Sindicat — Expiră Mâine!\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `> 📋 **${item.name}**\n` +
-        `> 👥 **Grade vizate:** ${gradeText}\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `**Membri care NU au achitat (${unpaidLines.length}):**\n` +
-        `${unpaidText}\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `<@&955126889171804170> <@&955126890472022066>`
+        `## ⏰ Taxă Sindicat — Expiră Mâine!\n━━━━━━━━━━━━━━━━━━━━\n> 📋 **${item.name}**\n> 👥 **Grade vizate:** ${gradeText}\n━━━━━━━━━━━━━━━━━━━━\n**Membri care NU au achitat (${unpaidLines.length}):**\n${unpaidText}\n━━━━━━━━━━━━━━━━━━━━\n<@&955126889171804170> <@&955126890472022066>`
       )
     }
   }
 
-  // Notificari taxe care expira azi
   for (const item of expiringToday) {
     const alreadyNotified = await (prisma as any).notification.findFirst({
-      where: {
-        type:      'tax',
-        title:     '🚨 Taxă Expiră Azi',
-        message:   { contains: item.name },
-        createdAt: { gte: today },
-      },
+      where: { type: 'tax', title: '🚨 Taxă Expiră Azi', message: { contains: item.name }, createdAt: { gte: todayStart } },
     })
-
     if (!alreadyNotified) {
-      const leaders = await prisma.user.findMany({
-        where:  { roleIds: { hasSome: LEADERSHIP_ROLES } },
-        select: { id: true },
-      })
-      await Promise.all(
-        leaders.map(l => notify({
-          userId:  l.id,
-          type:    'tax',
-          title:   '🚨 Taxă Expiră Azi',
-          message: `Taxa "${item.name}" expiră AZI! Acționați urgent.`,
-        }))
-      )
-
+      const leaders = await prisma.user.findMany({ where: { roleIds: { hasSome: LEADERSHIP_ROLES } }, select: { id: true } })
+      await Promise.all(leaders.map(l => notify({ userId: l.id, type: 'tax', title: '🚨 Taxă Expiră Azi', message: `Taxa "${item.name}" expiră AZI!` })))
       const targetRoles: string[] = item.targetRoles || []
-      const gradeText = targetRoles.length > 0
-        ? targetRoles.map((r: string) => GRADE_LABELS[r] || r).join(', ')
-        : 'Toți membrii'
-
+      const gradeText = targetRoles.length > 0 ? targetRoles.map((r: string) => GRADE_LABELS[r] || r).join(', ') : 'Toți membrii'
       const unpaidLines = await buildUnpaidList(item, weekStart)
-      const unpaidText = unpaidLines.length > 0
-        ? unpaidLines.join('\n')
-        : '> ✅ Toți au achitat!'
-
+      const unpaidText  = unpaidLines.length > 0 ? unpaidLines.join('\n') : '> ✅ Toți au achitat!'
       await sendDiscordMessage(
-        `## 🚨 Taxă Sindicat — Expiră AZI!\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `> 📋 **${item.name}**\n` +
-        `> 👥 **Grade vizate:** ${gradeText}\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `**Membri care NU au achitat (${unpaidLines.length}):**\n` +
-        `${unpaidText}\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `<@&955126889171804170> <@&955126890472022066>`
+        `## 🚨 Taxă Sindicat — Expiră AZI!\n━━━━━━━━━━━━━━━━━━━━\n> 📋 **${item.name}**\n> 👥 **Grade vizate:** ${gradeText}\n━━━━━━━━━━━━━━━━━━━━\n**Membri care NU au achitat (${unpaidLines.length}):**\n${unpaidText}\n━━━━━━━━━━━━━━━━━━━━\n<@&955126889171804170> <@&955126890472022066>`
       )
     }
   }
 
   return NextResponse.json({
     items,
-    paid:      payment?.paid   ?? false,
-    paidAt:    payment?.paidAt ?? null,
+    paid:      rolePayment.paid,
+    paidAt:    rolePayment.paidAt,
+    paidByRole,
     weekStart: weekStart.toISOString(),
   })
 }
