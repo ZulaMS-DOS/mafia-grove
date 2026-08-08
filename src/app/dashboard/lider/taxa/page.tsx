@@ -37,6 +37,7 @@ interface TaxItem {
 interface Payment {
   id: string; paid: boolean; paidAt: string | null
   user: { username: string; avatar: string | null; discordId: string; roleIds: string[] }
+  roleId?: string
 }
 interface Member { id: string; username: string; avatar: string | null; discordId: string; roleIds: string[] }
 
@@ -94,7 +95,10 @@ export default function LiderTaxaPage() {
       setMsg('🗑️ Material șters!')
       setTimeout(() => setMsg(''), 3000)
     }
-    setItems(prev => prev.filter((_, j) => j !== idx).length ? prev.filter((_, j) => j !== idx) : [emptyItem()])
+    setItems(prev => {
+      const filtered = prev.filter((_, j) => j !== idx)
+      return filtered.length ? filtered : [emptyItem()]
+    })
   }
 
   const updateItem = (idx: number, field: keyof TaxItem, value: any) => {
@@ -181,7 +185,7 @@ export default function LiderTaxaPage() {
         .then(d => setJafProgress(d.progress || []))
     }
   }, [activeGrade, tab])
-  
+
   return (
     <div className="space-y-5 animate-slide-up">
       <div className="flex items-center justify-between">
@@ -324,7 +328,6 @@ export default function LiderTaxaPage() {
 
       {tab === 'status' && (
         <div className="space-y-4">
-          {/* Selectie grad */}
           <div className="flex flex-wrap gap-2">
             {gradesWithMembers.map(g => (
               <button key={g.id} onClick={() => setActiveGrade(g.id)}
@@ -341,7 +344,6 @@ export default function LiderTaxaPage() {
             ))}
           </div>
 
-          {/* Progres grad selectat */}
           {activeGradeData && (
             <div className="grove-card p-0 overflow-hidden">
               <div className="px-5 py-3 border-b border-dark-border space-y-2">
@@ -365,79 +367,80 @@ export default function LiderTaxaPage() {
               ) : activeGradeData.members.length === 0 ? (
                 <div className="text-center py-8 text-zinc-600 text-sm">Niciun membru în acest grad</div>
               ) : (
-               {/* Bara progres jafuri pentru Grove Killer */}
-                {activeGrade === GROVE_KILLER_ID && jafProgress.length > 0 && (
-                  <div className="px-5 py-4 border-b border-dark-border space-y-3">
-                    <div className="text-xs text-red-400 uppercase tracking-widest font-semibold">⚔️ Progres Jafuri Săptămânale</div>
-                    {jafProgress.map(u => (
-                      <div key={u.userId} className="space-y-1 pb-3 border-b border-dark-border/30 last:border-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-white">{u.username}</span>
-                          {u.allCompleted && <span className="text-xs text-green-400 font-bold">✅ Complet</span>}
-                        </div>
-                        {u.itemProgress.map((item: any, i: number) => (
-                          <div key={i} className="space-y-1 mt-1">
-                            <div className="flex justify-between text-xs text-zinc-500">
-                              <span>{item.itemName}</span>
-                              <span className={item.completed ? 'text-green-400' : 'text-zinc-400'}>
-                                {item.totalDone}/{item.totalRequired}
-                              </span>
-                            </div>
-                            <div className="w-full h-1.5 bg-dark-border rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full transition-all ${item.completed ? 'bg-green-400' : 'bg-red-400'}`}
-                                style={{ width: item.totalRequired ? `${Math.min((item.totalDone / item.totalRequired) * 100, 100)}%` : '0%' }} />
-                            </div>
-                            {item.jafProgress.map((jaf: any, j: number) => (
-                              <div key={j} className="flex justify-between text-xs text-zinc-700 pl-2">
-                                <span>{jaf.type}</span>
-                                <span>{jaf.done}/{jaf.required}</span>
-                              </div>
-                            ))}
+                <>
+                  {activeGrade === GROVE_KILLER_ID && jafProgress.length > 0 && (
+                    <div className="px-5 py-4 border-b border-dark-border space-y-3">
+                      <div className="text-xs text-red-400 uppercase tracking-widest font-semibold">⚔️ Progres Jafuri Săptămânale</div>
+                      {jafProgress.map(u => (
+                        <div key={u.userId} className="space-y-1 pb-3 border-b border-dark-border/30 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-white">{u.username}</span>
+                            {u.allCompleted && <span className="text-xs text-green-400 font-bold">✅ Complet</span>}
                           </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="divide-y divide-dark-border/50">
-                  {activeGradeData.members.map(m => {
-              
-                    const payment = payments.find(p => p.user?.username === m.username && p.roleId === activeGrade)
-                    const hasPaid = payment?.paid ?? false
-                    const isToggling = toggling === m.id
-                    return (
-                      <div key={m.id} className="flex items-center justify-between px-5 py-3 hover:bg-dark-hover transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full border border-dark-border overflow-hidden bg-dark-muted flex items-center justify-center shrink-0">
-                            {m.avatar
-                              ? <Image src={m.avatar} alt={m.username} width={36} height={36} className="object-cover" unoptimized />
-                              : <span className="text-sm">👤</span>
+                          {u.itemProgress.map((item: any, i: number) => (
+                            <div key={i} className="space-y-1 mt-1">
+                              <div className="flex justify-between text-xs text-zinc-500">
+                                <span>{item.itemName}</span>
+                                <span className={item.completed ? 'text-green-400' : 'text-zinc-400'}>
+                                  {item.totalDone}/{item.totalRequired}
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-dark-border rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full transition-all ${item.completed ? 'bg-green-400' : 'bg-red-400'}`}
+                                  style={{ width: item.totalRequired ? `${Math.min((item.totalDone / item.totalRequired) * 100, 100)}%` : '0%' }} />
+                              </div>
+                              {item.jafProgress.map((jaf: any, j: number) => (
+                                <div key={j} className="flex justify-between text-xs text-zinc-700 pl-2">
+                                  <span>{jaf.type}</span>
+                                  <span>{jaf.done}/{jaf.required}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="divide-y divide-dark-border/50">
+                    {activeGradeData.members.map(m => {
+                      const payment = payments.find(p => p.user?.username === m.username && p.roleId === activeGrade)
+                      const hasPaid = payment?.paid ?? false
+                      const isToggling = toggling === m.id
+                      return (
+                        <div key={m.id} className="flex items-center justify-between px-5 py-3 hover:bg-dark-hover transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full border border-dark-border overflow-hidden bg-dark-muted flex items-center justify-center shrink-0">
+                              {m.avatar
+                                ? <Image src={m.avatar} alt={m.username} width={36} height={36} className="object-cover" unoptimized />
+                                : <span className="text-sm">👤</span>
+                              }
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-white">{m.username}</div>
+                              {hasPaid && payment?.paidAt && (
+                                <div className="text-xs text-zinc-600">
+                                  {format(new Date(payment.paidAt), 'dd MMM HH:mm', { locale: ro })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <button onClick={() => togglePaid(m.id, hasPaid, activeGrade)} disabled={isToggling}
+                            className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                              hasPaid
+                                ? 'text-green-400 border-green-500/30 bg-green-500/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30'
+                                : 'text-red-400 border-red-500/30 bg-red-500/10 hover:bg-green-500/10 hover:text-green-400 hover:border-green-500/30'
+                            } disabled:opacity-50`}>
+                            {isToggling
+                              ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                              : hasPaid ? '✓ Achitat' : '✗ Neachitat'
                             }
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-white">{m.username}</div>
-                            {hasPaid && payment?.paidAt && (
-                              <div className="text-xs text-zinc-600">
-                                {format(new Date(payment.paidAt), 'dd MMM HH:mm', { locale: ro })}
-                              </div>
-                            )}
-                          </div>
+                          </button>
                         </div>
-                        <button onClick={() => togglePaid(m.id, hasPaid, activeGrade)} disabled={isToggling}
-                          className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-                            hasPaid
-                              ? 'text-green-400 border-green-500/30 bg-green-500/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30'
-                              : 'text-red-400 border-red-500/30 bg-red-500/10 hover:bg-green-500/10 hover:text-green-400 hover:border-green-500/30'
-                          } disabled:opacity-50`}>
-                          {isToggling
-                            ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-                            : hasPaid ? '✓ Achitat' : '✗ Neachitat'
-                          }
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
+                      )
+                    })}
+                  </div>
+                </>
               )}
             </div>
           )}
