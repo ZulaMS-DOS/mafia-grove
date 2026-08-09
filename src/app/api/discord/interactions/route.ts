@@ -172,8 +172,8 @@ async function awardPoints(userIds: string[], points: number, reasonLabel: strin
 
     successLines.push(`> ✅ <@${discordId}> **+${points} pts**`)
 
-    // Verifica daca taxa Grove Killer e completata
-    await checkAndMarkGroveKillerTax(user.id)
+   // Verifica daca taxa Grove Killer e completata
+    await checkAndMarkGroveKillerTax()
   }
 
   return { successLines, failLines }
