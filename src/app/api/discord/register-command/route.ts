@@ -71,6 +71,32 @@ export async function GET() {
       ],
     },
   ]
+    {
+      name:        'taxa',
+      description: 'Marchează taxa achitată pentru un membru',
+      options: [
+        {
+          type:        6, // USER
+          name:        'user',
+          description: 'Menționează membrul',
+          required:    true,
+        },
+        {
+          type:        3, // STRING
+          name:        'grad',
+          description: 'Gradul pentru care se marchează taxa',
+          required:    true,
+          choices: [
+            { name: 'Lider',        value: '955126889171804170'  },
+            { name: 'Co-Lider',     value: '955126890472022066'  },
+            { name: 'Tester',       value: '1462444900388704317' },
+            { name: 'Membru',       value: '1501319885488390184' },
+            { name: 'Grove Killer', value: '955126892984410162'  },
+            { name: 'Muncitor',     value: '1342912254542348298' },
+          ],
+        },
+      ],
+    },
 
   const results = []
   for (const command of commands) {
