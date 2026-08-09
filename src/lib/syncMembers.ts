@@ -107,10 +107,16 @@ function getWeekStart() {
 
 async function hasPaidTaxa(userId: string): Promise<boolean> {
   const weekStart = getWeekStart()
-  const payment   = await (prisma as any).taxPayment.findUnique({
-    where: { userId_roleId_weekStart: { userId, roleId: 'all', weekStart } },
+  // Verifica plata pentru rolul de Muncitor SAU 'all'
+  const payments = await (prisma as any).taxPayment.findMany({
+    where: {
+      userId,
+      weekStart,
+      paid: true,
+      roleId: { in: ['all', MUNCITOR_ROLE_ID] },
+    },
   })
-  return payment?.paid ?? false
+  return payments.length > 0
 }
 
 export async function syncDiscordMembers() {
