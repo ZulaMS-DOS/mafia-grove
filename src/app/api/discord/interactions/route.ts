@@ -74,22 +74,32 @@ async function sendDM(discordId: string, content: string) {
   } catch {}
 }
 
-async function checkAndMarkGroveKillerTax(userId: string) {
+async function checkAndMarkGroveKillerTax() {
   try {
     const weekStart = getWeekStart()
     const weekEnd   = new Date(weekStart)
     weekEnd.setDate(weekEnd.getDate() + 7)
 
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { roleIds: true } })
-    if (!user?.roleIds.includes(GROVE_KILLER_ROLE_ID)) return
-
+    // Ia task-ul Grove Killer din saptamana curenta
     const taxItems = await (prisma as any).taxItem.findMany({
       where: { weekStart, targetRoles: { has: GROVE_KILLER_ROLE_ID } },
     })
     if (!taxItems.length) return
 
+    // Ia toti Grove Killerii
+    const groveKillers = await prisma.user.findMany({
+      where:  { roleIds: { has: GROVE_KILLER_ROLE_ID } },
+      select: { id: true },
+    })
+    if (!groveKillers.length) return
+
+    // Calculeaza jafurile procesate de TOTI Grove Killerii combinat
     const processedPoints = await prisma.pointHistory.findMany({
-      where: { userId, createdAt: { gte: weekStart, lt: weekEnd }, reason: { contains: '— procesat de' } },
+      where: {
+        userId:    { in: groveKillers.map(u => u.id) },
+        createdAt: { gte: weekStart, lt: weekEnd },
+        reason:    { contains: '— procesat de' },
+      },
     })
 
     const processedCounts: Record<string, number> = {}
@@ -102,6 +112,7 @@ async function checkAndMarkGroveKillerTax(userId: string) {
       }
     }
 
+    // Verifica daca toate cerintele sunt indeplinite
     let allCompleted = true
     for (const item of taxItems) {
       const jafuri: { type: string; count: number }[] = item.jafuri || []
@@ -115,18 +126,20 @@ async function checkAndMarkGroveKillerTax(userId: string) {
     }
 
     if (allCompleted) {
-      await (prisma as any).taxPayment.upsert({
-        where:  { userId_roleId_weekStart: { userId, roleId: GROVE_KILLER_ROLE_ID, weekStart } },
-        update: { paid: true, paidAt: new Date() },
-        create: { userId, roleId: GROVE_KILLER_ROLE_ID, weekStart, paid: true, paidAt: new Date() },
-      })
-      console.log(`Taxa Grove Killer marcata automat pentru ${userId}`)
+      // Marcheaza taxa ca achitata pentru TOTI Grove Killerii
+      for (const user of groveKillers) {
+        await (prisma as any).taxPayment.upsert({
+          where:  { userId_roleId_weekStart: { userId: user.id, roleId: GROVE_KILLER_ROLE_ID, weekStart } },
+          update: { paid: true, paidAt: new Date() },
+          create: { userId: user.id, roleId: GROVE_KILLER_ROLE_ID, weekStart, paid: true, paidAt: new Date() },
+        })
+      }
+      console.log(`Taxa Grove Killer marcata automat pentru toti (${groveKillers.length} membri)`)
     }
   } catch (e: any) {
     console.error('Eroare checkAndMarkGroveKillerTax:', e.message)
   }
 }
-
 async function awardPoints(userIds: string[], points: number, reasonLabel: string, callerName: string) {
   const successLines: string[] = []
   const failLines: string[]    = []
