@@ -95,7 +95,7 @@ async function sendReport(isMorning) {
         `${divider}\n> ✅ Toți membrii au predat resursele!\n` +
         `${divider}\n${pingRole}`
     } else {
-            const lines = Array.from(unpaidUsers.entries()).map(([id, username]) => `> ⏲️ <@${id}> **(${username})**`)
+    const lines = Array.from(unpaidUsers.entries()).map(([id, username]) => `> ⏲️ <@${id}> **(${username})**`)
 
       content =
         `## ${emoji} Raport ${period} — Evidențe Jafuri\n` +
