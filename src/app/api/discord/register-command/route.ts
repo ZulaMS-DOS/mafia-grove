@@ -19,17 +19,17 @@ export async function GET() {
           name:        'tip-jaf',
           description: 'Tipul jafului procesat',
           required:    true,
-                    choices: [
-            { name: 'Vinewood (1.5 pts)',    value: 'vinewood'    },
-            { name: 'Alta (1.5 pts)',         value: 'alta'        },
-            { name: 'Desert (1.5 pts)',       value: 'desert'      },
-            { name: 'Highway (1.5 pts)',      value: 'highway'     },
-            { name: 'Pacific (2 pts)',        value: 'pacific'     },
-            { name: 'Blaine (2 pts)',         value: 'blaine'      },
-            { name: 'Biju (2 pts)',           value: 'biju'        },
-            { name: 'ATM (1.5 pts)',          value: 'atm'         },
-            { name: 'Magazin (1 pt)',         value: 'magazin'     },
-            { name: 'Digital Den (2 pts)',    value: 'digital_den' },
+          choices: [
+            { name: 'Vinewood (1.5 pts)',  value: 'vinewood'    },
+            { name: 'Alta (1.5 pts)',      value: 'alta'        },
+            { name: 'Desert (1.5 pts)',    value: 'desert'      },
+            { name: 'Highway (1.5 pts)',   value: 'highway'     },
+            { name: 'Pacific (2 pts)',     value: 'pacific'     },
+            { name: 'Blaine (2 pts)',      value: 'blaine'      },
+            { name: 'Biju (2 pts)',        value: 'biju'        },
+            { name: 'ATM (1.5 pts)',       value: 'atm'         },
+            { name: 'Magazin (1 pt)',      value: 'magazin'     },
+            { name: 'Digital Den (2 pts)', value: 'digital_den' },
           ],
         },
         {
@@ -70,7 +70,6 @@ export async function GET() {
         },
       ],
     },
-  ]
     {
       name:        'taxa',
       description: 'Marchează taxa achitată pentru un membru',
@@ -96,7 +95,8 @@ export async function GET() {
           ],
         },
       ],
-    },
+    }
+  ] // <-- Aici se închide corect array-ul commands
 
   const results = []
   for (const command of commands) {
