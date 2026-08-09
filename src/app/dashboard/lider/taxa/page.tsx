@@ -162,12 +162,12 @@ export default function LiderTaxaPage() {
     setToggling(null)
   }
 
-  const paidMap = new Map(payments.map(p => [p.user.username, p]))
+  // Map cu cheie userId_roleId pentru plati separate per grad
+  const paidMap = new Map(payments.map((p: any) => [`${p.userId}_${p.roleId}`, p]))
 
-  // Grupeaza membrii per grad
   const gradesWithMembers = GRADE_OPTIONS.map(grade => {
     const gradeMembers = members.filter(m => m.roleIds.includes(grade.id))
-    const paidCount    = gradeMembers.filter(m => paidMap.get(m.username)?.paid).length
+    const paidCount    = gradeMembers.filter(m => paidMap.get(`${m.id}_${grade.id}`)?.paid).length
     return { ...grade, members: gradeMembers, paidCount, total: gradeMembers.length }
   }).filter(g => g.total > 0)
 
@@ -404,7 +404,7 @@ export default function LiderTaxaPage() {
 
                   <div className="divide-y divide-dark-border/50">
                     {activeGradeData.members.map(m => {
-                      const payment = payments.find(p => p.user?.username === m.username && p.roleId === activeGrade)
+                      const payment = paidMap.get(`${m.id}_${activeGrade}`)
                       const hasPaid = payment?.paid ?? false
                       const isToggling = toggling === m.id
                       return (
