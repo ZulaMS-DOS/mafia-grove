@@ -257,22 +257,68 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    if (commandName === 'taxa24h') {
+        if (commandName === 'taxa') {
       const deferResponse = NextResponse.json({ type: 5 })
+
       ;(async () => {
         try {
-          if (!useriRaw) { await sendFollowup(token, '⚠️ Trebuie să specifici useri.'); return }
-          const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
-          if (!userIds.length) { await sendFollowup(token, '⚠️ Nicio mențiune validă găsită.'); return }
-          const label = '⏰ Taxa 24 Ore'
-          const { successLines, failLines } = await awardPoints(userIds, 10, label, callerName)
-          await sendFollowup(token, buildRichMessage(label, successLines, failLines, callerName, userIds.length))
+          const targetUserId = options.find((o: any) => o.name === 'user')?.value as string | undefined
+          const grad         = options.find((o: any) => o.name === 'grad')?.value as string | undefined
+
+          if (!targetUserId || !grad) {
+            await sendFollowup(token, '⚠️ Trebuie să specifici userul și gradul.')
+            return
+          }
+
+          // Gaseste userul in DB dupa discordId
+          const user = await prisma.user.findUnique({
+            where:  { discordId: targetUserId },
+            select: { id: true, username: true },
+          })
+
+          if (!user) {
+            await sendFollowup(token, `⚠️ <@${targetUserId}> nu este înregistrat pe site.`)
+            return
+          }
+
+          const weekStart = getWeekStart()
+
+          // Marcheaza taxa ca achitata
+          await (prisma as any).taxPayment.upsert({
+            where:  { userId_roleId_weekStart: { userId: user.id, roleId: grad, weekStart } },
+            update: { paid: true, paidAt: new Date() },
+            create: { userId: user.id, roleId: grad, weekStart, paid: true, paidAt: new Date() },
+          })
+
+          const GRADE_LABELS: Record<string, string> = {
+            '955126889171804170':  'Lider',
+            '955126890472022066':  'Co-Lider',
+            '1462444900388704317': 'Tester',
+            '1501319885488390184': 'Membru',
+            '955126892984410162':  'Grove Killer',
+            '1342912254542348298': 'Muncitor',
+          }
+
+          const gradLabel = GRADE_LABELS[grad] || grad
+          const divider   = '━━━━━━━━━━━━━━━━━━━━'
+
+          await sendFollowup(token,
+            `## ✅ Taxă Marcată Achitată\n` +
+            `${divider}\n` +
+            `> 👤 **Membru:** <@${targetUserId}> (${user.username})\n` +
+            `> 🎖️ **Grad:** ${gradLabel}\n` +
+            `> 💰 **Status:** ✅ Achitat\n` +
+            `> 👮 **Marcat de:** ${callerName}\n` +
+            `${divider}`
+          )
         } catch (e) {
           await sendFollowup(token, '❌ A apărut o eroare. Încearcă din nou.')
         }
       })()
+
       return deferResponse
     }
+
 
     if (commandName === 'activitate') {
       const deferResponse = NextResponse.json({ type: 5 })
