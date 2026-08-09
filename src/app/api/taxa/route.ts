@@ -36,28 +36,58 @@ async function sendDiscordMessage(content: string) {
   } catch {}
 }
 
+// Prioritate grade — un user apare doar la gradul sau principal
+const GRADE_PRIORITY = [
+  '955126892984410162', // Grove Killer
+  '1462444900388704317', // Tester
+  '1501319885488390184', // Membru
+  '1342912254542348298', // Muncitor
+  '955126890472022066',  // Co-Lider
+  '955126889171804170',  // Lider
+]
+
+function getPrimaryRole(roleIds: string[]): string | null {
+  for (const roleId of GRADE_PRIORITY) {
+    if (roleIds.includes(roleId)) return roleId
+  }
+  return null
+}
+
 async function buildUnpaidList(item: any, weekStart: Date): Promise<string[]> {
   const targetRoles: string[] = item.targetRoles || []
+
   const allUsers = await prisma.user.findMany({
     where: targetRoles.length > 0 ? { roleIds: { hasSome: targetRoles } } : {},
-    select: { id: true, username: true, discordId: true },
+    select: { id: true, username: true, discordId: true, roleIds: true },
+  })
+
+  // Filtreaza userii care au gradul principal in targetRoles
+  const filteredUsers = allUsers.filter((u: any) => {
+    if (targetRoles.length === 0) return true
+    const primaryRole = getPrimaryRole(u.roleIds)
+    return primaryRole && targetRoles.includes(primaryRole)
   })
 
   const payments = await (prisma as any).taxPayment.findMany({
     where: {
       weekStart,
       paid:   true,
-      userId: { in: allUsers.map((u: any) => u.id) },
+      userId: { in: filteredUsers.map((u: any) => u.id) },
     },
     select: { userId: true, roleId: true },
   })
 
-  const paidUserIds = new Set(payments.map((p: any) => p.userId))
-  return allUsers
-    .filter((u: any) => !paidUserIds.has(u.id))
+  // Verifica plata pentru rolul specific
+  const paidSet = new Set(
+    payments
+      .filter((p: any) => targetRoles.includes(p.roleId) || p.roleId === 'all')
+      .map((p: any) => p.userId)
+  )
+
+  return filteredUsers
+    .filter((u: any) => !paidSet.has(u.id))
     .map((u: any) => `> ❌ <@${u.discordId}> (${u.username})`)
 }
-
 export async function GET(req: NextRequest) {
   const { session, error } = await requireAuth()
   if (error) return error
