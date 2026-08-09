@@ -115,7 +115,7 @@ async function checkAndMarkGroveKillerTax() {
     // Verifica daca toate cerintele sunt indeplinite
     let allCompleted = true
     for (const item of taxItems) {
-      const jafuri: { type: string; count: number }[] = item.jafuri || []
+      const jafuri: { type: string; count: number }[] = (item.jafuri as any) || []
       for (const jaf of jafuri) {
         if ((processedCounts[jaf.type] || 0) < jaf.count) {
           allCompleted = false
@@ -140,6 +140,7 @@ async function checkAndMarkGroveKillerTax() {
     console.error('Eroare checkAndMarkGroveKillerTax:', e.message)
   }
 }
+
 async function awardPoints(userIds: string[], points: number, reasonLabel: string, callerName: string) {
   const successLines: string[] = []
   const failLines: string[]    = []
@@ -257,7 +258,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-        if (commandName === 'taxa') {
+    if (commandName === 'taxa') {
       const deferResponse = NextResponse.json({ type: 5 })
 
       ;(async () => {
@@ -330,7 +331,7 @@ export async function POST(req: NextRequest) {
           const userIds = Array.from(useriRaw.matchAll(/<@!?(\d+)>/g)).map((m: any) => m[1])
           if (!userIds.length) { await sendFollowup(token, '⚠️ Nicio mențiune validă găsită.'); return }
           const label = '⭐ Activitate'
-          const { successLines, failLines } = await awardPoints(userIds, puncte, label, callerName)
+          const { successLines, failLines } = await awardPoints(userIds, puncte as number, label, callerName)
           await sendFollowup(token, buildRichMessage(label, successLines, failLines, callerName, userIds.length))
         } catch (e) {
           await sendFollowup(token, '❌ A apărut o eroare. Încearcă din nou.')
