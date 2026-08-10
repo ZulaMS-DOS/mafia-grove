@@ -423,8 +423,7 @@ export default function LiderTaxaPage() {
                 )}
                   
                   <div className="divide-y divide-dark-border/50">
-                    {activeGradeData.members.comap?.(m => { // handled safely below
-                    }) || activeGradeData.members.map(m => {
+                    {activeGradeData.members.map(m => {
                       const payment = paidMap.get(`${m.id}_${activeGrade}`)
                       const hasPaid = payment?.paid ?? false
                       const isToggling = toggling === m.id
