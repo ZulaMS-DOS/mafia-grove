@@ -177,7 +177,6 @@ export default function LiderTaxaPage() {
     setTimeout(() => setMsg(''), 3000)
   }
 
-  // Map cu cheie userId_roleId pentru plati separate per grad
   const paidMap = new Map(payments.map((p: any) => [`${p.userId}_${p.roleId}`, p]))
 
   const gradesWithMembers = GRADE_OPTIONS.map(grade => {
@@ -189,7 +188,6 @@ export default function LiderTaxaPage() {
   const totalPaid  = payments.filter(p => p.paid).length
   const totalCount = members.length
 
-  // Gradul activ pentru status
   const activeGradeData = gradesWithMembers.find(g => g.id === activeGrade) || gradesWithMembers[0]
   const [jafProgress, setJafProgress] = useState<any[]>([])
 
@@ -218,6 +216,7 @@ export default function LiderTaxaPage() {
             <RefreshCw size={16} />
           </button>
         </div>
+      </div>
 
       <div className="flex gap-1 border-b border-dark-border">
         <button onClick={() => setTab('seteaza')}
@@ -393,10 +392,9 @@ export default function LiderTaxaPage() {
                   <div className="px-5 py-4 border-b border-dark-border space-y-3">
                     <div className="text-xs text-red-400 uppercase tracking-widest font-semibold">⚔️ Progres Jafuri Colectiv</div>
                     {jafProgress[0]?.itemProgress.map((item: any, i: number) => {
-                      // Sumeaza jafurile din toti Grove Killerii
-                      const totalDone     = jafProgress.reduce((s: number, u: any) => s + (u.itemProgress[i]?.totalDone || 0), 0)
+                      const totalDone      = jafProgress.reduce((s: number, u: any) => s + (u.itemProgress[i]?.totalDone || 0), 0)
                       const totalRequired = item.totalRequired
-                      const completed     = totalDone >= totalRequired
+                      const completed      = totalDone >= totalRequired
                       return (
                         <div key={i} className="space-y-1">
                           <div className="flex justify-between text-xs text-zinc-400">
