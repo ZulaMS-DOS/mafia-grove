@@ -163,6 +163,20 @@ export default function LiderTaxaPage() {
     setToggling(null)
   }
 
+  const resetAll = async () => {
+    if (!confirm('Ești sigur? Toți membrii (exceptând Muncitorii) vor fi trecuți pe neachitat!')) return
+    setResetting(true)
+    const r = await fetch('/api/taxa/admin', {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'reset' }),
+    })
+    if (r.ok) { setMsg('✅ Reset efectuat!'); await load() }
+    else       { setMsg('❌ Eroare la reset') }
+    setResetting(false)
+    setTimeout(() => setMsg(''), 3000)
+  }
+
   // Map cu cheie userId_roleId pentru plati separate per grad
   const paidMap = new Map(payments.map((p: any) => [`${p.userId}_${p.roleId}`, p]))
 
