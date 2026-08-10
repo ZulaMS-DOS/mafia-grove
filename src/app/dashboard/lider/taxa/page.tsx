@@ -215,9 +215,23 @@ export default function LiderTaxaPage() {
           <h1 className="text-3xl font-black text-white">Taxa Sindicat — Lider</h1>
           <p className="text-zinc-500 text-sm mt-1">Setează materialele și marchează plățile</p>
         </div>
-        <button onClick={load} className="p-2 rounded-lg text-zinc-600 hover:text-grove-green hover:bg-grove-dim transition-colors">
-          <RefreshCw size={16} />
-        </button>
+        <div className="flex gap-2">
+  <button
+    onClick={resetAll}
+    disabled={resetting}
+    className="flex items-center gap-2 px-3 py-2 rounded-lg text-red-400 hover:bg-red-500/10 border border-red-500/20 text-xs font-semibold transition-colors disabled:opacity-50"
+  >
+    <RotateCcw size={14} className={resetting ? 'animate-spin' : ''} />
+    {resetting ? 'Se resetează...' : 'Reset Săptămână'}
+  </button>
+
+  <button
+    onClick={load}
+    className="p-2 rounded-lg text-zinc-600 hover:text-grove-green hover:bg-grove-dim transition-colors"
+  >
+    <RefreshCw size={16} />
+  </button>
+</div>
       </div>
 
       <div className="flex gap-1 border-b border-dark-border">
