@@ -4,11 +4,11 @@ import { requireLeadership } from '@/lib/middleware'
 import { notifyAll } from '@/lib/notifications'
 
 const ALL_ROLE_IDS     = ['955126889171804170','955126890472022066','1462444900388704317','1501319885488390184','1342912254542348298','955126892984410162']
-const LEADERSHIP_ROLES = ['955126889171804170','955126890472022066']
+const MUNCITOR_ROLE_ID = '1342912254542348298'
 
 function getWeekStart() {
-  const now = new Date()
-  const day = now.getDay()
+  const now  = new Date()
+  const day  = now.getDay()
   const diff = now.getDate() - day + (day === 0 ? -6 : 1)
   const monday = new Date(now)
   monday.setDate(diff)
@@ -16,15 +16,46 @@ function getWeekStart() {
   return monday
 }
 
+function getPrevWeekStart() {
+  const prev = getWeekStart()
+  prev.setDate(prev.getDate() - 7)
+  return prev
+}
+
 export async function GET() {
   const { error } = await requireLeadership()
   if (error) return error
 
   const weekStart = getWeekStart()
+
+  // Copiaza automat taxa permanenta pentru Muncitori din saptamana trecuta
+  const prevWeekStart  = getPrevWeekStart()
+  const existingItems  = await (prisma as any).taxItem.findMany({ where: { weekStart } })
+  const muncitorExists = existingItems.some((i: any) => i.targetRoles?.includes(MUNCITOR_ROLE_ID))
+
+  if (!muncitorExists) {
+    const prevMuncitorItems = await (prisma as any).taxItem.findMany({
+      where: { weekStart: prevWeekStart, targetRoles: { has: MUNCITOR_ROLE_ID } },
+    })
+    for (const item of prevMuncitorItems) {
+      await (prisma as any).taxItem.create({
+        data: {
+          name:        item.name,
+          bucati:      item.bucati,
+          termen:      null,
+          targetRoles: item.targetRoles,
+          jafuri:      item.jafuri,
+          weekStart,
+          createdBy:   item.createdBy,
+        },
+      })
+    }
+  }
+
   const [items, payments, members] = await Promise.all([
     (prisma as any).taxItem.findMany({ where: { weekStart }, orderBy: { createdAt: 'asc' } }),
     (prisma as any).taxPayment.findMany({
-      where: { weekStart },
+      where:   { weekStart },
       include: { user: { select: { username: true, avatar: true, discordId: true, roleIds: true } } },
     }),
     prisma.user.findMany({
@@ -78,12 +109,37 @@ export async function PATCH(req: NextRequest) {
   const { error } = await requireLeadership()
   if (error) return error
 
-  const { userId, roleId, paid } = await req.json()
+  const { userId, roleId, paid, action } = await req.json()
+
+  const weekStart = getWeekStart()
+
+  // Reset toate platile (inafara de Muncitori)
+  if (action === 'reset') {
+    const membersToReset = await prisma.user.findMany({
+      where:  { roleIds: { hasSome: ALL_ROLE_IDS } },
+      select: { id: true, roleIds: true },
+    })
+
+    const nonMuncitori = membersToReset.filter(
+      m => !m.roleIds.includes(MUNCITOR_ROLE_ID) ||
+           m.roleIds.some(r => ALL_ROLE_IDS.filter(id => id !== MUNCITOR_ROLE_ID).includes(r))
+    )
+
+    await (prisma as any).taxPayment.updateMany({
+      where: {
+        weekStart,
+        userId: { in: nonMuncitori.map(m => m.id) },
+        roleId: { not: MUNCITOR_ROLE_ID },
+      },
+      data: { paid: false, paidAt: null },
+    })
+
+    return NextResponse.json({ success: true, reset: nonMuncitori.length })
+  }
+
   if (!userId) return NextResponse.json({ error: 'userId lipsa' }, { status: 400 })
 
-  const weekStart  = getWeekStart()
   const finalRoleId = roleId || 'all'
-
   const payment = await (prisma as any).taxPayment.upsert({
     where:  { userId_roleId_weekStart: { userId, roleId: finalRoleId, weekStart } },
     update: { paid, paidAt: paid ? new Date() : null },
