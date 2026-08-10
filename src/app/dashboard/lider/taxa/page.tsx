@@ -52,6 +52,7 @@ export default function LiderTaxaPage() {
   const [deleting, setDeleting]   = useState<number | null>(null)
   const [toggling, setToggling]   = useState<string | null>(null)
   const [msg, setMsg]             = useState('')
+  const [resetting, setResetting] = useState(false)
   const [tab, setTab]             = useState<'seteaza' | 'status'>('seteaza')
   const [activeGrade, setActiveGrade] = useState<string>(GRADE_OPTIONS[0].id)
 
