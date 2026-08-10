@@ -55,6 +55,7 @@ export default function LiderTaxaPage() {
   const [resetting, setResetting] = useState(false)
   const [tab, setTab]             = useState<'seteaza' | 'status'>('seteaza')
   const [activeGrade, setActiveGrade] = useState<string>(GRADE_OPTIONS[0].id)
+  const [jafProgress, setJafProgress] = useState<any[]>([])
 
   const itemsRef = useRef<TaxItem[]>(items)
   useEffect(() => { itemsRef.current = items }, [items])
@@ -189,7 +190,6 @@ export default function LiderTaxaPage() {
   const totalCount = members.length
 
   const activeGradeData = gradesWithMembers.find(g => g.id === activeGrade) || gradesWithMembers[0]
-  const [jafProgress, setJafProgress] = useState<any[]>([])
 
   useEffect(() => {
     if (activeGrade === GROVE_KILLER_ID && tab === 'status') {
@@ -423,7 +423,8 @@ export default function LiderTaxaPage() {
                 )}
                   
                   <div className="divide-y divide-dark-border/50">
-                    {activeGradeData.members.map(m => {
+                    {activeGradeData.members.comap?.(m => { // handled safely below
+                    }) || activeGradeData.members.map(m => {
                       const payment = paidMap.get(`${m.id}_${activeGrade}`)
                       const hasPaid = payment?.paid ?? false
                       const isToggling = toggling === m.id
