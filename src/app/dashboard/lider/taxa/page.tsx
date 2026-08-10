@@ -61,23 +61,28 @@ export default function LiderTaxaPage() {
   useEffect(() => { itemsRef.current = items }, [items])
 
   const load = useCallback(async () => {
-    const r = await fetch('/api/taxa/admin')
-    const d = await r.json()
-    if (d.items?.length) {
-      setItems(d.items.map((i: any) => ({
-        id:          i.id,
-        name:        i.name,
-        bucati:      i.bucati,
-        termen:      i.termen ? new Date(i.termen).toISOString().split('T')[0] : '',
-        targetRoles: i.targetRoles || [],
-        jafuri:      i.jafuri || null,
-      })))
-    } else {
-      setItems([emptyItem()])
+    try {
+      const r = await fetch('/api/taxa/admin')
+      const d = await r.json()
+      if (d.items?.length) {
+        setItems(d.items.map((i: any) => ({
+          id:          i.id,
+          name:        i.name,
+          bucati:      i.bucati,
+          termen:      i.termen ? new Date(i.termen).toISOString().split('T')[0] : '',
+          targetRoles: i.targetRoles || [],
+          jafuri:      i.jafuri || null,
+        })))
+      } else {
+        setItems([emptyItem()])
+      }
+      setPayments(d.payments || [])
+      setMembers(d.members   || [])
+    } catch {
+      setMsg('❌ Eroare la încărcarea datelor')
+    } finally {
+      setLoading(false)
     }
-    setPayments(d.payments || [])
-    setMembers(d.members   || [])
-    setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -181,7 +186,7 @@ export default function LiderTaxaPage() {
   const paidMap = new Map(payments.map((p: any) => [`${p.userId}_${p.roleId}`, p]))
 
   const gradesWithMembers = GRADE_OPTIONS.map(grade => {
-    const gradeMembers = members.filter(m => m.roleIds.includes(grade.id))
+    const gradeMembers = members.filter(m => m.roleIds?.includes(grade.id))
     const paidCount    = gradeMembers.filter(m => paidMap.get(`${m.id}_${grade.id}`)?.paid).length
     return { ...grade, members: gradeMembers, paidCount, total: gradeMembers.length }
   }).filter(g => g.total > 0)
@@ -196,6 +201,7 @@ export default function LiderTaxaPage() {
       fetch('/api/taxa/progress')
         .then(r => r.json())
         .then(d => setJafProgress(d.progress || []))
+        .catch(() => {})
     }
   }, [activeGrade, tab])
 
