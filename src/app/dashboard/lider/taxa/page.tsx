@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, Trash2, Save, Users, RefreshCw, X, RotateCcw } from 'lucide-react'
+import { Plus, Trash2, Save, Users, RefreshCw, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
 import Image from 'next/image'
@@ -52,37 +52,30 @@ export default function LiderTaxaPage() {
   const [deleting, setDeleting]   = useState<number | null>(null)
   const [toggling, setToggling]   = useState<string | null>(null)
   const [msg, setMsg]             = useState('')
-  const [resetting, setResetting] = useState(false)
   const [tab, setTab]             = useState<'seteaza' | 'status'>('seteaza')
   const [activeGrade, setActiveGrade] = useState<string>(GRADE_OPTIONS[0].id)
-  const [jafProgress, setJafProgress] = useState<any[]>([])
 
   const itemsRef = useRef<TaxItem[]>(items)
   useEffect(() => { itemsRef.current = items }, [items])
 
   const load = useCallback(async () => {
-    try {
-      const r = await fetch('/api/taxa/admin')
-      const d = await r.json()
-      if (d.items?.length) {
-        setItems(d.items.map((i: any) => ({
-          id:          i.id,
-          name:        i.name,
-          bucati:      i.bucati,
-          termen:      i.termen ? new Date(i.termen).toISOString().split('T')[0] : '',
-          targetRoles: i.targetRoles || [],
-          jafuri:      i.jafuri || null,
-        })))
-      } else {
-        setItems([emptyItem()])
-      }
-      setPayments(d.payments || [])
-      setMembers(d.members   || [])
-    } catch {
-      setMsg('❌ Eroare la încărcarea datelor')
-    } finally {
-      setLoading(false)
+    const r = await fetch('/api/taxa/admin')
+    const d = await r.json()
+    if (d.items?.length) {
+      setItems(d.items.map((i: any) => ({
+        id:          i.id,
+        name:        i.name,
+        bucati:      i.bucati,
+        termen:      i.termen ? new Date(i.termen).toISOString().split('T')[0] : '',
+        targetRoles: i.targetRoles || [],
+        jafuri:      i.jafuri || null,
+      })))
+    } else {
+      setItems([emptyItem()])
     }
+    setPayments(d.payments || [])
+    setMembers(d.members   || [])
+    setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -169,24 +162,11 @@ export default function LiderTaxaPage() {
     setToggling(null)
   }
 
-  const resetAll = async () => {
-    if (!confirm('Ești sigur? Toți membrii (exceptând Muncitorii) vor fi trecuți pe neachitat!')) return
-    setResetting(true)
-    const r = await fetch('/api/taxa/admin', {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ action: 'reset' }),
-    })
-    if (r.ok) { setMsg('✅ Reset efectuat!'); await load() }
-    else       { setMsg('❌ Eroare la reset') }
-    setResetting(false)
-    setTimeout(() => setMsg(''), 3000)
-  }
-
+  // Map cu cheie userId_roleId pentru plati separate per grad
   const paidMap = new Map(payments.map((p: any) => [`${p.userId}_${p.roleId}`, p]))
 
   const gradesWithMembers = GRADE_OPTIONS.map(grade => {
-    const gradeMembers = members.filter(m => m.roleIds?.includes(grade.id))
+    const gradeMembers = members.filter(m => m.roleIds.includes(grade.id))
     const paidCount    = gradeMembers.filter(m => paidMap.get(`${m.id}_${grade.id}`)?.paid).length
     return { ...grade, members: gradeMembers, paidCount, total: gradeMembers.length }
   }).filter(g => g.total > 0)
@@ -194,14 +174,15 @@ export default function LiderTaxaPage() {
   const totalPaid  = payments.filter(p => p.paid).length
   const totalCount = members.length
 
+  // Gradul activ pentru status
   const activeGradeData = gradesWithMembers.find(g => g.id === activeGrade) || gradesWithMembers[0]
+  const [jafProgress, setJafProgress] = useState<any[]>([])
 
   useEffect(() => {
     if (activeGrade === GROVE_KILLER_ID && tab === 'status') {
       fetch('/api/taxa/progress')
         .then(r => r.json())
         .then(d => setJafProgress(d.progress || []))
-        .catch(() => {})
     }
   }, [activeGrade, tab])
 
@@ -212,16 +193,9 @@ export default function LiderTaxaPage() {
           <h1 className="text-3xl font-black text-white">Taxa Sindicat — Lider</h1>
           <p className="text-zinc-500 text-sm mt-1">Setează materialele și marchează plățile</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={resetAll} disabled={resetting}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-red-400 hover:bg-red-500/10 border border-red-500/20 text-xs font-semibold transition-colors disabled:opacity-50">
-            <RotateCcw size={14} className={resetting ? 'animate-spin' : ''} />
-            {resetting ? 'Se resetează...' : 'Reset Săptămână'}
-          </button>
-          <button onClick={load} className="p-2 rounded-lg text-zinc-600 hover:text-grove-green hover:bg-grove-dim transition-colors">
-            <RefreshCw size={16} />
-          </button>
-        </div>
+        <button onClick={load} className="p-2 rounded-lg text-zinc-600 hover:text-grove-green hover:bg-grove-dim transition-colors">
+          <RefreshCw size={16} />
+        </button>
       </div>
 
       <div className="flex gap-1 border-b border-dark-border">
@@ -395,39 +369,39 @@ export default function LiderTaxaPage() {
               ) : (
                 <>
                   {activeGrade === GROVE_KILLER_ID && jafProgress.length > 0 && (
-                  <div className="px-5 py-4 border-b border-dark-border space-y-3">
-                    <div className="text-xs text-red-400 uppercase tracking-widest font-semibold">⚔️ Progres Jafuri Colectiv</div>
-                    {jafProgress[0]?.itemProgress.map((item: any, i: number) => {
-                      const totalDone      = jafProgress.reduce((s: number, u: any) => s + (u.itemProgress[i]?.totalDone || 0), 0)
-                      const totalRequired = item.totalRequired
-                      const completed      = totalDone >= totalRequired
-                      return (
-                        <div key={i} className="space-y-1">
-                          <div className="flex justify-between text-xs text-zinc-400">
-                            <span>{item.itemName}</span>
-                            <span className={completed ? 'text-green-400 font-bold' : ''}>
-                              {totalDone}/{totalRequired} {completed ? '✅' : ''}
-                            </span>
+                    <div className="px-5 py-4 border-b border-dark-border space-y-3">
+                      <div className="text-xs text-red-400 uppercase tracking-widest font-semibold">⚔️ Progres Jafuri Săptămânale</div>
+                      {jafProgress.map(u => (
+                        <div key={u.userId} className="space-y-1 pb-3 border-b border-dark-border/30 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-white">{u.username}</span>
+                            {u.allCompleted && <span className="text-xs text-green-400 font-bold">✅ Complet</span>}
                           </div>
-                          <div className="w-full h-2 bg-dark-border rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full transition-all ${completed ? 'bg-green-400' : 'bg-red-400'}`}
-                              style={{ width: totalRequired ? `${Math.min((totalDone / totalRequired) * 100, 100)}%` : '0%' }} />
-                          </div>
-                          {item.jafProgress.map((jaf: any, j: number) => {
-                            const jafDone = jafProgress.reduce((s: number, u: any) => s + (u.itemProgress[i]?.jafProgress[j]?.done || 0), 0)
-                            return (
-                              <div key={j} className="flex justify-between text-xs text-zinc-700 pl-2">
-                                <span>{jaf.type}</span>
-                                <span>{jafDone}/{jaf.required}</span>
+                          {u.itemProgress.map((item: any, i: number) => (
+                            <div key={i} className="space-y-1 mt-1">
+                              <div className="flex justify-between text-xs text-zinc-500">
+                                <span>{item.itemName}</span>
+                                <span className={item.completed ? 'text-green-400' : 'text-zinc-400'}>
+                                  {item.totalDone}/{item.totalRequired}
+                                </span>
                               </div>
-                            )
-                          })}
+                              <div className="w-full h-1.5 bg-dark-border rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full transition-all ${item.completed ? 'bg-green-400' : 'bg-red-400'}`}
+                                  style={{ width: item.totalRequired ? `${Math.min((item.totalDone / item.totalRequired) * 100, 100)}%` : '0%' }} />
+                              </div>
+                              {item.jafProgress.map((jaf: any, j: number) => (
+                                <div key={j} className="flex justify-between text-xs text-zinc-700 pl-2">
+                                  <span>{jaf.type}</span>
+                                  <span>{jaf.done}/{jaf.required}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
-                  
+                      ))}
+                    </div>
+                  )}
+
                   <div className="divide-y divide-dark-border/50">
                     {activeGradeData.members.map(m => {
                       const payment = paidMap.get(`${m.id}_${activeGrade}`)
