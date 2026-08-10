@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, Trash2, Save, Users, RefreshCw, X } from 'lucide-react'
+import { Plus, Trash2, Save, Users, RefreshCw, X, RotateCcw } from 'lucide-react'
 import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
 import Image from 'next/image'
@@ -52,6 +52,7 @@ export default function LiderTaxaPage() {
   const [deleting, setDeleting]   = useState<number | null>(null)
   const [toggling, setToggling]   = useState<string | null>(null)
   const [msg, setMsg]             = useState('')
+  const [resetting, setResetting] = useState(false)
   const [tab, setTab]             = useState<'seteaza' | 'status'>('seteaza')
   const [activeGrade, setActiveGrade] = useState<string>(GRADE_OPTIONS[0].id)
 
