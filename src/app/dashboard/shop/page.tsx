@@ -15,6 +15,7 @@ export default function ShopPage() {
   const [myPoints, setMyPoints] = useState(0)
   const [quantities, setQtys]   = useState<Record<string, number>>({})
   const [msg, setMsg]           = useState<{ text: string; ok: boolean } | null>(null)
+  const [confirm, setConfirm]   = useState<ShopItem | null>(null)
 
   const load = useCallback(async () => {
     const [shopRes, ptsRes] = await Promise.all([
@@ -24,11 +25,21 @@ export default function ShopPage() {
     const shopData = await shopRes.json()
     const ptsData  = await ptsRes.json()
     setItems(shopData.items || [])
-    setMyPoints(ptsData.points || 0)
+    setMyPoints(ptsData.points ?? 0)
     setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // Reincarca punctele la fiecare 30s
+  useEffect(() => {
+    const t = setInterval(async () => {
+      const r = await fetch('/api/points')
+      const d = await r.json()
+      setMyPoints(d.points ?? 0)
+    }, 30000)
+    return () => clearInterval(t)
+  }, [])
 
   const getQty = (id: string) => quantities[id] || 1
   const setQty = (id: string, v: number) =>
@@ -46,9 +57,17 @@ export default function ShopPage() {
       showMsg(`Puncte insuficiente! Ai ${myPoints} pts, ai nevoie de ${total} pts.`, false)
       return
     }
+    setConfirm(item)
+  }
+
+  const confirmBuy = async () => {
+    if (!confirm) return
+    const item  = confirm
+    const qty   = getQty(item.id)
+    setConfirm(null)
     setBuying(item.id)
     try {
-      const r = await fetch(`/api/shop/${item.id}/buy`, {
+      const r = await fetch(`/api/shop/${item.id}`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ quantity: qty }),
@@ -73,6 +92,43 @@ export default function ShopPage() {
 
   return (
     <div className="space-y-5 animate-slide-up">
+      {/* Confirmare cumparatura */}
+      {confirm && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-dark-card border border-grove-border rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
+            <h2 className="text-xl font-black text-white">Confirmare Cumpărătură</h2>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Produs:</span>
+                <span className="text-white font-semibold">{confirm.name}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Cantitate:</span>
+                <span className="text-white font-semibold">{getQty(confirm.id)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Cost total:</span>
+                <span className="text-red-400 font-black">{confirm.price * getQty(confirm.id)} pts</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Puncte rămase:</span>
+                <span className="text-grove-green font-bold">{myPoints - confirm.price * getQty(confirm.id)} pts</span>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={confirmBuy}
+                className="flex-1 py-2.5 rounded-xl bg-grove-green text-black font-bold text-sm hover:bg-grove-dark transition-colors">
+                ✅ Confirmă
+              </button>
+              <button onClick={() => setConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl bg-dark-hover text-zinc-400 font-bold text-sm hover:text-white border border-dark-border transition-colors">
+                ❌ Anulare
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -122,12 +178,9 @@ export default function ShopPage() {
             const outOfStock = item.stock === 0
             const isInfinite = item.stock === -1
             const isBuying   = buying === item.id
-
             return (
               <div key={item.id}
                 className="bg-dark-card border border-dark-border rounded-2xl overflow-hidden hover:border-grove-border hover:shadow-[0_0_24px_#00ff6612] transition-all duration-300 flex flex-col">
-
-                {/* Imagine */}
                 <div className="relative h-48 bg-dark-hover flex items-center justify-center overflow-hidden">
                   {item.imageUrl ? (
                     <img src={item.imageUrl} alt={item.name}
@@ -142,8 +195,6 @@ export default function ShopPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Info */}
                 <div className="p-4 flex flex-col flex-1">
                   <h3 className="text-white font-bold text-base mb-1">{item.name}</h3>
                   {item.description && (
@@ -156,9 +207,7 @@ export default function ShopPage() {
                     <Package size={12} />
                     <span>Stoc: {isInfinite ? '∞' : item.stock}</span>
                   </div>
-
                   <div className="mt-auto space-y-2">
-                    {/* Quantity */}
                     <div className="flex items-center gap-2">
                       <button onClick={() => setQty(item.id, qty - 1)}
                         disabled={qty <= 1 || outOfStock}
@@ -174,8 +223,6 @@ export default function ShopPage() {
                         +
                       </button>
                     </div>
-
-                    {/* Buy */}
                     <button onClick={() => buy(item)}
                       disabled={outOfStock || !canAfford || isBuying}
                       className={`w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
