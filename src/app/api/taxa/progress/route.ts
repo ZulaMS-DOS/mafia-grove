@@ -4,7 +4,7 @@ import { requireLeadership } from '@/lib/middleware'
 
 const GROVE_KILLER_ROLE_ID = '955126892984410162'
 
-const JAF_CONFIG: Record<string, string> = {
+const JAF_LABELS: Record<string, string> = {
   '🎬 Vinewood Bank':      'vinewood',
   '🏦 Alta Bank':          'alta',
   '🏜️ Desert Heist':       'desert',
@@ -46,56 +46,55 @@ export async function GET() {
     select: { id: true, username: true, avatar: true, discordId: true },
   })
 
-  // Calculeaza progresul per user
-  const progress = []
-  for (const user of groveKillers) {
-    const pointHistory = await prisma.pointHistory.findMany({
-      where: {
-        userId:    user.id,
-        createdAt: { gte: weekStart, lt: weekEnd },
-        reason:    { contains: '— procesat de' },
-      },
-    })
+  // Ia TOATE jafurile procesate in saptamana curenta pentru Grove Killeri
+  // (procesate de oricine, nu doar de Grove Killeri)
+  const allProcessed = await prisma.pointHistory.findMany({
+    where: {
+      userId:    { in: groveKillers.map(u => u.id) },
+      createdAt: { gte: weekStart, lt: weekEnd },
+      reason:    { contains: '— procesat de' },
+    },
+    select: { reason: true, userId: true },
+  })
 
-    // Numar jafurile procesate
-    const processedCounts: Record<string, number> = {}
-    for (const ph of pointHistory) {
-      for (const [label, key] of Object.entries(JAF_CONFIG)) {
-        if (ph.reason.includes(label)) {
-          processedCounts[key] = (processedCounts[key] || 0) + 1
-        }
+  // Numara jafurile colectiv (toti Grove Killerii la un loc)
+  const collectiveCounts: Record<string, number> = {}
+  for (const ph of allProcessed) {
+    for (const [label, key] of Object.entries(JAF_LABELS)) {
+      if (ph.reason.includes(label)) {
+        collectiveCounts[key] = (collectiveCounts[key] || 0) + 1
       }
     }
-
-    // Calculeaza progresul per item din taxa
-    const itemProgress = taxItems.map((item: any) => {
-      const jafuri: { type: string; count: number }[] = item.jafuri || []
-      const jafProgress = jafuri.map(jaf => ({
-        type:     jaf.type,
-        required: jaf.count,
-        done:     Math.min(processedCounts[jaf.type] || 0, jaf.count),
-      }))
-      const totalRequired = jafuri.reduce((s, j) => s + j.count, 0)
-      const totalDone     = jafProgress.reduce((s, j) => s + j.done, 0)
-      return {
-        itemName:      item.name,
-        jafProgress,
-        totalRequired,
-        totalDone,
-        completed:     totalDone >= totalRequired,
-      }
-    })
-
-    const allCompleted = itemProgress.every((i: any) => i.completed)
-
-    progress.push({
-      userId:        user.id,
-      username:      user.username,
-      avatar:        user.avatar,
-      itemProgress,
-      allCompleted,
-    })
   }
 
-  return NextResponse.json({ progress, taxItems })
+  // Calculeaza progresul colectiv per item din taxa
+  const itemProgress = taxItems.map((item: any) => {
+    const jafuri: { type: string; count: number }[] = item.jafuri || []
+    const jafProgress = jafuri.map(jaf => ({
+      type:     jaf.type,
+      required: jaf.count,
+      done:     Math.min(collectiveCounts[jaf.type] || 0, jaf.count),
+    }))
+    const totalRequired = jafuri.reduce((s, j) => s + j.count, 0)
+    const totalDone     = jafProgress.reduce((s, j) => s + j.done, 0)
+    return {
+      itemName:      item.name,
+      jafProgress,
+      totalRequired,
+      totalDone,
+      completed:     totalRequired > 0 && totalDone >= totalRequired,
+    }
+  })
+
+  const allCompleted = itemProgress.every((i: any) => i.completed)
+
+  return NextResponse.json({
+    progress: [{
+      itemProgress,
+      allCompleted,
+      collectiveCounts,
+      totalGroveKillers: groveKillers.length,
+    }],
+    taxItems,
+  })
 }
