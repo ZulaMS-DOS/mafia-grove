@@ -14,6 +14,7 @@ const JAF_LABELS: Record<string, string> = {
   biju:        '💎 Biju',
   magazin:     '🏪 Magazin',
   digital_den: '💻 Digital Den',
+  atm:         '💳 ATM',
 }
 
 interface JafEntry { type: string; count: number }
@@ -21,22 +22,38 @@ interface TaxItem {
   id: string; name: string; bucati: number; termen: string | null
   expired: boolean; jafuri: JafEntry[] | null
 }
+interface JafProgress {
+  type: string; required: number; done: number
+}
+interface ItemProgress {
+  itemName: string; jafProgress: JafProgress[]
+  totalRequired: number; totalDone: number; completed: boolean
+}
+interface Progress {
+  itemProgress: ItemProgress[]; allCompleted: boolean
+}
 
 export default function TaskSaptamanalPage() {
-  const [items, setItems]     = useState<TaxItem[]>([])
-  const [paid, setPaid]       = useState(false)
-  const [paidAt, setPaidAt]   = useState<string | null>(null)
-  const [weekStart, setWeek]  = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [lastUpdate, setLast] = useState(new Date())
+  const [items, setItems]       = useState<TaxItem[]>([])
+  const [paid, setPaid]         = useState(false)
+  const [paidAt, setPaidAt]     = useState<string | null>(null)
+  const [weekStart, setWeek]    = useState<string | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [lastUpdate, setLast]   = useState(new Date())
+  const [progress, setProgress] = useState<Progress | null>(null)
 
   const load = useCallback(async () => {
-    const r = await fetch('/api/taxa?role=955126892984410162')
-    const d = await r.json()
-    setItems(d.items || [])
-    setPaid(d.paid)
-    setPaidAt(d.paidAt)
-    setWeek(d.weekStart)
+    const [taxRes, progRes] = await Promise.all([
+      fetch('/api/taxa?role=955126892984410162'),
+      fetch('/api/taxa/progress/member'),
+    ])
+    const taxData  = await taxRes.json()
+    const progData = await progRes.json()
+    setItems(taxData.items || [])
+    setPaid(taxData.paid)
+    setPaidAt(taxData.paidAt)
+    setWeek(taxData.weekStart)
+    setProgress(progData.progress || null)
     setLast(new Date())
     setLoading(false)
   }, [])
@@ -63,6 +80,7 @@ export default function TaskSaptamanalPage() {
         </button>
       </div>
 
+      {/* Status achitat */}
       <div className={`grove-card flex items-center gap-4 ${paid ? 'border-green-500/40 bg-green-500/5' : 'border-red-500/40 bg-red-500/5'}`}>
         {paid
           ? <CheckCircle size={32} className="text-green-400 shrink-0" />
@@ -74,16 +92,49 @@ export default function TaskSaptamanalPage() {
           </div>
           {paid && paidAt
             ? <div className="text-xs text-zinc-500 mt-0.5">Confirmat la {format(new Date(paidAt), 'dd MMM yyyy HH:mm', { locale: ro })}</div>
-            : <div className="text-xs text-zinc-500 mt-0.5">Contactează un Lider după ce ai completat task-ul</div>
+            : <div className="text-xs text-zinc-500 mt-0.5">Taxa se marchează automat când toate jafurile sunt completate</div>
           }
         </div>
       </div>
 
+      {/* Bara progres colectiv */}
+      {progress && progress.itemProgress.length > 0 && (
+        <div className="grove-card space-y-3">
+          <h2 className="text-sm font-semibold text-red-400 uppercase tracking-widest">⚔️ Progres Colectiv Jafuri</h2>
+          {progress.itemProgress.map((item, i) => (
+            <div key={i} className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-zinc-400">{item.itemName}</span>
+                <span className={item.completed ? 'text-green-400 font-bold' : 'text-zinc-500'}>
+                  {item.totalDone}/{item.totalRequired} {item.completed ? '✅' : ''}
+                </span>
+              </div>
+              <div className="w-full h-2 bg-dark-border rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${item.completed ? 'bg-green-400' : 'bg-red-400'}`}
+                  style={{ width: item.totalRequired ? `${Math.min((item.totalDone / item.totalRequired) * 100, 100)}%` : '0%' }}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                {item.jafProgress.map((jaf, j) => (
+                  <div key={j} className="flex justify-between text-xs text-zinc-600 bg-dark-hover rounded-lg px-2 py-1">
+                    <span>{JAF_LABELS[jaf.type] || jaf.type}</span>
+                    <span className={jaf.done >= jaf.required ? 'text-green-400 font-bold' : 'text-zinc-500'}>
+                      {jaf.done}/{jaf.required}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Lista cerinte */}
       <div className="grove-card p-0 overflow-hidden">
         <div className="px-5 py-3 border-b border-dark-border">
           <h2 className="text-sm font-semibold text-red-400 uppercase tracking-widest">⚔️ Cerințe Săptămânale</h2>
         </div>
-
         {loading ? (
           <div className="text-center py-10 text-zinc-600">Se încarcă...</div>
         ) : items.length === 0 ? (
@@ -93,24 +144,19 @@ export default function TaskSaptamanalPage() {
           </div>
         ) : (
           <div className="divide-y divide-dark-border/50">
-            {items.map((item, i) => (
-              <div key={item.id}
-                className={`px-5 py-4 hover:bg-dark-hover transition-colors ${item.expired ? 'opacity-60' : ''}`}>
+            {items.map((item) => (
+              <div key={item.id} className={`px-5 py-4 hover:bg-dark-hover transition-colors ${item.expired ? 'opacity-60' : ''}`}>
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="flex items-center gap-2">
                     <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.expired ? 'bg-red-500' : 'bg-red-400'}`} />
                     <span className="text-white text-sm font-semibold">{item.name}</span>
                   </div>
-                  <div className="text-sm shrink-0">
-                    {item.termen ? (
-                      <span className={item.expired ? 'text-red-400 font-semibold text-xs' : 'text-yellow-400 text-xs'}>
-                        {item.expired ? '⛔ Expirat' : format(new Date(item.termen), 'dd MMM yyyy', { locale: ro })}
-                      </span>
-                    ) : null}
-                  </div>
+                  {item.termen && (
+                    <span className={item.expired ? 'text-red-400 font-semibold text-xs' : 'text-yellow-400 text-xs'}>
+                      {item.expired ? '⛔ Expirat' : format(new Date(item.termen), 'dd MMM yyyy', { locale: ro })}
+                    </span>
+                  )}
                 </div>
-
-                {/* Jafuri pentru Grove Killer */}
                 {item.jafuri && item.jafuri.length > 0 ? (
                   <div className="space-y-1 ml-3.5">
                     {item.jafuri.map((jaf, j) => (
@@ -119,7 +165,7 @@ export default function TaskSaptamanalPage() {
                         <span className="text-xs text-zinc-300">{JAF_LABELS[jaf.type] || jaf.type}</span>
                       </div>
                     ))}
-                    <div className="text-xs text-zinc-600 mt-1 pt-1 border-t border-dark-border/30">
+                    <div className="text-xs text-zinc-600 pt-1">
                       Total: {item.jafuri.map(j => `${j.count}x ${JAF_LABELS[j.type] || j.type}`).join(' + ')}
                     </div>
                   </div>
