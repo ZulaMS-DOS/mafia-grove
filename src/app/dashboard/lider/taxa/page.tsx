@@ -126,7 +126,8 @@ export default function LiderTaxaPage() {
   const updateJaf = (idx: number, jafIdx: number, field: 'type' | 'count', value: string | number) => {
     setItems(prev => prev.map((item, j) => {
       if (j !== idx) return item
-      const jafuri = (item.jafuri || []).map((jaf, k) => k === jafIdx ? { ...jaf, [field]: value } : jaf)
+      const finalValue = field === 'type' ? String(value).toLowerCase() : value
+      const jafuri = (item.jafuri || []).map((jaf, k) => k === jafIdx ? { ...jaf, [field]: finalValue } : jaf)
       return { ...item, jafuri }
     }))
   }
