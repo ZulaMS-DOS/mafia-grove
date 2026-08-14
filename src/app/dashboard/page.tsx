@@ -40,8 +40,8 @@ export default async function DashboardPage() {
     prisma.workSession.findMany({ where: { userId, clockIn: { gte: todayStart }, clockOut: { not: null } } }),
     prisma.workSession.findMany({ where: { userId, clockIn: { gte: weekStart }, clockOut: { not: null } } }),
     prisma.leaveRequest.count({ where: { userId, status: 'PENDING' } }),
-    (prisma as any).taxPayment.findUnique({
-      where: { userId_roleId_weekStart: { userId, roleId: 'all', weekStart: taxWeek } },
+    (prisma as any).taxPayment.findFirst({
+      where: { userId, weekStart: taxWeek, paid: true },
     }),
   ])
 
