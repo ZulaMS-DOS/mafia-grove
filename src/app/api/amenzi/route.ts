@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
     // Log FW
     await (prisma as any).botLog.create({
       data: {
-        categorie: 'jafuri',
+        categorie: 'sanctiuni',
         titlu:     `🚨 FW ${totalFw}/3 — ${user?.username || 'Necunoscut'}`,
         continut:
           `Membru: ${user?.username}\n` +
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
     // Log Amendă
     await (prisma as any).botLog.create({
       data: {
-        categorie: 'jafuri',
+        categorie: 'sanctiuni',
         titlu:     `⚠️ Amendă — ${user?.username || 'Necunoscut'}`,
         continut:
           `Membru: ${user?.username}\n` +
