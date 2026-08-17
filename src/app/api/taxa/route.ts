@@ -26,12 +26,36 @@ function getWeekStart() {
   return monday
 }
 
-async function sendDiscordMessage(content: string) {
+async function sendDiscordMessage(content: string, titlu: string) {
   try {
+    // Sterge mesajele vechi ale botului
+    const existing = await fetch(
+      `https://discord.com/api/v10/channels/${NOTIFY_CHANNEL_ID}/messages?limit=10`,
+      { headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` } }
+    )
+    const messages = await existing.json()
+    if (Array.isArray(messages)) {
+      for (const msg of messages) {
+        if (msg.author?.bot) {
+          await fetch(
+            `https://discord.com/api/v10/channels/${NOTIFY_CHANNEL_ID}/messages/${msg.id}`,
+            { method: 'DELETE', headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` } }
+          )
+          await new Promise(r => setTimeout(r, 500))
+        }
+      }
+    }
+
+    // Trimite mesaj nou
     await fetch(`https://discord.com/api/v10/channels/${NOTIFY_CHANNEL_ID}/messages`, {
       method:  'POST',
       headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
       body:    JSON.stringify({ content }),
+    })
+
+    // Salveaza log pe site
+    await (prisma as any).botLog.create({
+      data: { categorie: 'taxa', titlu, continut: content },
     })
   } catch {}
 }
