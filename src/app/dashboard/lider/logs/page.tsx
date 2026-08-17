@@ -9,10 +9,11 @@ interface Log {
 }
 
 const CATEGORII = [
-  { id: 'all',       label: 'Toate',     icon: '📋' },
-  { id: 'muncitori', label: 'Muncitori', icon: '👥' },
-  { id: 'taxa',      label: 'Taxă',      icon: '💰' },
-  { id: 'jafuri',    label: 'Jafuri',    icon: '🏴' },
+  { id: 'all',        label: 'Toate',      icon: '📋' },
+  { id: 'muncitori',  label: 'Muncitori',  icon: '👥' },
+  { id: 'taxa',       label: 'Taxă',       icon: '💰' },
+  { id: 'jafuri',     label: 'Jafuri',     icon: '🏴' },
+  { id: 'sanctiuni',  label: 'Sancțiuni',  icon: '⚠️' },
 ]
 
 export default function LogsPage() {
