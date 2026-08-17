@@ -194,9 +194,17 @@ export async function GET(req: NextRequest) {
       const unpaidLines = await buildUnpaidList(item, weekStart)
       const unpaidText  = unpaidLines.length > 0 ? unpaidLines.join('\n') : '> ✅ Toți au achitat!'
       await sendDiscordMessage(
-        `## ⏰ Taxă Sindicat — Expiră Mâine!\n`,
-        '⏰ Taxă Expiră Mâine'━━━━━━━━━━━━━━━━━━━━\n> 📋 **${item.name}**\n> 👥 **Grade vizate:** ${gradeText}\n━━━━━━━━━━━━━━━━━━━━\n**Membri care NU au achitat (${unpaidLines.length}):**\n${unpaidText}\n━━━━━━━━━━━━━━━━━━━━\n<@&955126889171804170> <@&955126890472022066>`
-      )
+  `## ⏰ Taxă Expiră Mâine
+━━━━━━━━━━━━━━━━━━━━
+> 📋 **${item.name}**
+> 👥 **Grade vizate:** ${gradeText}
+━━━━━━━━━━━━━━━━━━━━
+**Membri care NU au achitat (${unpaidLines.length}):**
+${unpaidText}
+━━━━━━━━━━━━━━━━━━━━
+<@&955126889171804170> <@&955126890472022066>`,
+  '⏰ Taxă Expiră Mâine'
+)
     }
   }
 
