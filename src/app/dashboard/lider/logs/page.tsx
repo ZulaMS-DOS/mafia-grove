@@ -32,14 +32,15 @@ export default function LogsPage() {
 
   useEffect(() => { setLoading(true); load() }, [load])
 
-  const categorieColor = (cat: string) => ({
-    muncitori: 'text-zinc-400 border-zinc-600/30 bg-zinc-600/10',
-    taxa:      'text-yellow-400 border-yellow-500/30 bg-yellow-500/10',
-    jafuri:    'text-red-400 border-red-500/30 bg-red-500/10',
+    const categorieColor = (cat: string) => ({
+    muncitori:  'text-zinc-400 border-zinc-600/30 bg-zinc-600/10',
+    taxa:       'text-yellow-400 border-yellow-500/30 bg-yellow-500/10',
+    jafuri:     'text-red-400 border-red-500/30 bg-red-500/10',
+    sanctiuni:  'text-orange-400 border-orange-500/30 bg-orange-500/10',
   }[cat] || 'text-grove-green border-grove-border bg-grove-dim')
 
   const categorieEmoji = (cat: string) => ({
-    muncitori: '👥', taxa: '💰', jafuri: '🏴'
+    muncitori: '👥', taxa: '💰', jafuri: '🏴', sanctiuni: '⚠️'
   }[cat] || '📋')
 
   return (
