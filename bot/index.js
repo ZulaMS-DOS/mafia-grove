@@ -228,12 +228,12 @@ function connect() {
         }))
       }
 
-      if (op === 7) {
-        console.log('Discord cere reconnect')
-        isConnecting = false
-        safeReconnect(5000)
-      }
-
+         if (op === 7) {
+      console.log('Discord cere reconnect')
+      isConnecting = false
+      safeReconnect(30000)
+    }
+      
       if (op === 9) {
         console.log('Sesiune invalida')
         isConnecting = false
