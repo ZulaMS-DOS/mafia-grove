@@ -306,7 +306,7 @@ function connect() {
       return
     }
 
-    reconnectDelay = Math.min(reconnectDelay * 2, 300000)
+    reconnectDelay = Math.min(reconnectDelay * 2, 600000) // max 10 minute
     safeReconnect(reconnectDelay)
   })
 
