@@ -3,6 +3,7 @@ const WebSocket = require('ws')
 const TOKEN                    = process.env.DISCORD_BOT_TOKEN
 const CHANNEL_ID               = '1446288393737732147'
 const REPORT_CHANNEL_ID        = '1528186240833290271'
+const COMMAND_CHANNEL_ID       = '1539902499022970900'
 const KEYWORD                  = 'jaf'
 const EMOJI_DEFAULT            = '⏲️'
 const EMOJI_RESPONSABIL        = '✅'
@@ -10,7 +11,17 @@ const RESPONSABIL_RESURSE_ROLE = '1462444666958909583'
 const LIDER_ROLE               = '955126889171804170'
 const CO_LIDER_ROLE            = '955126890472022066'
 
-// Intents: GUILD_MESSAGES(512) + MESSAGE_CONTENT(32768) + GUILD_MESSAGE_REACTIONS(1024) = 34304
+const ROLE_NAMES = {
+  '1537286791667916921': '🌽┇ Farmer',
+  '1503322791796146237': '🔫┇ Recrut Jaf',
+  '955126892984410162':  '⚔️ ┇ Grove Killers'
+}
+
+const ALLOWED_ROLE_MAP = {
+  '1446844478173348015': ['1537286791667916921'],                    // Responsabil Farm -> Farmer
+  '1348974812315258972': ['1503322791796146237', '955126892984410162'] // Responsabil Jafuri -> Recrut Jaf & Grove Killers
+}
+
 const INTENTS = 512 | 32768 | 1024
 
 let ws                = null
@@ -22,6 +33,49 @@ let reportScheduled   = false
 let reconnectTimeout  = null
 let sessionId         = null
 let resumeGatewayUrl  = null
+
+async function registerSlashCommands(appId) {
+  try {
+    const res = await fetch(`https://discord.com/api/v10/applications/${appId}/commands`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bot ${TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify([
+        {
+          name: 'rol',
+          description: 'Ofera un rol unui membru din lista permisa',
+          options: [
+            {
+              name: 'user',
+              description: 'Membru care primeste rolul',
+              type: 6,
+              required: true
+            }
+          ]
+        }
+      ])
+    })
+    if (res.ok) {
+      console.log('Comanda /rol a fost inregistrata cu succes!')
+    }
+  } catch (e) {
+    console.error('Eroare inregistrare comanda /rol:', e.message)
+  }
+}
+
+async function respondInteraction(id, token, body) {
+  try {
+    await fetch(`https://discord.com/api/v10/interactions/${id}/${token}/callback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+  } catch (e) {
+    console.error('Eroare respondInteraction:', e.message)
+  }
+}
 
 function scheduleReports() {
   if (reportScheduled) return
@@ -112,11 +166,24 @@ async function sendMessage(channelId, content) {
   }
 }
 
+async function giveRole(guildId, userId, roleId) {
+  try {
+    const res = await fetch(
+      `https://discord.com/api/v10/guilds/${guildId}/members/${userId}/roles/${roleId}`,
+      { method: 'PUT', headers: { 'Authorization': `Bot ${TOKEN}` } }
+    )
+    return res.ok
+  } catch (e) {
+    console.error('Eroare giveRole:', e.message)
+    return false
+  }
+}
+
 async function addReaction(channelId, messageId, emoji) {
   try {
     const encoded = encodeURIComponent(emoji)
     const res = await fetch(
-      `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/${encoded}/@me`,
+      `https://discord.com/api/v10/channels/${channelId}/messages/${encoded}/@me`,
       { method: 'PUT', headers: { 'Authorization': `Bot ${TOKEN}` } }
     )
     if (!res.ok) {
@@ -202,7 +269,6 @@ function connect(tryResume = false) {
 
       if (s) lastSequence = s
 
-      // HELLO
       if (op === 10) {
         const interval = d.heartbeat_interval
         if (heartbeatInterval) clearInterval(heartbeatInterval)
@@ -212,7 +278,6 @@ function connect(tryResume = false) {
           }
         }, interval)
 
-        // Incearca RESUME daca avem sesiune valida
         if (tryResume && sessionId && lastSequence) {
           console.log('Incerc RESUME sesiune...')
           ws.send(JSON.stringify({
@@ -220,7 +285,6 @@ function connect(tryResume = false) {
             d: { token: TOKEN, session_id: sessionId, seq: lastSequence },
           }))
         } else {
-          // IDENTIFY normal
           ws.send(JSON.stringify({
             op: 2,
             d: {
@@ -232,14 +296,12 @@ function connect(tryResume = false) {
         }
       }
 
-      // RECONNECT — Discord cere reconnect cu resume
       if (op === 7) {
         console.log('Discord cere reconnect — incerc resume')
         isConnecting = false
         safeReconnect(3000, true)
       }
 
-      // INVALID SESSION
       if (op === 9) {
         const resumable = d === true
         console.log(`Sesiune invalida (resumable: ${resumable})`)
@@ -248,24 +310,116 @@ function connect(tryResume = false) {
         safeReconnect(resumable ? 3000 : 10000, resumable)
       }
 
-      // HEARTBEAT ACK
       if (op === 11) {}
 
-      // RESUMED
       if (t === 'RESUMED') {
         console.log('Sesiune reluata cu succes!')
         scheduleReports()
       }
 
-      // READY
       if (t === 'READY') {
         sessionId        = d.session_id
         resumeGatewayUrl = d.resume_gateway_url
         console.log(`Bot gata: ${d.user.username} (session: ${sessionId})`)
         scheduleReports()
+        await registerSlashCommands(d.application?.id || d.user?.id)
       }
 
-      // MESSAGE_REACTION_ADD
+      if (t === 'INTERACTION_CREATE') {
+        const interactionId = d.id
+        const interactionToken = d.token
+
+        // Rulare comanda /rol
+        if (d.type === 2 && d.data.name === 'rol') {
+          // Verificare canal permis
+          if (d.channel_id !== COMMAND_CHANNEL_ID) {
+            await respondInteraction(interactionId, interactionToken, {
+              type: 4,
+              data: { content: `❌ Această comandă poate fi folosită doar în canalul <#${COMMAND_CHANNEL_ID}>!`, flags: 64 }
+            })
+            return
+          }
+
+          const targetUserId = d.data.options?.[0]?.value
+          const executorRoles = d.member?.roles || []
+
+          const allowedRoleIds = new Set()
+          for (const roleId of executorRoles) {
+            const allowed = ALLOWED_ROLE_MAP[roleId] || []
+            allowed.forEach(r => allowedRoleIds.add(r))
+          }
+
+          if (allowedRoleIds.size === 0) {
+            await respondInteraction(interactionId, interactionToken, {
+              type: 4,
+              data: { content: '❌ Nu ai permisiunea să folosești această comandă!', flags: 64 }
+            })
+            return
+          }
+
+          const selectOptions = Array.from(allowedRoleIds).map(roleId => ({
+            label: ROLE_NAMES[roleId] || `Rol ${roleId}`,
+            value: roleId
+          }))
+
+          await respondInteraction(interactionId, interactionToken, {
+            type: 4,
+            data: {
+              content: `Alege rolul pe care dorești să i-l oferi lui <@${targetUserId}>:`,
+              flags: 64,
+              components: [
+                {
+                  type: 1,
+                  components: [
+                    {
+                      type: 3,
+                      custom_id: `select_role:${targetUserId}`,
+                      placeholder: 'Alege un rol din listă...',
+                      options: selectOptions
+                    }
+                  ]
+                }
+              ]
+            }
+          })
+        }
+
+        // Selectare rol din lista drop-down
+        if (d.type === 3 && d.data.custom_id.startsWith('select_role:')) {
+          if (d.channel_id !== COMMAND_CHANNEL_ID) {
+            await respondInteraction(interactionId, interactionToken, {
+              type: 4,
+              data: { content: `❌ Această acțiune poate fi făcută doar în canalul <#${COMMAND_CHANNEL_ID}>!`, flags: 64 }
+            })
+            return
+          }
+
+          const targetUserId = d.data.custom_id.split(':')[1]
+          const roleIdToAdd = d.data.values[0]
+          const guildId = d.guild_id
+
+          const ok = await giveRole(guildId, targetUserId, roleIdToAdd)
+
+          if (ok) {
+            await respondInteraction(interactionId, interactionToken, {
+              type: 7,
+              data: {
+                content: `✅ Rolul <@&${roleIdToAdd}> a fost oferit cu succes lui <@${targetUserId}>!`,
+                components: []
+              }
+            })
+          } else {
+            await respondInteraction(interactionId, interactionToken, {
+              type: 7,
+              data: {
+                content: '❌ Eroare la adăugarea rolului.',
+                components: []
+              }
+            })
+          }
+        }
+      }
+
       if (t === 'MESSAGE_REACTION_ADD') {
         console.log('Reactie detectata:', d.emoji?.name, 'canal:', d.channel_id)
         const channelId = d.channel_id
@@ -299,10 +453,10 @@ function connect(tryResume = false) {
         }
       }
 
-      // MESSAGE_CREATE
       if (t === 'MESSAGE_CREATE') {
         const channelId   = d.channel_id
-        const content     = (d.content || '').toLowerCase()
+        const rawContent  = d.content || ''
+        const content     = rawContent.toLowerCase()
         const messageId   = d.id
         const authorRoles = d.member ? d.member.roles || [] : []
 
@@ -330,7 +484,6 @@ function connect(tryResume = false) {
       return
     }
 
-    // Coduri care permit resume
     const resumeCodes = [4000, 4001, 4002, 4003, 4005, 4008, 4009, 1001, 1006]
     const canResume   = resumeCodes.includes(code) && !!sessionId
 
