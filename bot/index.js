@@ -7,9 +7,11 @@ const KEYWORD                  = 'jaf'
 const EMOJI_DEFAULT            = '⏲️'
 const EMOJI_RESPONSABIL        = '✅'
 const RESPONSABIL_RESURSE_ROLE = '1462444666958909583'
+const LIDER_ROLE               = '955126889171804170'
+const CO_LIDER_ROLE            = '955126890472022066'
 
-const LIDER_ROLE     = '955126889171804170'
-const CO_LIDER_ROLE  = '955126890472022066'
+// Intents: GUILD_MESSAGES(512) + MESSAGE_CONTENT(32768) + GUILD_MESSAGE_REACTIONS(8192) = 41472
+const INTENTS = 512 | 32768 | 8192
 
 let ws               = null
 let heartbeatInterval = null
@@ -18,19 +20,13 @@ let reconnectDelay    = 10000
 let isConnecting      = false
 let reportScheduled   = false
 let reconnectTimeout  = null
-
-// Intents:
-// 512   = GUILD_MESSAGES
-// 32768 = MESSAGE_CONTENT
-// 8192  = GUILD_MESSAGE_REACTIONS
-// Total = 41472
-const INTENTS = 512 | 32768 | 8192
+let sessionId         = null
+let resumeGatewayUrl  = null
 
 function scheduleReports() {
   if (reportScheduled) return
   reportScheduled = true
   console.log('Rapoarte programate la 08:00 si 20:00')
-
   setInterval(async () => {
     const now = new Date()
     const h   = now.getHours()
@@ -48,7 +44,6 @@ async function deleteOldBotMessages() {
     )
     const messages = await res.json()
     if (!Array.isArray(messages)) return
-
     for (const msg of messages) {
       if (msg.author?.bot) {
         await fetch(
@@ -78,9 +73,7 @@ async function sendReport(isMorning) {
       if (!content.includes(KEYWORD)) continue
       const reactions = msg.reactions || []
       const hasTimer  = reactions.some(r => r.emoji.name === '⏲️')
-      if (hasTimer) {
-        unpaidUsers.set(msg.author.id, msg.author.username)
-      }
+      if (hasTimer) unpaidUsers.set(msg.author.id, msg.author.username)
     }
 
     const emoji    = isMorning ? '☀️' : '🌙'
@@ -90,16 +83,11 @@ async function sendReport(isMorning) {
 
     let content
     if (unpaidUsers.size === 0) {
-      content =
-        `## ${emoji} Raport ${period} — Evidențe Jafuri\n` +
-        `${divider}\n> ✅ Toți membrii au predat resursele!\n` +
-        `${divider}\n${pingRole}`
+      content = `## ${emoji} Raport ${period} — Evidențe Jafuri\n${divider}\n> ✅ Toți membrii au predat resursele!\n${divider}\n${pingRole}`
     } else {
-    const lines = Array.from(unpaidUsers.entries()).map(([id, username]) => `> ⏲️ <@${id}> **(${username})**`)
-
+      const lines = Array.from(unpaidUsers.entries()).map(([id, username]) => `> ⏲️ <@${id}> **(${username})**`)
       content =
-        `## ${emoji} Raport ${period} — Evidențe Jafuri\n` +
-        `${divider}\n` +
+        `## ${emoji} Raport ${period} — Evidențe Jafuri\n${divider}\n` +
         `**${unpaidUsers.size} membri nu au predat resursele:**\n` +
         lines.join('\n') + '\n' +
         `${divider}\n${pingRole}`
@@ -149,12 +137,9 @@ async function removeReaction(channelId, messageId, emoji) {
     )
     if (res.ok) {
       console.log(`Reaction ${emoji} scoasa de pe mesajul ${messageId}`)
-    } else {
-      const err = await res.json()
-      console.error('Eroare stergere reaction:', err)
     }
   } catch (e) {
-    console.error('Eroare fetch removeReaction:', e.message)
+    console.error('Eroare removeReaction:', e.message)
   }
 }
 
@@ -167,21 +152,26 @@ function cleanup() {
   }
 }
 
-function safeReconnect(delay) {
+function safeReconnect(delay, canResume = false) {
   if (isConnecting) return
   cleanup()
   const actualDelay = Math.min(delay, 300000)
-  console.log(`Reconectare in ${actualDelay / 1000}s...`)
-  reconnectTimeout = setTimeout(connect, actualDelay)
+  console.log(`Reconectare in ${actualDelay / 1000}s... (resume: ${canResume})`)
+  reconnectTimeout = setTimeout(() => connect(canResume), actualDelay)
 }
 
-function connect() {
+function connect(tryResume = false) {
   if (isConnecting || ws) return
   isConnecting = true
-  console.log('Conectare Gateway...')
+
+  const gatewayUrl = (tryResume && resumeGatewayUrl)
+    ? `${resumeGatewayUrl}?v=10&encoding=json`
+    : 'wss://gateway.discord.gg/?v=10&encoding=json'
+
+  console.log(`Conectare Gateway... (resume: ${tryResume})`)
 
   try {
-    ws = new WebSocket('wss://gateway.discord.gg/?v=10&encoding=json')
+    ws = new WebSocket(gatewayUrl)
   } catch (e) {
     console.error('Eroare creare WebSocket:', e.message)
     isConnecting = false
@@ -190,7 +180,7 @@ function connect() {
   }
 
   const connectTimeout = setTimeout(() => {
-    console.log('Timeout conectare — reconectez')
+    console.log('Timeout conectare')
     isConnecting = false
     safeReconnect(reconnectDelay)
   }, 30000)
@@ -209,6 +199,7 @@ function connect() {
 
       if (s) lastSequence = s
 
+      // HELLO
       if (op === 10) {
         const interval = d.heartbeat_interval
         if (heartbeatInterval) clearInterval(heartbeatInterval)
@@ -218,42 +209,67 @@ function connect() {
           }
         }, interval)
 
-        ws.send(JSON.stringify({
-          op: 2,
-          d: {
-            token:      TOKEN,
-            intents:    INTENTS,
-            properties: { os: 'linux', browser: 'grove-bot', device: 'grove-bot' },
-          },
-        }))
+        // Incearca RESUME daca avem sesiune valida
+        if (tryResume && sessionId && lastSequence) {
+          console.log('Incerc RESUME sesiune...')
+          ws.send(JSON.stringify({
+            op: 6,
+            d: { token: TOKEN, session_id: sessionId, seq: lastSequence },
+          }))
+        } else {
+          // IDENTIFY normal
+          ws.send(JSON.stringify({
+            op: 2,
+            d: {
+              token:      TOKEN,
+              intents:    INTENTS,
+              properties: { os: 'linux', browser: 'grove-bot', device: 'grove-bot' },
+            },
+          }))
+        }
       }
 
-         if (op === 7) {
-      console.log('Discord cere reconnect')
-      isConnecting = false
-      safeReconnect(30000)
-    }
-      
-      if (op === 9) {
-        console.log('Sesiune invalida')
+      // RECONNECT — Discord cere reconnect cu resume
+      if (op === 7) {
+        console.log('Discord cere reconnect — incerc resume')
         isConnecting = false
-        safeReconnect(30000)
+        safeReconnect(3000, true)
       }
 
+      // INVALID SESSION
+      if (op === 9) {
+        const resumable = d === true
+        console.log(`Sesiune invalida (resumable: ${resumable})`)
+        sessionId = null
+        isConnecting = false
+        safeReconnect(resumable ? 3000 : 10000, resumable)
+      }
+
+      // HEARTBEAT ACK
+      if (op === 11) {}
+
+      // RESUMED
+      if (t === 'RESUMED') {
+        console.log('Sesiune reluata cu succes!')
+        scheduleReports()
+      }
+
+      // READY
       if (t === 'READY') {
-        console.log(`Bot gata: ${d.user.username}`)
+        sessionId        = d.session_id
+        resumeGatewayUrl = d.resume_gateway_url
+        console.log(`Bot gata: ${d.user.username} (session: ${sessionId})`)
         scheduleReports()
       }
 
       // MESSAGE_REACTION_ADD
       if (t === 'MESSAGE_REACTION_ADD') {
-        console.log('Reactie detectata:', d.emoji?.name, 'pe canal:', d.channel_id)
-        const channelId    = d.channel_id
-        const messageId    = d.message_id
-        const emojiName    = d.emoji?.name
+        console.log('Reactie detectata:', d.emoji?.name, 'canal:', d.channel_id)
+        const channelId = d.channel_id
+        const messageId = d.message_id
+        const emojiName = d.emoji?.name
 
         if (channelId === CHANNEL_ID && emojiName === '✅') {
-          // Fetch member roles din Discord API
           try {
             const memberRes = await fetch(
               `https://discord.com/api/v10/guilds/${d.guild_id}/members/${d.user_id}`,
@@ -261,11 +277,9 @@ function connect() {
             )
             const member = await memberRes.json()
             const roles  = member.roles || []
-
             const isAuthorized = roles.includes(LIDER_ROLE) ||
                                  roles.includes(CO_LIDER_ROLE) ||
                                  roles.includes(RESPONSABIL_RESURSE_ROLE)
-
             if (isAuthorized) {
               await removeReaction(channelId, messageId, '⏲️')
             }
@@ -306,14 +320,18 @@ function connect() {
       return
     }
 
-    reconnectDelay = Math.min(reconnectDelay * 2, 600000) // max 10 minute
-    safeReconnect(reconnectDelay)
+    // Coduri care permit resume
+    const resumeCodes = [4000, 4001, 4002, 4003, 4005, 4008, 4009, 1001, 1006]
+    const canResume   = resumeCodes.includes(code) && !!sessionId
+
+    reconnectDelay = Math.min(reconnectDelay * 2, 300000)
+    safeReconnect(reconnectDelay, canResume)
   })
 
   ws.on('error', (err) => {
     console.error('Gateway eroare:', err.message)
     isConnecting = false
-    safeReconnect(reconnectDelay)
+    safeReconnect(reconnectDelay, false)
   })
 }
 
