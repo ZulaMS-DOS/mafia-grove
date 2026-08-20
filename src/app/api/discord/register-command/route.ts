@@ -11,6 +11,18 @@ export async function GET() {
 
   const commands = [
     {
+      name:        'grad',
+      description: 'Oferă un grad unui membru din lista permisă',
+      options: [
+        {
+          type:        6, // USER
+          name:        'user',
+          description: 'Membru care primește gradul',
+          required:    true,
+        },
+      ],
+    },
+    {
       name:        'jaf-procesat',
       description: 'Acordă puncte fixe pentru un jaf procesat',
       options: [
@@ -96,7 +108,7 @@ export async function GET() {
         },
       ],
     }
-  ] // <-- Aici se închide corect array-ul commands
+  ]
 
   const results = []
   for (const command of commands) {
