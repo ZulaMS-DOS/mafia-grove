@@ -10,10 +10,10 @@ const RESPONSABIL_RESURSE_ROLE = '1462444666958909583'
 const LIDER_ROLE               = '955126889171804170'
 const CO_LIDER_ROLE            = '955126890472022066'
 
-// Intents: GUILD_MESSAGES(512) + MESSAGE_CONTENT(32768) + GUILD_MESSAGE_REACTIONS(8192) = 41472
-const INTENTS = 512 | 32768 | 8192
+// Intents: GUILD_MESSAGES(512) + MESSAGE_CONTENT(32768) + GUILD_MESSAGE_REACTIONS(1024) = 34304
+const INTENTS = 512 | 32768 | 1024
 
-let ws               = null
+let ws                = null
 let heartbeatInterval = null
 let lastSequence      = null
 let reconnectDelay    = 10000
@@ -72,7 +72,7 @@ async function sendReport(isMorning) {
       const content = (msg.content || '').toLowerCase()
       if (!content.includes(KEYWORD)) continue
       const reactions = msg.reactions || []
-      const hasTimer  = reactions.some(r => r.emoji.name === '⏲️')
+      const hasTimer  = reactions.some(r => r.emoji.name === EMOJI_DEFAULT)
       if (hasTimer) unpaidUsers.set(msg.author.id, msg.author.username)
     }
 
@@ -137,6 +137,9 @@ async function removeReaction(channelId, messageId, emoji) {
     )
     if (res.ok) {
       console.log(`Reaction ${emoji} scoasa de pe mesajul ${messageId}`)
+    } else {
+      const err = await res.json()
+      console.error('Eroare removeReaction status:', res.status, err)
     }
   } catch (e) {
     console.error('Eroare removeReaction:', e.message)
@@ -269,23 +272,33 @@ function connect(tryResume = false) {
         const messageId = d.message_id
         const emojiName = d.emoji?.name
 
-        if (channelId === CHANNEL_ID && emojiName === '✅') {
+        if (channelId === CHANNEL_ID && emojiName === EMOJI_RESPONSABIL) {
           try {
-            const roles = d.member ? d.member.roles : []
-            
+            let roles = d.member?.roles
+
+            if (!roles && d.guild_id && d.user_id) {
+              const memberRes = await fetch(
+                `https://discord.com/api/v10/guilds/${d.guild_id}/members/${d.user_id}`,
+                { headers: { 'Authorization': `Bot ${TOKEN}` } }
+              )
+              const member = await memberRes.json()
+              roles = member.roles || []
+            }
+
+            roles = roles || []
             const isAuthorized = roles.includes(LIDER_ROLE) ||
                                  roles.includes(CO_LIDER_ROLE) ||
                                  roles.includes(RESPONSABIL_RESURSE_ROLE)
-            
+
             if (isAuthorized) {
-              await removeReaction(channelId, messageId, '⏲️')
+              await removeReaction(channelId, messageId, EMOJI_DEFAULT)
             }
           } catch (e) {
-            console.error('Eroare autorizare/stergere ceas:', e.message)
+            console.error('Eroare la procesarea reactiei:', e.message)
           }
         }
       }
-      
+
       // MESSAGE_CREATE
       if (t === 'MESSAGE_CREATE') {
         const channelId   = d.channel_id
