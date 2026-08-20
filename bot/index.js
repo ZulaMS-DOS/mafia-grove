@@ -271,24 +271,21 @@ function connect(tryResume = false) {
 
         if (channelId === CHANNEL_ID && emojiName === '✅') {
           try {
-            const memberRes = await fetch(
-              `https://discord.com/api/v10/guilds/${d.guild_id}/members/${d.user_id}`,
-              { headers: { 'Authorization': `Bot ${TOKEN}` } }
-            )
-            const member = await memberRes.json()
-            const roles  = member.roles || []
+            const roles = d.member ? d.member.roles : []
+            
             const isAuthorized = roles.includes(LIDER_ROLE) ||
                                  roles.includes(CO_LIDER_ROLE) ||
                                  roles.includes(RESPONSABIL_RESURSE_ROLE)
+            
             if (isAuthorized) {
               await removeReaction(channelId, messageId, '⏲️')
             }
           } catch (e) {
-            console.error('Eroare fetch member:', e.message)
+            console.error('Eroare autorizare/stergere ceas:', e.message)
           }
         }
       }
-
+      
       // MESSAGE_CREATE
       if (t === 'MESSAGE_CREATE') {
         const channelId   = d.channel_id
