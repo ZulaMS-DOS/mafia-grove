@@ -96,6 +96,30 @@ export async function GET() {
         },
       ],
     }
+    {
+      name:        'grad',
+      description: 'Oferă un grad unui membru',
+      options: [
+        {
+          type:        6,
+          name:        'user',
+          description: 'Menționează membrul',
+          required:    true,
+        },
+        {
+          type:        3,
+          name:        'grad',
+          description: 'Gradul de acordat',
+          required:    true,
+          choices: [
+            { name: '🌽 Farmer',       value: '1537286791667916921' },
+            { name: '🔫 Recrut Jaf',   value: '1503322791796146237' },
+            { name: '⚔️ Grove Killer', value: '955126892984410162'  },
+          ],
+        },
+      ],
+    },
+    
   ] // <-- Aici se închide corect array-ul commands
 
   const results = []
