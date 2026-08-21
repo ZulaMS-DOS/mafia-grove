@@ -12,8 +12,8 @@ const SUPER_ADMIN_ID       = '949760812518617138'
 const GROVE_KILLER_ROLE_ID = '955126892984410162'
 
 const JAF_CONFIG: Record<string, { label: string; points: number }> = {
-  vinewood:    { label: '🎬 Vinewood Bank',      points: 1.5 },
-  alta:        { label: '🏦 Alta Bank',          points: 1.5 },
+  vinewood:    { label: '🎬 Vinewood Bank',     points: 1.5 },
+  alta:        { label: '🏦 Alta Bank',         points: 1.5 },
   desert:      { label: '🏜️ Desert Heist',       points: 1.5 },
   highway:     { label: '🛣️ Highway Robbery',    points: 1.5 },
   pacific:     { label: '🌊 Pacific Standard',   points: 2   },
@@ -80,20 +80,17 @@ async function checkAndMarkGroveKillerTax() {
     const weekEnd   = new Date(weekStart)
     weekEnd.setDate(weekEnd.getDate() + 7)
 
-    // Ia task-ul Grove Killer din saptamana curenta
     const taxItems = await (prisma as any).taxItem.findMany({
       where: { weekStart, targetRoles: { has: GROVE_KILLER_ROLE_ID } },
     })
     if (!taxItems.length) return
 
-    // Ia toti Grove Killerii
     const groveKillers = await prisma.user.findMany({
       where:  { roleIds: { has: GROVE_KILLER_ROLE_ID } },
       select: { id: true },
     })
     if (!groveKillers.length) return
 
-    // Calculeaza jafurile procesate de TOTI Grove Killerii combinat
     const processedPoints = await prisma.pointHistory.findMany({
       where: {
         userId:    { in: groveKillers.map(u => u.id) },
@@ -112,7 +109,6 @@ async function checkAndMarkGroveKillerTax() {
       }
     }
 
-    // Verifica daca toate cerintele sunt indeplinite
     let allCompleted = true
     for (const item of taxItems) {
       const jafuri: { type: string; count: number }[] = (item.jafuri as any) || []
@@ -126,7 +122,6 @@ async function checkAndMarkGroveKillerTax() {
     }
 
     if (allCompleted) {
-      // Marcheaza taxa ca achitata pentru TOTI Grove Killerii
       for (const user of groveKillers) {
         await (prisma as any).taxPayment.upsert({
           where:  { userId_roleId_weekStart: { userId: user.id, roleId: GROVE_KILLER_ROLE_ID, weekStart } },
@@ -173,7 +168,6 @@ async function awardPoints(userIds: string[], points: number, reasonLabel: strin
 
     successLines.push(`> ✅ <@${discordId}> **+${points} pts**`)
 
-   // Verifica daca taxa Grove Killer e completata
     await checkAndMarkGroveKillerTax()
   }
 
@@ -271,7 +265,6 @@ export async function POST(req: NextRequest) {
             return
           }
 
-          // Gaseste userul in DB dupa discordId
           const user = await prisma.user.findUnique({
             where:  { discordId: targetUserId },
             select: { id: true, username: true },
@@ -284,7 +277,6 @@ export async function POST(req: NextRequest) {
 
           const weekStart = getWeekStart()
 
-          // Marcheaza taxa ca achitata
           await (prisma as any).taxPayment.upsert({
             where:  { userId_roleId_weekStart: { userId: user.id, roleId: grad, weekStart } },
             update: { paid: true, paidAt: new Date() },
@@ -320,6 +312,66 @@ export async function POST(req: NextRequest) {
       return deferResponse
     }
 
+    if (commandName === 'grad') {
+      const deferResponse = NextResponse.json({ type: 5 })
+
+      ;(async () => {
+        try {
+          const targetUserId = options.find((o: any) => o.name === 'user')?.value as string | undefined
+          const gradId       = options.find((o: any) => o.name === 'grad')?.value as string | undefined
+
+          if (!targetUserId || !gradId) {
+            await sendFollowup(token, '⚠️ Trebuie să specifici userul și gradul.')
+            return
+          }
+
+          const GRAD_PERMISSIONS: Record<string, string[]> = {
+            '1446844478173348015': ['1537286791667916921'],
+            '1348974812315258972': ['1503322791796146237', '955126892984410162'],
+          }
+
+          const GRAD_LABELS: Record<string, string> = {
+            '1537286791667916921': '🌽 Farmer',
+            '1503322791796146237': '🔫 Recrut Jaf',
+            '955126892984410162':  '⚔️ Grove Killer',
+          }
+
+          const allowedGrades = memberRoles
+            .flatMap(r => GRAD_PERMISSIONS[r] || [])
+
+          if (!allowedGrades.includes(gradId)) {
+            await sendFollowup(token, `🚫 **Acces interzis** — nu ai permisiunea să acorzi gradul **${GRAD_LABELS[gradId] || gradId}**.`)
+            return
+          }
+
+          const res = await fetch(
+            `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${targetUserId}/roles/${gradId}`,
+            { method: 'PUT', headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` } }
+          )
+
+          if (!res.ok) {
+            const err = await res.json()
+            console.error('Eroare addRole:', err)
+            await sendFollowup(token, '❌ Eroare la acordarea gradului. Verifică permisiunile botului.')
+            return
+          }
+
+          const divider = '━━━━━━━━━━━━━━━━━━━━'
+          await sendFollowup(token,
+            `## ✅ Grad Acordat\n` +
+            `${divider}\n` +
+            `> 👤 **Membru:** <@${targetUserId}>\n` +
+            `> 🎖️ **Grad acordat:** ${GRAD_LABELS[gradId]}\n` +
+            `> 👮 **Acordat de:** ${callerName}\n` +
+            `${divider}`
+          )
+        } catch (e) {
+          await sendFollowup(token, '❌ A apărut o eroare. Încearcă din nou.')
+        }
+      })()
+
+      return deferResponse
+    }
 
     if (commandName === 'activitate') {
       const deferResponse = NextResponse.json({ type: 5 })
