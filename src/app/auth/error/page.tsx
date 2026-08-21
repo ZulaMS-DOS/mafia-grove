@@ -34,6 +34,12 @@ const ERRORS: Record<string, { title: string; message: string; emoji: string; ca
     message:  'Discord a blocat temporar autentificarea din cauza prea multor încercări. Așteaptă câteva minute și încearcă din nou. Dacă problema persistă, șterge cookie-urile browserului.',
     canRetry: true,
   },
+  AccessDenied: {
+    emoji:    '🛑',
+    title:    'Autentificare Anulată',
+    message:  'Ai anulat procesul de autentificare. Trebuie să autorizezi aplicația pentru a te putea conecta.',
+    canRetry: true,
+  },
   default: {
     emoji:    '⚠️',
     title:    'Eroare Autentificare',
