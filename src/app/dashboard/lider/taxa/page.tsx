@@ -26,7 +26,8 @@ const JAF_TYPES = [
   { value: 'biju',        label: '💎 Biju'        },
   { value: 'magazin',     label: '🏪 Magazin'     },
   { value: 'digital_den', label: '💻 Digital Den' },
-  { value: 'ATM',         label: '🏧 ATM'         },
+  { value: 'atm',         label: '💳 ATM'         },
+
 ]
 
 interface JafEntry { type: string; count: number }
