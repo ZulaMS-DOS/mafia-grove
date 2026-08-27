@@ -22,7 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (user?.banned) redirect('/auth/error?error=banned')
 
   const roleIds      = session.user.roleIds || []
-  const isLeadership = roleIds.some((r: string) => LEADERSHIP_ROLES.includes(r))
+  const isLeadership = Boolean((session.user as any).isLeadership) || roleIds.some((r: string) => LEADERSHIP_ROLES.includes(r))
 
   return (
     <div className="flex h-screen bg-black overflow-hidden">
