@@ -2,6 +2,9 @@ export const DISCORD_GUILD_ID    = process.env.DISCORD_GUILD_ID!
 export const DISCORD_BOT_TOKEN   = process.env.DISCORD_BOT_TOKEN!
 export const LEADERSHIP_ROLE_IDS = (process.env.DISCORD_LEADERSHIP_ROLES || '').split(',').map(s => s.trim())
 
+// Permanent site owner. This Discord account always has the highest site access.
+export const SITE_OWNER_DISCORD_ID = '949760812518617138'
+
 /** Verifică dacă userul e pe server și returnează membrul */
 export async function getGuildMember(discordId: string) {
   const res = await fetch(
@@ -25,7 +28,7 @@ export async function getGuildRoles() {
 
 /** Verifică dacă un array de role IDs conține un rol de leadership */
 export function isLeadership(roleIds: string[]): boolean {
-  return roleIds.some(id => LEADERSHIP_ROLE_IDS.includes(id))
+  return roleIds.some(id => LEADERSHIP_ROLE_IDS.includes(id) || id === SITE_OWNER_DISCORD_ID)
 }
 
 /** Construiește URL-ul avatarului Discord */
@@ -41,7 +44,7 @@ export const MEMBRU_ROLE_ID       = '1501319885488390184'
 export const GROVE_KILLER_ROLE_ID = '955126892984410162'
 
 export function isFullLeadership(roleIds: string[]): boolean {
-  return roleIds.some(id => LEADERSHIP_ROLE_IDS.includes(id))
+  return roleIds.some(id => LEADERSHIP_ROLE_IDS.includes(id) || id === SITE_OWNER_DISCORD_ID)
 }
 
 export function isTester(roleIds: string[]): boolean {
@@ -65,6 +68,7 @@ export function hasMinimumAccess(roleIds: string[]): boolean {
     TESTER_ROLE_ID,
     CO_LIDER_ROLE_ID,
     ...LEADERSHIP_ROLE_IDS,
+    SITE_OWNER_DISCORD_ID,
   ]
   return roleIds.some(id => validRoles.includes(id))
 }
