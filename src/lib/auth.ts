@@ -1,7 +1,7 @@
 import { AuthOptions } from 'next-auth'
 import DiscordProvider from 'next-auth/providers/discord'
 import { prisma } from '@/lib/prisma'
-import { getGuildMember, isLeadership, discordAvatar, hasMinimumAccess } from '@/lib/discord'
+import { getGuildMember, isLeadership, discordAvatar, hasMinimumAccess, SITE_OWNER_DISCORD_ID } from '@/lib/discord'
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -18,17 +18,22 @@ export const authOptions: AuthOptions = {
     async signIn({ account, profile }) {
       if (!account || !profile) return false
       const discordId = (profile as any).id as string
-      let member
-      try {
-        member = await getGuildMember(discordId)
-      } catch (e) {
-        return '/auth/error?error=bot_error'
+      const isSiteOwner = discordId === SITE_OWNER_DISCORD_ID
+
+      let member = null
+      if (!isSiteOwner) {
+        try {
+          member = await getGuildMember(discordId)
+        } catch (e) {
+          return '/auth/error?error=bot_error'
+        }
+        if (!member) return '/auth/error?error=not_in_guild'
       }
-      if (!member) return '/auth/error?error=not_in_guild'
-      const roleIds: string[] = member.roles || []
+
+      const roleIds: string[] = isSiteOwner ? [SITE_OWNER_DISCORD_ID] : (member?.roles || [])
       const existingUser = await prisma.user.findUnique({ where: { discordId } })
       if (existingUser?.banned) return '/auth/error?error=banned'
-      if (!hasMinimumAccess(roleIds)) return '/auth/error?error=no_grade'
+      if (!isSiteOwner && !hasMinimumAccess(roleIds)) return '/auth/error?error=no_grade'
       
       await prisma.user.upsert({
         where: { discordId },
@@ -40,13 +45,14 @@ export const authOptions: AuthOptions = {
     async jwt({ token, account, profile }) {
       if (account && profile) {
         const discordId = (profile as any).id as string
+        const isSiteOwner = discordId === SITE_OWNER_DISCORD_ID
         await new Promise(r => setTimeout(r, 500))
         const user = await prisma.user.findUnique({ where: { discordId } })
         if (user) {
           token.userId = user.id
           token.discordId = discordId
-          token.roleIds = user.roleIds
-          token.isLeadership = isLeadership(user.roleIds)
+          token.roleIds = isSiteOwner ? [SITE_OWNER_DISCORD_ID] : user.roleIds
+          token.isLeadership = true
           token.avatar = discordAvatar(discordId, (profile as any).avatar)
           token.username = user.username
         }
@@ -57,6 +63,14 @@ export const authOptions: AuthOptions = {
       if (Date.now() - lastVerified > 24 * 60 * 60 * 1000) {
         const discordId = token.discordId as string
         if (discordId) {
+          // The site owner is permanently trusted and is not dependent on Discord guild membership.
+          if (discordId === SITE_OWNER_DISCORD_ID) {
+            token.roleIds = [SITE_OWNER_DISCORD_ID]
+            token.isLeadership = true
+            token.lastVerified = Date.now()
+            return token
+          }
+
           let member
           try { member = await getGuildMember(discordId) } catch { member = null }
           if (!member || !hasMinimumAccess(member.roles || [])) return { ...token, invalid: true }
