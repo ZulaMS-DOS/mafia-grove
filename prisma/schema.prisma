@@ -292,3 +292,9 @@ model BotLog {
   continut  String
   createdAt DateTime @default(now())
 }
+
+model SiteConfig {
+  id          String  @id @default("main")
+  maintenance Boolean @default(false)
+  message     String  @default("Site-ul este în mentenanță. Revenim în curând!")
+}
