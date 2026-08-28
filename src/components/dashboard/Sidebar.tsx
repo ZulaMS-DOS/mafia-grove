@@ -218,14 +218,14 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
 
       <button
         onClick={() => setOpen(true)}
-        className="md:hidden fixed top-3 left-3 z-50 p-2.5 rounded-xl bg-dark-card border border-dark-border text-zinc-400 hover:text-grove-green shadow-lg transition-colors"
+        className="md:hidden fixed top-3 left-3 z-50 p-2.5 rounded-xl bg-white border border-zinc-200 text-zinc-500 hover:text-black shadow-lg transition-colors"
       >
         <Menu size={20} />
       </button>
 
       {open && (
         <div
-          className="md:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
+          className="md:hidden fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
           onClick={() => setOpen(false)}
         />
       )}
