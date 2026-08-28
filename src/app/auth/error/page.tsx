@@ -13,7 +13,7 @@ const ERRORS: Record<string, { title: string; message: string; emoji: string; ca
   not_in_guild: {
     emoji:    '❌',
     title:    'Nu ești pe server',
-    message:  'Trebuie să fii membru al serverului Discord Mafia Grove pentru a accesa acest site.',
+    message:  'Trebuie să fii membru al serverului Discord Bratkov Legacy pentru a accesa acest site.',
     canRetry: false,
   },
   bot_error: {
