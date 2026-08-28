@@ -181,7 +181,7 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
 
         {isLeadership && (
           <>
-            <div className="text-xs text-grove-green/50 uppercase tracking-widest px-4 py-2 mt-3">⭐ Lider</div>
+            <div className="text-xs text-zinc-500 uppercase tracking-widest px-4 py-2 mt-3">⭐ Lider</div>
             {liderNav.map(item => <NavItem key={item.href} {...item} />)}
 
             {session?.user.discordId === '949760812518617138' && (
@@ -191,7 +191,7 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
         )}
       </nav>
 
-      <div className="p-3 border-t border-dark-border space-y-2">
+      <div className="p-3 border-t border-zinc-200 space-y-2">
         {session?.user.discordId === '949760812518617138' && (
           <MaintenanceToggle />
         )}
