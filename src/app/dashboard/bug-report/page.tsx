@@ -5,7 +5,7 @@ import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
 import { useSession } from 'next-auth/react'
 
-const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
+const LEADERSHIP_ROLES = ['1107100643291828224', '1107099637644529684']
 
 const STATUS_CONFIG = {
   OPEN:        { label: 'Deschis',     color: 'text-red-400 bg-red-500/10 border-red-500/20',    icon: AlertCircle  },
