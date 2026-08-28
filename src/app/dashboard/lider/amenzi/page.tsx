@@ -13,8 +13,8 @@ interface Fine {
 }
 interface Member { id: string; username: string; avatar: string | null; discordId: string }
 
-const LEADER_ROLES = ['955126889171804170', '955126890472022066']
-const TESTER_ROLE  = '1462444900388704317'
+const LEADER_ROLES = ['1107100643291828224', '1107099637644529684']
+const TESTER_ROLE  = '1107098741510520852'
 
 export default function LiderAmenziPage() {
   const { data: session } = useSession()
