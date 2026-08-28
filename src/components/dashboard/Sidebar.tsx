@@ -136,7 +136,7 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
           : 'text-zinc-500 hover:text-black hover:bg-zinc-100'
           
         )}>
-        <Icon size={16} className={clsx('transition-colors shrink-0', active ? 'text-grove-green' : 'group-hover:text-grove-green')} />
+        <Icon size={16} className={clsx('transition-colors shrink-0', active ? 'text-black' : 'group-hover:text-black'
         <span>{label}</span>
         {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-grove-green shrink-0" />}
       </Link>
