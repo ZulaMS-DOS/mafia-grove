@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { Users, Clock, FileText, Star } from 'lucide-react'
 import { ActiveClockIns } from '@/components/dashboard/ActiveClockIns'
 
-const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
+const LEADERSHIP_ROLES = ['1107100643291828224', '1107099637644529684']
 
 export default async function LiderPage() {
   const session = await getServerSession(authOptions)
