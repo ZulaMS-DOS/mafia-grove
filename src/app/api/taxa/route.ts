@@ -3,17 +3,16 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/middleware'
 import { notify } from '@/lib/notifications'
 
-const LEADERSHIP_ROLES  = ['955126889171804170','955126890472022066']
-const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
-const NOTIFY_CHANNEL_ID = '1522391429899358298'
-
+const LEADERSHIP_ROLES  = ['1107100643291828224','1515017621127299303','1107099637644529684']
+const NOTIFY_CHANNEL_ID = '1542818539197698070'
 const GRADE_LABELS: Record<string, string> = {
-  '955126889171804170':  'Lider',
-  '955126890472022066':  'Co-Lider',
-  '1462444900388704317': 'Tester',
-  '1501319885488390184': 'Membru',
-  '955126892984410162':  'Grove Killer',
-  '1342912254542348298': 'Muncitor',
+  '1107100643291828224': 'Lider Bratkov',
+  '1515017621127299303': 'Lider Secundar',
+  '1107099637644529684': 'Co-Lider Bratkov',
+  '1107098741510520852': 'Tester',
+  '1107095888045801532': 'Membru',
+  '1518710460717731840': 'Echipa Jaf',
+  '1107093171026010203': 'Săgeată',
 }
 
 function getWeekStart() {
