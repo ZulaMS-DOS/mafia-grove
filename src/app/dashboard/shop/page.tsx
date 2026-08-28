@@ -135,7 +135,7 @@ export default function ShopPage() {
           <h1 className="text-3xl font-black text-white flex items-center gap-3">
             <ShoppingCart size={28} className="text-grove-green" /> Grove Shop
           </h1>
-          <p className="text-zinc-500 text-sm mt-1">Cumpără iteme cu Grove Coins</p>
+          <p className="text-zinc-500 text-sm mt-1">Cumpără iteme cu Bratkov Coins</p>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 bg-dark-card border border-grove-border rounded-xl">
           <span className="text-xs text-zinc-500 uppercase tracking-wider">Puncte</span>
