@@ -7,7 +7,7 @@ export default function MaintenancePage() {
           <h1 className="text-3xl font-black text-white mb-2">Mentenanță</h1>
           <p className="text-zinc-500">Site-ul este momentan în mentenanță. Revenim în curând!</p>
         </div>
-        <p className="text-xs text-zinc-700">Grove Street © 2026</p>
+        <p className="text-xs text-zinc-700">Bratkov Legacy © 2026</p>
       </div>
     </div>
   )
