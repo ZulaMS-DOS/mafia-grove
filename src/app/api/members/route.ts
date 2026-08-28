@@ -3,11 +3,11 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/middleware'
 
 const VALID_ROLES = [
-  '955126889171804170', // Lider
-  '955126890472022066', // Co-Lider
-  '1462444900388704317', // Tester
-  '1501319885488390184', // Membru
-  '1342912254542348298', // Muncitor
+  '1107100643291828224', // Lider
+  '1107099637644529684', // Co-Lider
+  '1107098741510520852', // Tester
+  '1107095888045801532', // Membru
+  '1107093171026010203', // Muncitor
 ]
 
 export async function GET() {
