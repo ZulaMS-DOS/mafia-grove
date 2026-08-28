@@ -14,7 +14,7 @@ export async function GET() {
     }),
     prisma.user.findMany({
       where: {
-        roleIds: { hasSome: ['955126889171804170','955126890472022066','1462444900388704317','1501319885488390184','1342912254542348298','955126892984410162'] }
+        roleIds: { hasSome: ['1107100643291828224','1107099637644529684','1107098741510520852','1107095888045801532','1518710460717731840','1107093171026010203'] }
       },
       orderBy: { username: 'asc' },
       select:  { id: true, username: true, avatar: true, discordId: true },
