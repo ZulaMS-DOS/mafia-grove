@@ -62,7 +62,7 @@ export default function TasksPage() {
         <h1 className="text-3xl font-black text-white flex items-center gap-3">
           <ListTodo size={28} className="text-grove-green" /> Task-uri
         </h1>
-        <p className="text-zinc-500 text-sm mt-1">Completează taskuri și câștigă Grove Coins</p>
+        <p className="text-zinc-500 text-sm mt-1">Completează taskuri și câștigă Bratkov Coins</p>
       </div>
 
       {msg && (
