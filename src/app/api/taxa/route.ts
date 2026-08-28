@@ -38,7 +38,7 @@ async function sendDiscordMessage(content: string, titlu: string) {
         if (msg.author?.bot) {
           await fetch(
             `https://discord.com/api/v10/channels/${NOTIFY_CHANNEL_ID}/messages/${msg.id}`,
-            { method: 'DELETE', headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` } }
+            { method: 'DELETE', headers: { 'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}` } }
           )
           await new Promise(r => setTimeout(r, 500))
         }
