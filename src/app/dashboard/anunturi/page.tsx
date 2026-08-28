@@ -5,7 +5,7 @@ import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
 import { Megaphone } from 'lucide-react'
 
-const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
+const LEADERSHIP_ROLES = ['1107100643291828224', '1107099637644529684']
 
 interface Anunt {
   id: string
