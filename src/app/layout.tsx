@@ -7,8 +7,8 @@ const inter = Inter({ subsets: ['latin'] })
 const bangers = Bangers({ subsets: ['latin'], weight: '400', variable: '--font-bangers' })
 
 export const metadata: Metadata = {
-  title: 'Grove Street — Dashboard',
-  description: 'Platforma organizației Grove Street pe FiveM',
+  title: 'Bratkov Legacy — Dashboard',
+  description: 'Platforma organizației Bratkov Legacy pe FiveM',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
