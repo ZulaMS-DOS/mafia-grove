@@ -202,7 +202,7 @@ export async function syncDiscordMembers() {
         `${DIVIDER}\n` +
         lines.join('\n') + '\n' +
         `${DIVIDER}\n` +
-        `<@&955126889171804170> <@&955126890472022066>`
+        <@&1107100643291828224> <@&1515017621127299303> <@&1107099637644529684>
 
       await sendDiscordMessage(reminderMsg)
       await saveLog('muncitori', '⚠️ Reminder Perioadă Probă', reminderMsg)
