@@ -4,14 +4,14 @@ import { requireAuth, requireFineGiver } from '@/lib/middleware'
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
 const DISCORD_GUILD_ID  = process.env.DISCORD_GUILD_ID!
-const FW_CHANNEL_ID     = '1107388564146225213'
+const FW_CHANNEL_ID     = '1542898040627536012'
 const AMENDA_CHANNEL_ID = '1107388564146225213'
 const DIVIDER           = '━━━━━━━━━━━━━━━━━━━━'
 
 const FW_ROLES: Record<number, string> = {
-  1: '955132772249387048',
-  2: '955132770504540182',
-  3: '1051049847551184956',
+  1: '1542899996024639508',
+  2: '1542900207795306507',
+  3: '1542900241462853682',
 }
 
 async function sendDiscordMessage(channelId: string, content: string) {
