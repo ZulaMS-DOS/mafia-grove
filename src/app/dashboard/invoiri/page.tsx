@@ -5,8 +5,8 @@ import { format } from 'date-fns'
 import { ro } from 'date-fns/locale'
 import { Plus, Check, X } from 'lucide-react'
 
-const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
-const TESTER_ROLE      = '1462444900388704317'
+const LEADERSHIP_ROLES = ['1107100643291828224', '1107099637644529684']
+const TESTER_ROLE      = '1107098741510520852'
 
 interface Invoire {
   id: string; reason: string; startDate: string; endDate: string; status: string;
