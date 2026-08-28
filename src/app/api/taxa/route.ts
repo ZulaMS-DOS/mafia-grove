@@ -61,12 +61,12 @@ async function sendDiscordMessage(content: string, titlu: string) {
 
 // Prioritate grade — un user apare doar la gradul sau principal
 const GRADE_PRIORITY = [
-  '955126892984410162', // Grove Killer
-  '1462444900388704317', // Tester
-  '1501319885488390184', // Membru
-  '1342912254542348298', // Muncitor
-  '955126890472022066',  // Co-Lider
-  '955126889171804170',  // Lider
+  '1518710460717731840', // Grove Killer
+  '1107098741510520852', // Tester
+  '1107095888045801532', // Membru
+  '1107093171026010203', // Muncitor
+  '1107099637644529684', // Co-Lider
+  '1107100643291828224', // Lider
 ]
 
 function getPrimaryRole(roleIds: string[]): string | null {
@@ -201,7 +201,7 @@ export async function GET(req: NextRequest) {
 **Membri care NU au achitat (${unpaidLines.length}):**
 ${unpaidText}
 ━━━━━━━━━━━━━━━━━━━━
-<@&955126889171804170> <@&955126890472022066>`,
+<@&1107100643291828224> <@&1107099637644529684>`,
   '⏰ Taxă Expiră Mâine'
 )
     }
@@ -228,7 +228,7 @@ ${unpaidText}
 **Membri care NU au achitat (${unpaidLines.length}):**
 ${unpaidText}
 ━━━━━━━━━━━━━━━━━━━━
-<@&955126889171804170> <@&955126890472022066>`,
+<@&1107100643291828224> <@&1107099637644529684>`,
   '🚨 Taxă Expiră Azi'
 )
     }
