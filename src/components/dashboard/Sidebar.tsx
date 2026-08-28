@@ -21,7 +21,7 @@ const ROLES = {
 }
 
 const baseNav = [
-  { href: '/dashboard',              icon: LayoutDashboard, label: 'Dashboard'    },
+  { href: '/dashboard',             icon: LayoutDashboard, label: 'Dashboard'    },
   { href: '/dashboard/clock',        icon: Clock,           label: 'Clock In/Out' },
   { href: '/dashboard/invoiri',      icon: FileText,        label: 'Invoiri'      },
   { href: '/dashboard/demisii',      icon: LogOut,          label: 'Demisii'      },
@@ -113,7 +113,7 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
 
-    const has = (role: string) => roleIds.includes(role)
+  const has = (role: string) => roleIds.includes(role)
   const isTester      = has(ROLES.TESTER) && !isLeadership
   const isMembru      = has(ROLES.MEMBRU)
   const isGroveKiller = has(ROLES.GROVE_KILLER)
@@ -126,7 +126,7 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
   const showSageti         = isMuncitor
 
   const NavItem = ({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) => {
-    const active = path === href
+    const active = path === href;
     return (
       <Link href={href} onClick={() => setOpen(false)}
         className={clsx(
@@ -134,9 +134,8 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
           active
              ? 'bg-zinc-100 text-black border border-zinc-300'
           : 'text-zinc-500 hover:text-black hover:bg-zinc-100'
-          
         )}>
-        <Icon size={16} className={clsx('transition-colors shrink-0', active ? 'text-black' : 'group-hover:text-black'
+        <Icon size={16} className={clsx('transition-colors shrink-0', active ? 'text-black' : 'group-hover:text-black')} />
         <span>{label}</span>
         {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-black shrink-0" />}
       </Link>
@@ -145,7 +144,7 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
 
   const SidebarContent = () => (
     <aside className="w-64 bg-white flex flex-col h-full border-r border-zinc-200">
-      <div className="p-5 border-b border-zinc-200" flex items-center justify-between">
+      <div className="p-5 border-b border-zinc-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="font-black text-white text-lg leading-none" style={{ fontFamily: 'var(--font-bangers), cursive', letterSpacing: '0.05em' }}>
             <span style={{ color: '#111111' }}>GROVE</span> STREET
@@ -166,7 +165,7 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
             <NavItem href="/dashboard/anunturi"   icon={Megaphone}     label="Anunțuri"       />
             <NavItem href="/dashboard/amenzi"      icon={AlertTriangle} label="Amenzile Mele" />
             <NavItem href="/dashboard/bug-report"  icon={Bug}           label="Bug Report"     />
-            {showTaxa           && <NavItem href="/dashboard/taxa"            icon={Coins} label="Taxa Sindicat"   />}
+            {showTaxa           && <NavItem href="/dashboard/taxa"             icon={Coins} label="Taxa Sindicat"   />}
             {showTaskSaptamanal && <NavItem href="/dashboard/task-saptamanal" icon={Sword} label="Task Săptămânal" />}
             {showSageti         && <NavItem href="/dashboard/sageti"          icon={Zap}   label="Task Săgeată"   />}
           </>
