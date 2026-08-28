@@ -113,11 +113,12 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
 
-  const has = (role: string) => roleIds.includes(role)
-  const isTester      = has(ROLES.TESTER)       && !isLeadership
+    const has = (role: string) => roleIds.includes(role)
+  const isTester      = has(ROLES.TESTER) && !isLeadership
   const isMembru      = has(ROLES.MEMBRU)
   const isGroveKiller = has(ROLES.GROVE_KILLER)
   const isMuncitor    = has(ROLES.MUNCITOR)
+  const isLeadership2 = has(ROLES.LIDER2)
 
   const showImportant      = isLeadership || isTester || isMembru || isGroveKiller || isMuncitor
   const showTaxa           = isLeadership || isTester || isMembru
