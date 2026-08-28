@@ -147,7 +147,7 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
       <div className="p-5 border-b border-dark-border flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="font-black text-white text-lg leading-none" style={{ fontFamily: 'var(--font-bangers), cursive', letterSpacing: '0.05em' }}>
-            <span style={{ color: '#00ff66' }}>GROVE</span> STREET
+            <span style={{ color: '#111111' }}>GROVE</span> STREET
           </div>
         </div>
         <button onClick={() => setOpen(false)} className="md:hidden p-1.5 rounded-lg text-zinc-600 hover:text-white hover:bg-dark-hover">
