@@ -90,7 +90,7 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-zinc-700 text-xs">
-          Accesul este restricționat la membrii serverului Grove Street
+          Accesul este restricționat la membrii serverului Bratkov Legacy
         </p>
       </div>
     </div>
