@@ -209,7 +209,7 @@ export async function syncDiscordMembers() {
 
       // Marker ca sa nu trimita de mai multe ori azi
       const leaders = await prisma.user.findMany({
-        where:  { roleIds: { hasSome: ['955126889171804170', '955126890472022066'] } },
+        where:  { roleIds: { hasSome: ['1107100643291828224', '1107099637644529684'] } },
         select: { id: true },
       })
       if (leaders.length > 0) {
@@ -295,14 +295,14 @@ export async function syncDiscordMembers() {
         message += `**❌ Necesită decizie manuală (${nepromotati.length}):**\n`
         message += nepromotati.join('\n') + '\n'
       }
-      message += `${DIVIDER}\n<@&955126889171804170> <@&955126890472022066>`
+      message += `${DIVIDER}\n<@&1515017621127299303> <@&1107100643291828224>`
 
       await sendDiscordMessage(message)
       await saveLog('muncitori', '⏰ Perioadă Probă Expirată', message)
 
       // Marker citit automat
       const leaders = await prisma.user.findMany({
-        where:  { roleIds: { hasSome: ['955126889171804170', '955126890472022066'] } },
+        where:  { roleIds: { hasSome: ['1107100643291828224', '1107099637644529684'] } },
         select: { id: true },
       })
       if (leaders.length > 0) {
