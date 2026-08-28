@@ -2,9 +2,9 @@ import { prisma } from '@/lib/prisma'
 
 const DISCORD_GUILD_ID  = process.env.DISCORD_GUILD_ID!
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
-const MUNCITOR_ROLE_ID  = '1342912254542348298'
-const MEMBRU_ROLE_ID    = '1501319885488390184'
-const NOTIFY_CHANNEL_ID = '1525258100599165008'
+const MUNCITOR_ROLE_ID  = '1107093171026010203'
+const MEMBRU_ROLE_ID    = '1107095888045801532'
+const NOTIFY_CHANNEL_ID = '1542818782979031070'
 const DIVIDER           = '━━━━━━━━━━━━━━━━━━━━'
 
 async function fetchAllDiscordMembers() {
