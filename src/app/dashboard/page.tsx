@@ -61,7 +61,7 @@ export default async function DashboardPage() {
         }
         <div className="flex-1 min-w-0">
           <div className="font-black text-white text-lg truncate">{user.name}</div>
-          <div className="text-zinc-500 text-sm">Mafia Grove</div>
+          <div className="text-zinc-500 text-sm">Bratkov Legacy</div>
         </div>
         <div className="shrink-0 text-right">
           <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${
@@ -140,7 +140,7 @@ export default async function DashboardPage() {
       {/* Footer */}
       <div className="text-center py-4 border-t border-dark-border">
         <p className="text-xs text-zinc-700">
-          © {new Date().getFullYear()} Mafia Grove · Made by <span className="text-grove-green font-semibold">Zula</span>
+          © {new Date().getFullYear()} Bratkov Legacy · Made by <span className="text-grove-green font-semibold">Zula</span>
         </p>
       </div>
 
