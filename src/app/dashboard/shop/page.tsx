@@ -133,7 +133,7 @@ export default function ShopPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-black text-white flex items-center gap-3">
-            <ShoppingCart size={28} className="text-grove-green" /> Grove Shop
+            <ShoppingCart size={28} className="text-grove-green" /> Bratkov Shop
           </h1>
           <p className="text-zinc-500 text-sm mt-1">Cumpără iteme cu Bratkov Coins</p>
         </div>
