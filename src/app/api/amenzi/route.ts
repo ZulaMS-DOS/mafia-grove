@@ -4,8 +4,8 @@ import { requireAuth, requireFineGiver } from '@/lib/middleware'
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
 const DISCORD_GUILD_ID  = process.env.DISCORD_GUILD_ID!
-const FW_CHANNEL_ID     = '1342941323367288852'
-const AMENDA_CHANNEL_ID = '1446452930310832219'
+const FW_CHANNEL_ID     = '1107388564146225213'
+const AMENDA_CHANNEL_ID = '1107388564146225213'
 const DIVIDER           = '━━━━━━━━━━━━━━━━━━━━'
 
 const FW_ROLES: Record<number, string> = {
