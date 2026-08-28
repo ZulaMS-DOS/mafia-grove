@@ -326,15 +326,13 @@ export async function POST(req: NextRequest) {
           }
 
           const GRAD_PERMISSIONS: Record<string, string[]> = {
-            '1446844478173348015': ['1537286791667916921'],
-            '1348974812315258972': ['1503322791796146237', '955126892984410162'],
-          }
-
-          const GRAD_LABELS: Record<string, string> = {
-            '1537286791667916921': '🌽 Farmer',
-            '1503322791796146237': '🔫 Recrut Jaf',
-            '955126892984410162':  '⚔️ Grove Killer',
-          }
+  '1515705305739169953': ['1542820259809984592'],
+  '1433433896372011060': ['1518710460717731840'],
+}
+const GRAD_LABELS: Record<string, string> = {
+  '1542820259809984592': '🌾 Farmer',
+  '1518710460717731840': '⚔️ Echipa Jaf',
+}
 
           const allowedGrades = memberRoles
             .flatMap(r => GRAD_PERMISSIONS[r] || [])
