@@ -204,7 +204,7 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
         </button>
 
         <p className="text-center text-[10px] text-zinc-700 pt-1">
-          © 2026 Zula | Bratkov Legacy
+          © 2026 Zula | Bratkov Legacy Dashboard
         </p>
       </div>
     </aside>
