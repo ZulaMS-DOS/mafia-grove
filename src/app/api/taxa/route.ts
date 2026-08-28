@@ -30,7 +30,7 @@ async function sendDiscordMessage(content: string, titlu: string) {
     // Sterge mesajele vechi ale botului
     const existing = await fetch(
       `https://discord.com/api/v10/channels/${NOTIFY_CHANNEL_ID}/messages?limit=10`,
-      { headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` } }
+      { headers: { 'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}` } }
     )
     const messages = await existing.json()
     if (Array.isArray(messages)) {
