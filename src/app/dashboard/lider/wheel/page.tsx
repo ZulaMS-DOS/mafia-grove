@@ -166,7 +166,7 @@ export default function LiderWheelPage() {
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
                   prizeKind === 'points' ? 'bg-grove-dim text-grove-green border-grove-border' : 'bg-dark-hover text-zinc-500 border-dark-border'
                 }`}>
-                <Coins size={14} /> Grove Coins
+                <Coins size={14} /> Bratkov Coins
               </button>
               <button onClick={() => setPrizeKind('shop')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
