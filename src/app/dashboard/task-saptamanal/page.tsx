@@ -44,7 +44,7 @@ export default function TaskSaptamanalPage() {
 
   const load = useCallback(async () => {
     const [taxRes, progRes] = await Promise.all([
-      fetch('/api/taxa?role=955126892984410162'),
+      fetch('/api/taxa?role=1518710460717731840'),
       fetch('/api/taxa/progress/member'),
     ])
     const taxData  = await taxRes.json()
