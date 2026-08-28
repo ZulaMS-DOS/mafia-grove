@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireLeadership } from '@/lib/middleware'
 
-const GROVE_KILLER_ROLE_ID = '955126892984410162'
+const GROVE_KILLER_ROLE_ID = '1518710460717731840'
 
 const JAF_LABELS: Record<string, string> = {
   '🎬 Vinewood Bank':      'vinewood',
