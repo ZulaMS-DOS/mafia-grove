@@ -138,13 +138,13 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
         )}>
         <Icon size={16} className={clsx('transition-colors shrink-0', active ? 'text-black' : 'group-hover:text-black'
         <span>{label}</span>
-        {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-grove-green shrink-0" />}
+        {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-black shrink-0" />}
       </Link>
     )
   }
 
   const SidebarContent = () => (
-    <aside className="w-64 bg-dark-card flex flex-col h-full">
+    <aside className="w-64 bg-white flex flex-col h-full border-r border-zinc-200">
       <div className="p-5 border-b border-dark-border flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="font-black text-white text-lg leading-none" style={{ fontFamily: 'var(--font-bangers), cursive', letterSpacing: '0.05em' }}>
