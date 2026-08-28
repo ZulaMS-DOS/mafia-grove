@@ -48,7 +48,7 @@ async function sendDiscordMessage(content: string, titlu: string) {
     // Trimite mesaj nou
     await fetch(`https://discord.com/api/v10/channels/${NOTIFY_CHANNEL_ID}/messages`, {
       method:  'POST',
-      headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
       body:    JSON.stringify({ content }),
     })
 
