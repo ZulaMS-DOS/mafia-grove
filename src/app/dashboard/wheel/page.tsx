@@ -234,7 +234,7 @@ export default function WheelPage() {
           >
             🎰 <span style={{ color: '#00ff66', WebkitTextStroke: '1px #000' }}>FORTUNE</span> WHEEL
           </h1>
-          <p className="text-zinc-500 text-sm mt-1.5">Învârte roata și câștigă premii din Grove Street!</p>
+          <p className="text-zinc-500 text-sm mt-1.5">Învârte roata și câștigă premii din Bratkov Legacy!</p>
         </div>
         <div className="flex items-center gap-2 px-4 py-2.5 bg-dark-card border border-grove-border rounded-xl shadow-[0_0_16px_#00ff6620]">
           <Coins size={16} className="text-grove-green" />
