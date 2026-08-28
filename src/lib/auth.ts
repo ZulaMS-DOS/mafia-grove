@@ -48,14 +48,19 @@ export const authOptions: AuthOptions = {
         const isSiteOwner = discordId === SITE_OWNER_DISCORD_ID
         await new Promise(r => setTimeout(r, 500))
         const user = await prisma.user.findUnique({ where: { discordId } })
-        if (user) {
-          token.userId = user.id
-          token.discordId = discordId
-          token.roleIds = isSiteOwner ? [SITE_OWNER_DISCORD_ID] : user.roleIds
-          token.isLeadership = true
-          token.avatar = discordAvatar(discordId, (profile as any).avatar)
-          token.username = user.username
-        }
+        if (user) 
+   {
+  token.userId = user.id
+  token.discordId = discordId
+  token.roleIds = isSiteOwner ? [SITE_OWNER_DISCORD_ID] : user.roleIds
+
+  token.isLeadership = isSiteOwner
+    ? true
+    : isLeadership(user.roleIds || [])
+
+  token.avatar = discordAvatar(discordId, (profile as any).avatar)
+  token.username = user.username
+}
         token.lastVerified = Date.now()
         return token
       }
