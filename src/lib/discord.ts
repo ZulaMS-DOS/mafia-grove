@@ -37,11 +37,11 @@ export function discordAvatar(userId: string, hash: string | null) {
   return `https://cdn.discordapp.com/avatars/${userId}/${hash}.png?size=128`
 }
 
-export const CO_LIDER_ROLE_ID     = '955126890472022066'
-export const TESTER_ROLE_ID       = '1462444900388704317'
-export const MUNCITOR_ROLE_ID     = '1342912254542348298'
-export const MEMBRU_ROLE_ID       = '1501319885488390184'
-export const GROVE_KILLER_ROLE_ID = '955126892984410162'
+export const CO_LIDER_ROLE_ID     = '1107099637644529684'
+export const TESTER_ROLE_ID       = '1107098741510520852'
+export const MUNCITOR_ROLE_ID     = '1107093171026010203'
+export const MEMBRU_ROLE_ID       = '1107095888045801532'
+export const GROVE_KILLER_ROLE_ID = '1518710460717731840'
 
 export function isFullLeadership(roleIds: string[]): boolean {
   return roleIds.some(id => LEADERSHIP_ROLE_IDS.includes(id) || id === SITE_OWNER_DISCORD_ID)
