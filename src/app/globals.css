@@ -3,47 +3,90 @@
 @tailwind utilities;
 
 @layer base {
-  :root { color-scheme: dark; }
-  * { scrollbar-width: thin; scrollbar-color: #00ff6640 transparent; }
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-thumb { background: #00ff6640; border-radius: 9px; }
-  body { background: #000; }
+  :root {
+    color-scheme: light;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #d4d4d4 transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 999px;
+  }
+
+  body {
+    background: #ffffff;
+    color: #111111;
+  }
 }
 
 @layer components {
   .grove-card {
-    @apply bg-dark-card border border-dark-border rounded-xl p-5
-           transition-all duration-300
-           hover:border-grove-border hover:shadow-[0_0_20px_#00ff6615];
+    @apply bg-white border border-zinc-200 rounded-xl p-5
+           shadow-sm transition-all duration-300
+           hover:shadow-md;
   }
+
   .grove-btn {
     @apply px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200
-           bg-grove-green text-black hover:bg-grove-dark
-           hover:shadow-[0_0_16px_#00ff6650] active:scale-95;
+           bg-black text-white
+           hover:bg-zinc-800
+           active:scale-95;
   }
+
   .grove-btn-outline {
     @apply px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200
-           border border-grove-border text-grove-green
-           hover:bg-grove-dim active:scale-95;
+           border border-zinc-300 text-black
+           hover:bg-zinc-100
+           active:scale-95;
   }
+
   .grove-btn-danger {
     @apply px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200
-           bg-red-600 text-white hover:bg-red-700 active:scale-95;
+           bg-red-600 text-white
+           hover:bg-red-700
+           active:scale-95;
   }
+
   .grove-input {
-    @apply w-full bg-dark-hover border border-dark-border rounded-lg px-4 py-2.5
-           text-white text-sm placeholder-zinc-600 outline-none
-           focus:border-grove-border focus:shadow-[0_0_0_2px_#00ff6620]
+    @apply w-full bg-white border border-zinc-300 rounded-lg px-4 py-2.5
+           text-black text-sm placeholder-zinc-400 outline-none
+           focus:border-black focus:ring-2 focus:ring-black/10
            transition-all duration-200;
   }
+
   .grove-select {
     @apply grove-input cursor-pointer;
   }
+
   .grove-label {
     @apply block text-xs text-zinc-500 uppercase tracking-widest mb-2;
   }
-  .badge-pending  { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20; }
-  .badge-accepted { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20; }
-  .badge-rejected { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20; }
-  .badge-leadership { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-grove-dim text-grove-green border border-grove-border; }
+
+  .badge-pending {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-yellow-100 text-yellow-700 border border-yellow-200;
+  }
+
+  .badge-accepted {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-zinc-100 text-zinc-900 border border-zinc-200;
+  }
+
+  .badge-rejected {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-red-100 text-red-700 border border-red-200;
+  }
+
+  .badge-leadership {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-black text-white border border-black;
+  }
 }
