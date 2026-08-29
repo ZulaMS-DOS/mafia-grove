@@ -132,12 +132,10 @@ export default function LiderAmenziPage() {
           {f.givenByName} · {format(new Date(f.createdAt), 'dd MMM HH:mm', { locale: ro })}
         </div>
       </div>
-      {isLeader && (
-        <button onClick={() => remove(f.id)}
-          className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 shrink-0">
-          <Trash2 size={13} />
-        </button>
-      )}
+      <button onClick={() => remove(f.id)}
+        className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 shrink-0">
+        <Trash2 size={13} />
+      </button>
     </div>
   )
 
@@ -323,16 +321,14 @@ export default function LiderAmenziPage() {
                             {sorted.map(f => f.material).join(' · ')}
                           </div>
                         </div>
-                        {isLeader && (
-                          <div className="flex gap-1 shrink-0">
-                            {sorted.map(f => (
-                              <button key={f.id} onClick={() => remove(f.id)}
-                                className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20">
-                                <Trash2 size={11} />
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        <div className="flex gap-1 shrink-0">
+                          {sorted.map(f => (
+                            <button key={f.id} onClick={() => remove(f.id)}
+                              className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20">
+                              <Trash2 size={11} />
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )
