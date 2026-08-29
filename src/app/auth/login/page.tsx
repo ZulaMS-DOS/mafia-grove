@@ -13,59 +13,58 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center relative overflow-hidden">
       {/* Background glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,#00ff6612,transparent)]" />
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-grove-green/30 to-transparent" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,#ffffff08,transparent)]" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
       {/* Grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(#00ff6608_1px,transparent_1px),linear-gradient(90deg,#00ff6608_1px,transparent_1px)] bg-[size:40px_40px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(#ffffff05_1px,transparent_1px),linear-gradient(90deg,#ffffff05_1px,transparent_1px)] bg-[size:40px_40px]" />
 
       <div className="relative z-10 text-center px-6 animate-slide-up">
         {/* Logo */}
         <div className="mb-8">
           <div className="relative inline-block">
-            <div className="absolute -inset-x-8 -inset-y-4 opacity-20 blur-2xl bg-grove-green rounded-full" />
-
+            <div className="absolute -inset-x-8 -inset-y-4 opacity-10 blur-2xl bg-white rounded-full" />
             <h1
-              className="relative text-7xl sm:text-8xl leading-none tracking-wide select-none"
+              className="relative text-6xl sm:text-7xl leading-none tracking-wide select-none"
               style={{ fontFamily: 'var(--font-bangers), cursive' }}
             >
               <span
                 className="block text-white"
                 style={{
-                  WebkitTextStroke: '2px #00ff66',
-                  textShadow: '3px 3px 0px #00ff66, 6px 6px 12px rgba(0,255,102,0.4)',
+                  WebkitTextStroke: '1px rgba(255,255,255,0.3)',
+                  textShadow: '0 0 40px rgba(255,255,255,0.15)',
                 }}
               >
-                GROVE
+                BRATKOV
               </span>
               <span
-                className="block -mt-3 text-grove-green"
+                className="block -mt-2 text-white"
                 style={{
-                  WebkitTextStroke: '2px #000',
-                  textShadow: '3px 3px 0px #000, 0 0 30px #00ff6680',
+                  WebkitTextStroke: '1px rgba(255,255,255,0.1)',
+                  textShadow: '0 0 60px rgba(255,255,255,0.1)',
+                  opacity: 0.7,
                 }}
               >
-                STREET
+                LEGACY
               </span>
             </h1>
           </div>
-          <p className="text-zinc-500 text-sm tracking-[0.3em] uppercase mt-4">Organization Dashboard</p>
+          <p className="text-zinc-600 text-sm tracking-[0.3em] uppercase mt-4">Organization Dashboard</p>
         </div>
 
         {/* Card */}
-        <div className="bg-dark-card border border-dark-border rounded-2xl p-8 max-w-sm mx-auto
-                        shadow-[0_0_60px_#00000080]">
+        <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-8 max-w-sm mx-auto shadow-[0_0_60px_#00000080]">
           <div className="mb-6 space-y-2">
             <div className="flex items-center gap-3 text-sm text-zinc-500">
-              <div className="w-1.5 h-1.5 rounded-full bg-grove-green" />
+              <div className="w-1.5 h-1.5 rounded-full bg-white/60" />
               Autentificare cu Discord
             </div>
             <div className="flex items-center gap-3 text-sm text-zinc-500">
-              <div className="w-1.5 h-1.5 rounded-full bg-grove-green" />
+              <div className="w-1.5 h-1.5 rounded-full bg-white/60" />
               Verificare membership server
             </div>
             <div className="flex items-center gap-3 text-sm text-zinc-500">
-              <div className="w-1.5 h-1.5 rounded-full bg-grove-green" />
+              <div className="w-1.5 h-1.5 rounded-full bg-white/60" />
               Acces bazat pe roluri Discord
             </div>
           </div>
