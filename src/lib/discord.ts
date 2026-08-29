@@ -37,6 +37,7 @@ export function discordAvatar(userId: string, hash: string | null) {
   return `https://cdn.discordapp.com/avatars/${userId}/${hash}.png?size=128`
 }
 
+export const LEADERSHIP_ROLE_ID   = '1107100643291828224'
 export const CO_LIDER_ROLE_ID     = '1107099637644529684'
 export const TESTER_ROLE_ID       = '1107098741510520852'
 export const MUNCITOR_ROLE_ID     = '1107093171026010203'
