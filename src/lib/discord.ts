@@ -68,7 +68,7 @@ export function hasMinimumAccess(roleIds: string[]): boolean {
     GROVE_KILLER_ROLE_ID,
     TESTER_ROLE_ID,
     CO_LIDER_ROLE_ID,
-    ...LEADERSHIP_ROLE_IDS,
+    LEADERSHIP_ROLE_IDS,
     SITE_OWNER_DISCORD_ID,
   ]
   return roleIds.some(id => validRoles.includes(id))
