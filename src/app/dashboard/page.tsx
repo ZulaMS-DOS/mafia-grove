@@ -60,7 +60,7 @@ export default async function DashboardPage() {
           : <div className="w-14 h-14 rounded-2xl bg-dark-muted flex items-center justify-center text-2xl shrink-0">🤵</div>
         }
         <div className="flex-1 min-w-0">
-          <div className="font-black text-white text-lg truncate">{user.name}</div>
+          <div className="font-black text-zinc-900 text-lg truncate">{user.name}</div>
           <div className="text-zinc-500 text-sm">Bratkov Legacy</div>
         </div>
         <div className="shrink-0 text-right">
