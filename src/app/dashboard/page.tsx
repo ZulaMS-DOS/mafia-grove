@@ -84,7 +84,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 gap-3">
         <div className="grove-card text-center">
           <Clock size={18} className="text-white mx-auto mb-1.5" />
-          <div className="text-2xl font-black text-white">>{fmtDur(minsToday)}</div>
+          <div className="text-2xl font-black text-white">{fmtDur(minsToday)}</div>
           <div className="text-xs text-zinc-600 mt-1 uppercase tracking-wider">Ore Azi</div>
         </div>
         <div className="grove-card text-center">
