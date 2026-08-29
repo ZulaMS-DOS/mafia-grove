@@ -114,10 +114,11 @@ export default async function DashboardPage() {
       <div className="grove-card">
         <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">Acțiuni Rapide</h2>
         <div className="grid grid-cols-2 gap-2">
-          <a href="/dashboard/clock"
-             className="flex items-center gap-3 p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white hover:bg-zinc-700 transition-colors"
-            <Clock size={16} className="shrink-0" />
-            <span className="text-sm font-semibold">Clock In/Out</span>
+          <a
+  href="/dashboard/clock"
+  className="flex items-center gap-3 p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white hover:bg-zinc-700 transition-colors">
+  <Clock size={16} className="shrink-0" />
+  <span className="text-sm font-semibold">Clock In/Out</span>
           </a>
           <a href="/dashboard/taxa"
             className="flex items-center gap-3 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/15 transition-colors">
