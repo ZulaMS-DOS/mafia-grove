@@ -6,12 +6,12 @@ import { ro } from 'date-fns/locale'
 import Image from 'next/image'
 
 const GRADE_OPTIONS = [
-  { id: '1107100643291828224', label: 'Lider',        color: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' },
-  { id: '1107099637644529684', label: 'Co-Lider',     color: 'text-orange-400 border-orange-500/30 bg-orange-500/10' },
-  { id: '1107098741510520852', label: 'Tester',       color: 'text-purple-400 border-purple-500/30 bg-purple-500/10' },
-  { id: '1107095888045801532', label: 'Membru',       color: 'text-grove-green border-grove-border bg-grove-dim' },
-  { id: '1518710460717731840', label: 'Grove Killer', color: 'text-red-400 border-red-500/30 bg-red-500/10' },
-  { id: '1107093171026010203', label: 'Muncitor',     color: 'text-zinc-400 border-zinc-600/30 bg-zinc-600/10' },
+  { id: '1107100643291828224', label: 'Lider',            color: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' },
+  { id: '1107099637644529684', label: 'Co-Lider',         color: 'text-orange-400 border-orange-500/30 bg-orange-500/10' },
+  { id: '1107098741510520852', label: 'Tester',           color: 'text-purple-400 border-purple-500/30 bg-purple-500/10' },
+  { id: '1107095888045801532', label: 'Membru',           color: 'text-grove-green border-grove-border bg-grove-dim' },
+  { id: '1518710460717731840', label: 'Bratkov Enforcer', color: 'text-red-400 border-red-500/30 bg-red-500/10' },
+  { id: '1107093171026010203', label: 'Muncitor',         color: 'text-zinc-400 border-zinc-600/30 bg-zinc-600/10' },
 ]
 
 const GROVE_KILLER_ID = '1518710460717731840'
@@ -306,7 +306,7 @@ export default function LiderTaxaPage() {
                 {isGroveKiller && (
                   <div className="space-y-2 p-3 rounded-xl bg-red-500/5 border border-red-500/20">
                     <div className="flex items-center justify-between">
-                      <div className="text-xs text-red-400 uppercase tracking-wider font-semibold">⚔️ Jafuri Grove Killer</div>
+                      <div className="text-xs text-red-400 uppercase tracking-wider font-semibold">⚔️ Jafuri Bratkov Enforcer</div>
                       <button onClick={() => addJaf(idx)}
                         className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20">
                         <Plus size={11} /> Adaugă jaf
