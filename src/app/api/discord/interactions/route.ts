@@ -163,7 +163,7 @@ async function awardPoints(userIds: string[], points: number, reasonLabel: strin
       userId:  user.id,
       type:    'task',
       title:   `💰 ${reasonLabel}`,
-      message: `Ai primit +${points} Grove Coins!`,
+      message: `Ai primit +${points} Bratkov Points!`,
     })
 
     successLines.push(`> ✅ <@${discordId}> **+${points} pts**`)
@@ -288,7 +288,7 @@ export async function POST(req: NextRequest) {
             '1107099637644529684': 'Co-Lider',
             '1107098741510520852': 'Tester',
             '1107095888045801532': 'Membru',
-            '1518710460717731840': 'Grove Killer',
+            '1518710460717731840': 'Bratkov Enforcer',
             '1107093171026010203': 'Muncitor',
           }
 
@@ -331,7 +331,7 @@ export async function POST(req: NextRequest) {
 }
 const GRAD_LABELS: Record<string, string> = {
   '1542820259809984592': '🌾 Farmer',
-  '1518710460717731840': '⚔️ Echipa Jaf',
+  '1518710460717731840': '⚔️ Bratkov Enforcer',
 }
 
           const allowedGrades = memberRoles
