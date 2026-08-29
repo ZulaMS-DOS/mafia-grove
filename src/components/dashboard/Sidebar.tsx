@@ -144,7 +144,7 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
 
   const SidebarContent = () => (
     <aside className="w-64 bg-dark-card flex flex-col h-full border-r border-dark-border">
-      <div className="p-5 border-b border-dark-border" flex items-center justify-between">
+      <div className="p-5 border-b border-dark-border flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="font-black text-white text-lg leading-none" style={{ fontFamily: 'var(--font-bangers), cursive', letterSpacing: '0.05em' }}>
             <span className="text-white">Bratkov</span>
@@ -191,7 +191,7 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
         )}
       </nav>
 
-      <div className="p-3 border-t border-zinc-200 space-y-2">
+      <div className="p-3 border-t border-dark-border space-y-2">
         {session?.user.discordId === '949760812518617138' && (
           <MaintenanceToggle />
         )}
@@ -218,7 +218,7 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
 
       <button
         onClick={() => setOpen(true)}
-        className="md:hidden fixed top-3 left-3 z-50 p-2.5 rounded-xl bg-white border border-zinc-200 text-zinc-500 hover:text-black shadow-lg transition-colors"
+        className="md:hidden fixed top-3 left-3 z-50 p-2.5 rounded-xl bg-dark-card border border-dark-border text-zinc-400 hover:text-white shadow-lg transition-colors"
       >
         <Menu size={20} />
       </button>
