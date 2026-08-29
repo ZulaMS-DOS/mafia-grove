@@ -115,7 +115,7 @@ export default async function DashboardPage() {
         <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">Acțiuni Rapide</h2>
         <div className="grid grid-cols-2 gap-2">
           <a href="/dashboard/clock"
-           className="flex items-center gap-3 p-3 rounded-xl bg-zinc-100 border border-zinc-300 text-zinc-900 hover:bg-zinc-200 transition-colors"
+             className="flex items-center gap-3 p-3 rounded-xl bg-zinc-100 border border-zinc-300 text-zinc-900 hover:bg-zinc-200 transition-colors">
             <Clock size={16} className="shrink-0" />
             <span className="text-sm font-semibold">Clock In/Out</span>
           </a>
