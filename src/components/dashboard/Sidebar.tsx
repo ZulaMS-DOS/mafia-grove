@@ -135,9 +135,9 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
            ? 'bg-grove-dim text-white border border-grove-border shadow-[0_0_20px_rgba(255,255,255,0.08)]'
            : 'text-zinc-500 hover:text-white hover:bg-dark-hover'
         )}>
-        <Icon size={16} className={clsx('transition-colors shrink-0', active ? 'text-black' : 'group-hover:text-black')} />
+        <Icon size={16} className={clsx('transition-colors shrink-0', active ? 'text-white' : 'group-hover:text-white')} />
         <span>{label}</span>
-        {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-black shrink-0" />}
+        {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white shrink-0" />}
       </Link>
     )
   }
