@@ -132,8 +132,8 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
         className={clsx(
           'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group',
           active
-             ? 'bg-zinc-100 text-black border border-zinc-300'
-          : 'text-zinc-500 hover:text-black hover:bg-zinc-100'
+           ? 'bg-grove-dim text-white border border-grove-border shadow-[0_0_20px_rgba(255,255,255,0.08)]'
+           : 'text-zinc-500 hover:text-white hover:bg-dark-hover'
         )}>
         <Icon size={16} className={clsx('transition-colors shrink-0', active ? 'text-black' : 'group-hover:text-black')} />
         <span>{label}</span>
