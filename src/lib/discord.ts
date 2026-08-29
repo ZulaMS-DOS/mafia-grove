@@ -1,9 +1,21 @@
 export const DISCORD_GUILD_ID    = process.env.DISCORD_GUILD_ID!
 export const DISCORD_BOT_TOKEN   = process.env.DISCORD_BOT_TOKEN!
-export const LEADERSHIP_ROLE_IDS = (process.env.DISCORD_LEADERSHIP_ROLES || '').split(',').map(s => s.trim())
+export const ENV_LEADERSHIP_ROLE_IDS = (process.env.DISCORD_LEADERSHIP_ROLES || '').split(',').map(s => s.trim()).filter(Boolean)
 
 // Permanent site owner. This Discord account always has the highest site access.
 export const SITE_OWNER_DISCORD_ID = '949760812518617138'
+
+export const LIDER_ROLE_ID        = '1107100643291828224'
+export const CO_LIDER_ROLE_ID     = '1107099637644529684'
+export const TESTER_ROLE_ID       = '1107098741510520852'
+export const MUNCITOR_ROLE_ID     = '1107093171026010203'
+export const MEMBRU_ROLE_ID       = '1107095888045801532'
+export const GROVE_KILLER_ROLE_ID = '1518710460717731840'
+
+export const LEADERSHIP_ROLE_IDS = Array.from(new Set([
+  LIDER_ROLE_ID,
+  ...ENV_LEADERSHIP_ROLE_IDS
+]))
 
 /** Verifică dacă userul e pe server și returnează membrul */
 export async function getGuildMember(discordId: string) {
@@ -36,13 +48,6 @@ export function discordAvatar(userId: string, hash: string | null) {
   if (!hash) return `https://cdn.discordapp.com/embed/avatars/${parseInt(userId) % 5}.png`
   return `https://cdn.discordapp.com/avatars/${userId}/${hash}.png?size=128`
 }
-
-export const LIDER_ROLE_ID        = '1107100643291828224'
-export const CO_LIDER_ROLE_ID     = '1107099637644529684'
-export const TESTER_ROLE_ID       = '1107098741510520852'
-export const MUNCITOR_ROLE_ID     = '1107093171026010203'
-export const MEMBRU_ROLE_ID       = '1107095888045801532'
-export const GROVE_KILLER_ROLE_ID = '1518710460717731840'
 
 export function isFullLeadership(roleIds: string[]): boolean {
   return roleIds.some(id => LEADERSHIP_ROLE_IDS.includes(id) || id === SITE_OWNER_DISCORD_ID)
