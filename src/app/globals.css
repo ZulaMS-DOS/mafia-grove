@@ -4,12 +4,12 @@
 
 @layer base {
   :root {
-    color-scheme: light;
+    color-scheme: dark;
   }
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: #d4d4d4 transparent;
+    scrollbar-color: #404040 transparent;
   }
 
   ::-webkit-scrollbar {
@@ -17,34 +17,35 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #d4d4d4;
+    background: #404040;
     border-radius: 999px;
   }
 
   body {
-    background: #ffffff;
-    color: #111111;
+    background: #000000;
+    color: #ffffff;
   }
 }
 
 @layer components {
   .grove-card {
-    @apply bg-white border border-zinc-200 rounded-xl p-5
-           shadow-sm transition-all duration-300
-           hover:shadow-md;
+    @apply bg-dark-card border border-dark-border rounded-xl p-5
+           transition-all duration-300
+           hover:border-grove-border
+           hover:shadow-[0_0_20px_rgba(255,255,255,0.05)];
   }
 
   .grove-btn {
     @apply px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200
-           bg-black text-white
-           hover:bg-zinc-800
+           bg-white text-black
+           hover:bg-zinc-200
            active:scale-95;
   }
 
   .grove-btn-outline {
     @apply px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200
-           border border-zinc-300 text-black
-           hover:bg-zinc-100
+           border border-grove-border text-white
+           hover:bg-grove-dim
            active:scale-95;
   }
 
@@ -56,9 +57,9 @@
   }
 
   .grove-input {
-    @apply w-full bg-white border border-zinc-300 rounded-lg px-4 py-2.5
-           text-black text-sm placeholder-zinc-400 outline-none
-           focus:border-black focus:ring-2 focus:ring-black/10
+    @apply w-full bg-dark-hover border border-dark-border rounded-lg px-4 py-2.5
+           text-white text-sm placeholder-zinc-500 outline-none
+           focus:border-grove-border
            transition-all duration-200;
   }
 
@@ -67,26 +68,26 @@
   }
 
   .grove-label {
-    @apply block text-xs text-zinc-500 uppercase tracking-widest mb-2;
+    @apply block text-xs text-zinc-400 uppercase tracking-widest mb-2;
   }
 
   .badge-pending {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-           bg-yellow-100 text-yellow-700 border border-yellow-200;
+           bg-yellow-500/10 text-yellow-400 border border-yellow-500/20;
   }
 
   .badge-accepted {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-           bg-zinc-100 text-zinc-900 border border-zinc-200;
+           bg-white/10 text-white border border-white/20;
   }
 
   .badge-rejected {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-           bg-red-100 text-red-700 border border-red-200;
+           bg-red-500/10 text-red-400 border border-red-500/20;
   }
 
   .badge-leadership {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-           bg-black text-white border border-black;
+           bg-white/10 text-white border border-white/20;
   }
 }
