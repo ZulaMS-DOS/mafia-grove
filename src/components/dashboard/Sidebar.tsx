@@ -143,7 +143,7 @@ export function Sidebar({ isLeadership, roleIds }: SidebarProps) {
   }
 
   const SidebarContent = () => (
-    <aside className="w-64 bg-white flex flex-col h-full border-r border-zinc-200">
+    <aside className="w-64 bg-dark-card flex flex-col h-full border-r border-dark-border">
       <div className="p-5 border-b border-zinc-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="font-black text-white text-lg leading-none" style={{ fontFamily: 'var(--font-bangers), cursive', letterSpacing: '0.05em' }}>
