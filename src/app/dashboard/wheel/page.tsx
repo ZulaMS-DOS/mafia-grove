@@ -53,8 +53,8 @@ export default function WheelPage() {
     ctx.clearRect(0, 0, W, H)
 
     const glow = ctx.createRadialGradient(cx, cy, R - 10, cx, cy, R + 14)
-    glow.addColorStop(0, 'rgba(0,255,102,0)')
-    glow.addColorStop(1, 'rgba(0,255,102,0.28)')
+    glow.addColorStop(0, 'rgba(0,255,255,0)')
+    glow.addColorStop(1, 'rgba(0,255,255,0.28)')
     ctx.beginPath()
     ctx.arc(cx, cy, R + 14, 0, Math.PI * 2)
     ctx.fillStyle = glow
@@ -75,11 +75,11 @@ export default function WheelPage() {
       ctx.closePath()
       const sg = ctx.createRadialGradient(cx, cy, R * 0.3, cx, cy, R)
       if (i % 2 === 0) { sg.addColorStop(0, '#0d0d0d'); sg.addColorStop(1, '#020202') }
-      else              { sg.addColorStop(0, '#070707'); sg.addColorStop(1, '#000') }
+      else             { sg.addColorStop(0, '#070707'); sg.addColorStop(1, '#000') }
       ctx.fillStyle = sg
       ctx.fill()
 
-      ctx.strokeStyle = 'rgba(0,255,102,0.4)'
+      ctx.strokeStyle = 'rgba(0,255,255,0.4)'
       ctx.lineWidth   = 1.5
       ctx.stroke()
 
@@ -94,13 +94,13 @@ export default function WheelPage() {
         ctx.arc(ix, iy, imgSize / 2, 0, Math.PI * 2)
         ctx.fillStyle = '#111'
         ctx.fill()
-        ctx.strokeStyle = prize.color || '#00ff66'
+        ctx.strokeStyle = prize.color || '#00ffff'
         ctx.lineWidth   = 3
-        ctx.shadowColor = prize.color || '#00ff66'
+        ctx.shadowColor = prize.color || '#00ffff'
         ctx.shadowBlur  = 10
         ctx.stroke()
         ctx.shadowBlur  = 0
-        ctx.fillStyle   = prize.color || '#00ff66'
+        ctx.fillStyle   = prize.color || '#00ffff'
         ctx.font        = `bold ${Math.max(14, imgSize * 0.42)}px sans-serif`
         ctx.textAlign   = 'center'
         ctx.textBaseline = 'middle'
@@ -115,11 +115,11 @@ export default function WheelPage() {
       ctx.save()
       ctx.translate(tx, ty)
       ctx.rotate(mid + Math.PI / 2)
-      ctx.fillStyle    = '#00ff66'
-      ctx.font          = `bold ${Math.max(9, Math.min(12, 140 / n))}px Inter, sans-serif`
-      ctx.textAlign     = 'center'
-      ctx.shadowColor   = '#000'
-      ctx.shadowBlur    = 4
+      ctx.fillStyle    = '#00ffff'
+      ctx.font         = `bold ${Math.max(9, Math.min(12, 140 / n))}px Inter, sans-serif`
+      ctx.textAlign    = 'center'
+      ctx.shadowColor  = '#000'
+      ctx.shadowBlur   = 4
       const maxLen = Math.max(6, Math.floor(16 / (n / 5)))
       const lbl    = prize.label.length > maxLen ? prize.label.slice(0, maxLen) + '…' : prize.label
       ctx.fillText(lbl, 0, 0)
@@ -128,9 +128,9 @@ export default function WheelPage() {
 
     ctx.beginPath()
     ctx.arc(cx, cy, R, 0, Math.PI * 2)
-    ctx.strokeStyle = '#00ff66'
+    ctx.strokeStyle = '#00ffff'
     ctx.lineWidth   = 4
-    ctx.shadowColor = '#00ff66'
+    ctx.shadowColor = '#00ffff'
     ctx.shadowBlur  = 14
     ctx.stroke()
     ctx.shadowBlur  = 0
@@ -142,17 +142,17 @@ export default function WheelPage() {
     ctx.arc(cx, cy, 32, 0, Math.PI * 2)
     ctx.fillStyle   = cg
     ctx.fill()
-    ctx.strokeStyle = '#00ff66'
+    ctx.strokeStyle = '#00ffff'
     ctx.lineWidth   = 3.5
-    ctx.shadowColor = '#00ff66'
+    ctx.shadowColor = '#00ffff'
     ctx.shadowBlur  = 16
     ctx.stroke()
     ctx.shadowBlur  = 0
 
-    ctx.fillStyle = '#00ff66'
+    ctx.fillStyle = '#ffffff'
     ctx.font      = "bold 14px 'Bangers', cursive"
     ctx.textAlign = 'center'
-    ctx.fillText('GROVE', cx, cy + 5)
+    ctx.fillText('Bratkov', cx, cy + 5)
 
   }, [prizes, rotation])
 
@@ -173,13 +173,13 @@ export default function WheelPage() {
     spinDataRef.current = d
 
     const n          = prizes.length
-    const sliceAngle  = 360 / n
-    const prizeIdx    = prizes.findIndex(p => p.id === d.prize.id)
-    const idx         = prizeIdx >= 0 ? prizeIdx : 0
+    const sliceAngle = 360 / n
+    const prizeIdx   = prizes.findIndex(p => p.id === d.prize.id)
+    const idx        = prizeIdx >= 0 ? prizeIdx : 0
 
     const targetSectorMid = idx * sliceAngle + sliceAngle / 2
-    const needed           = (270 - targetSectorMid + 720) % 360
-    const totalRotation    = rotRef.current + 360 * (5 + Math.floor(Math.random() * 3)) + needed
+    const needed          = (270 - targetSectorMid + 720) % 360
+    const totalRotation   = rotRef.current + 360 * (5 + Math.floor(Math.random() * 3)) + needed
 
     const startRot  = rotRef.current
     const startTime = Date.now()
@@ -224,7 +224,7 @@ export default function WheelPage() {
   return (
     <div className="space-y-6 animate-slide-up relative">
       <div className="fixed inset-0 -z-10 opacity-[0.04] pointer-events-none"
-        style={{ backgroundImage: 'linear-gradient(#00ff66 1px, transparent 1px), linear-gradient(90deg, #00ff66 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+        style={{ backgroundImage: 'linear-gradient(#00ffff 1px, transparent 1px), linear-gradient(90deg, #00ffff 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -232,13 +232,13 @@ export default function WheelPage() {
             className="text-4xl text-white leading-none tracking-wide"
             style={{ fontFamily: 'var(--font-bangers), cursive' }}
           >
-            🎰 <span style={{ color: '#00ff66', WebkitTextStroke: '1px #000' }}>FORTUNE</span> WHEEL
+            🎰 <span style={{ color: '#00ffff', WebkitTextStroke: '1px #000' }}>FORTUNE</span> WHEEL
           </h1>
           <p className="text-zinc-500 text-sm mt-1.5">Învârte roata și câștigă premii din Bratkov Legacy!</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-dark-card border border-grove-border rounded-xl shadow-[0_0_16px_#00ff6620]">
-          <Coins size={16} className="text-grove-green" />
-          <span className="text-grove-green font-black text-xl">{myPoints}</span>
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-dark-card border border-grove-border rounded-xl shadow-[0_0_16px_#00ffff20]">
+          <Coins size={16} className="text-[#00ffff]" />
+          <span className="text-[#00ffff] font-black text-xl">{myPoints}</span>
         </div>
       </div>
 
@@ -255,18 +255,18 @@ export default function WheelPage() {
 
           <div className="flex flex-col items-center gap-5 shrink-0">
             <div className="relative" style={{ width: SIZE, height: SIZE }}>
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 z-30 drop-shadow-[0_0_10px_#00ff66]">
-                <div className="w-0 h-0 border-l-[16px] border-r-[16px] border-t-[32px] border-l-transparent border-r-transparent border-t-grove-green" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 z-30 drop-shadow-[0_0_10px_#00ffff]">
+                <div className="w-0 h-0 border-l-[16px] border-r-[16px] border-t-[32px] border-l-transparent border-r-transparent border-t-[#00ffff]" />
               </div>
 
-              <div className="absolute inset-0 rounded-full blur-2xl opacity-35 pointer-events-none" style={{ background: 'radial-gradient(circle, #00ff66 0%, transparent 70%)' }} />
+              <div className="absolute inset-0 rounded-full blur-2xl opacity-35 pointer-events-none" style={{ background: 'radial-gradient(circle, #00ffff 0%, transparent 70%)' }} />
 
               <canvas
                 ref={canvasRef}
                 width={SIZE}
                 height={SIZE}
                 className="absolute inset-0 z-10 rounded-full bg-black border-4 border-black"
-                style={{ filter: spinning ? 'drop-shadow(0 0 28px #00ff6660)' : 'drop-shadow(0 0 12px #00ff6630)' }}
+                style={{ filter: spinning ? 'drop-shadow(0 0 28px #00ffff60)' : 'drop-shadow(0 0 12px #00ffff30)' }}
               />
 
               <div
@@ -281,14 +281,14 @@ export default function WheelPage() {
                   return (
                     <div
                       key={p.id}
-                      className="absolute rounded-full overflow-hidden border-[3px] border-grove-green"
+                      className="absolute rounded-full overflow-hidden border-[3px] border-[#00ffff]"
                       style={{
                         width:  imgSize,
                         height: imgSize,
                         left:   SIZE / 2 - imgSize / 2,
                         top:    SIZE / 2 - imgSize / 2,
                         transform: `rotate(${midDeg}deg) translate(${radius}px) rotate(${-midDeg}deg)`,
-                        boxShadow: '0 0 10px #00ff66',
+                        boxShadow: '0 0 10px #00ffff',
                       }}
                     >
                       <img src={p.itemImageUrl} alt={p.label} className="w-full h-full object-cover" />
@@ -301,7 +301,7 @@ export default function WheelPage() {
             <button onClick={spin} disabled={!canSpin}
               className={`flex items-center gap-3 px-10 py-4 rounded-2xl text-xl transition-all duration-200 ${
                 canSpin
-                  ? 'bg-grove-green text-black hover:bg-grove-dark hover:shadow-[0_0_36px_#00ff6670] active:scale-95'
+                  ? 'bg-[#00ffff] text-black hover:bg-[#00cccc] hover:shadow-[0_0_36px_#00ffff70] active:scale-95'
                   : 'bg-dark-muted text-zinc-600 cursor-not-allowed border border-dark-border'
               }`}
               style={{ fontFamily: 'var(--font-bangers), cursive', letterSpacing: '0.03em' }}
@@ -322,12 +322,12 @@ export default function WheelPage() {
           <div className="flex-1 w-full max-w-md space-y-4">
 
             {result && (
-              <div className="grove-card border-grove-border animate-slide-up overflow-hidden bg-black shadow-[0_0_30px_#00ff6620]">
+              <div className="grove-card border-grove-border animate-slide-up overflow-hidden bg-black shadow-[0_0_30px_#00ffff20]">
                 <div className="text-center space-y-3 py-2">
                   <div className="text-3xl">🎉</div>
                   <div
                     className="text-white text-3xl"
-                    style={{ fontFamily: 'var(--font-bangers), cursive', WebkitTextStroke: '1px #00ff66' }}
+                    style={{ fontFamily: 'var(--font-bangers), cursive', WebkitTextStroke: '1px #00ffff' }}
                   >
                     {result.prize.label}
                   </div>
@@ -335,12 +335,12 @@ export default function WheelPage() {
                   {result.imageUrl && (
                     <div className="flex justify-center">
                       <img src={result.imageUrl} alt={result.prize.label}
-                        className="h-32 object-contain rounded-xl border-2 border-grove-border shadow-[0_0_24px_#00ff6650]"
+                        className="h-32 object-contain rounded-xl border-2 border-grove-border shadow-[0_0_24px_#00ffff50]"
                         onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     </div>
                   )}
 
-                  <div className="text-grove-green font-bold text-lg">{result.detail}</div>
+                  <div className="text-[#00ffff] font-bold text-lg">{result.detail}</div>
                   <div className="text-zinc-500 text-sm">Puncte rămase: <strong className="text-white">{result.pointsAfter}</strong></div>
                 </div>
               </div>
@@ -348,7 +348,7 @@ export default function WheelPage() {
 
             <div className="grove-card bg-black">
               <h2
-                className="text-sm text-grove-green uppercase tracking-widest mb-3"
+                className="text-sm text-[#00ffff] uppercase tracking-widest mb-3"
                 style={{ fontFamily: 'var(--font-bangers), cursive', letterSpacing: '0.05em' }}
               >
                 🏆 Premii pe Roată
@@ -361,7 +361,7 @@ export default function WheelPage() {
                         className="w-9 h-9 rounded-full object-cover border-2 border-grove-border shrink-0" />
                     ) : (
                       <div className="w-9 h-9 rounded-full bg-black border-2 border-grove-border flex items-center justify-center shrink-0">
-                        <Coins size={14} className="text-grove-green" />
+                        <Coins size={14} className="text-[#00ffff]" />
                       </div>
                     )}
                     <span className="text-white text-sm flex-1 font-medium">{p.label}</span>
