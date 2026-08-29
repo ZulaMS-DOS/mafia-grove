@@ -115,7 +115,7 @@ export default async function DashboardPage() {
         <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">Acțiuni Rapide</h2>
         <div className="grid grid-cols-2 gap-2">
           <a href="/dashboard/clock"
-            className="flex items-center gap-3 p-3 rounded-xl bg-grove-dim border border-grove-border text-grove-green hover:bg-grove-dim/80 transition-colors">
+           className="flex items-center gap-3 p-3 rounded-xl bg-zinc-100 border border-zinc-300 text-zinc-900 hover:bg-zinc-200 transition-colors"
             <Clock size={16} className="shrink-0" />
             <span className="text-sm font-semibold">Clock In/Out</span>
           </a>
@@ -140,7 +140,7 @@ export default async function DashboardPage() {
       {/* Footer */}
       <div className="text-center py-4 border-t border-dark-border">
         <p className="text-xs text-zinc-700">
-          © {new Date().getFullYear()} Bratkov Legacy · Made by <span className="text-grove-green font-semibold">Zula</span>
+          © {new Date().getFullYear()} Bratkov Legacy · Made by <span className="text-white font-semibold">Zula</span>
         </p>
       </div>
 
