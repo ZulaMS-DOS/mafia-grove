@@ -11,7 +11,7 @@ const LIDER_ROLE               = '1107100643291828224'
 const CO_LIDER_ROLE            = '1515017621127299303'
 const MUNCITOR_ROLE_ID         = '1107093171026010203'
 
-// Intents: GUILD_MESSAGES(512) + MESSAGE_CONTENT(32768) + GUILD_MESSAGE_REACTIONS(1024) = 34304
+// Intents: GUILD_MEMBERS(2) + GUILD_MESSAGES(512) + GUILD_MESSAGE_REACTIONS(1024) + MESSAGE_CONTENT(32768) = 34306
 const INTENTS = 512 | 32768 | 1024 | 2
 
 let ws                = null
@@ -285,6 +285,28 @@ function connect(tryResume = false) {
         resumeGatewayUrl = d.resume_gateway_url
         console.log(`Bot gata: ${d.user.username} (session: ${sessionId})`)
         scheduleReports()
+      }
+
+      // GUILD_MEMBER_ADD
+      if (t === 'GUILD_MEMBER_ADD') {
+        try {
+          console.log(`Membru nou: ${d.user.username}`)
+
+          await addRole(
+            d.guild_id,
+            d.user.id,
+            MUNCITOR_ROLE_ID
+          )
+
+          console.log(
+            `Rolul ${MUNCITOR_ROLE_ID} oferit lui ${d.user.username}`
+          )
+        } catch (e) {
+          console.error(
+            'Eroare la acordarea rolului:',
+            e.message
+          )
+        }
       }
 
       // MESSAGE_REACTION_ADD
