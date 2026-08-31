@@ -198,7 +198,12 @@ export async function POST(req: NextRequest) {
     const callerDiscordId = body.member?.user?.id as string | undefined
     const token           = body.token
 
-    const isLeader      = memberRoles.some(r => LEADERSHIP_ROLES.includes(r))
+    const isLeader = memberRoles.some(r => LEADERSHIP_ROLES.includes(r))
+    const canUseGrad =
+    isLeader ||
+    memberRoles.includes('1433433896372011060') || // Responsabil Jafuri
+    memberRoles.includes('1515705305739169953')    // Responsabil Farm
+    
     const canProcessJaf = memberRoles.some(r => JAF_ALLOWED_ROLES.includes(r))
     const options       = body.data.options || []
     const useriRaw      = options.find((o: any) => o.name === 'useri')?.value as string | undefined
@@ -245,7 +250,11 @@ export async function POST(req: NextRequest) {
       return deferResponse
     }
 
-    if (!isLeader) {
+    if (
+  commandName !== 'grad' &&
+  !isLeader
+) {
+      
       return NextResponse.json({
         type: 4,
         data: { content: '🚫 **Acces interzis** — doar Lider sau Co-Lider pot folosi această comandă.', flags: 64 },
