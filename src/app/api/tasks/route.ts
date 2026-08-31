@@ -4,7 +4,7 @@ import { requireAuth } from '@/lib/middleware'
 import { checkRateLimit } from '@/lib/rateLimit'
 import { notify } from '@/lib/notifications'
 
-const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
+const LEADERSHIP_ROLES = ['1107100643291828224', '1107099637644529684']
 
 // GET — toate taskurile active + statusul userului
 export async function GET() {
