@@ -147,6 +147,27 @@ async function removeReaction(channelId, messageId, emoji) {
   }
 }
 
+async function addRole(guildId, userId, roleId) {
+  try {
+    const res = await fetch(
+      `https://discord.com/api/v10/guilds/${guildId}/members/${userId}/roles/${roleId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bot ${TOKEN}`
+        }
+      }
+    )
+
+    if (!res.ok) {
+      const err = await res.text()
+      console.error('Add role error:', err)
+    }
+  } catch (e) {
+    console.error('Add role exception:', e.message)
+  }
+}
+
 function cleanup() {
   if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null }
   if (reconnectTimeout)  { clearTimeout(reconnectTimeout);   reconnectTimeout  = null }
