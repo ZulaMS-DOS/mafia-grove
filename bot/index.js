@@ -8,7 +8,8 @@ const EMOJI_DEFAULT            = '⏲️'
 const EMOJI_RESPONSABIL        = '✅'
 const RESPONSABIL_RESURSE_ROLE = '1543345807959527524'
 const LIDER_ROLE               = '1107100643291828224'
-const CO_LIDER_ROLE            = '1515017621127299303'
+const LIDER_SECUNDAR_ROLE      = '1515017621127299303'
+const CO_LIDER_ROLE            = '1107099637644529684'
 const MUNCITOR_ROLE_ID         = '1107093171026010203'
 
 // Intents: GUILD_MEMBERS(2) + GUILD_MESSAGES(512) + GUILD_MESSAGE_REACTIONS(1024) + MESSAGE_CONTENT(32768) = 34306
@@ -331,6 +332,7 @@ function connect(tryResume = false) {
 
             roles = roles || []
             const isAuthorized = roles.includes(LIDER_ROLE) ||
+                                 roles.includes(LIDER_SECUNDAR_ROLE) ||
                                  roles.includes(CO_LIDER_ROLE) ||
                                  roles.includes(RESPONSABIL_RESURSE_ROLE)
 
