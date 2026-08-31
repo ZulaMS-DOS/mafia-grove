@@ -343,8 +343,9 @@ const GRAD_LABELS: Record<string, string> = {
   '1518710460717731840': '⚔️ Bratkov Enforcer',
 }
 
-          const allowedGrades = memberRoles
-            .flatMap(r => GRAD_PERMISSIONS[r] || [])
+          const allowedGrades = isLeader
+  ? [gradId] // liderii pot da orice
+  : memberRoles.flatMap(r => GRAD_PERMISSIONS[r] || [])
 
           if (!allowedGrades.includes(gradId)) {
             await sendFollowup(token, `🚫 **Acces interzis** — nu ai permisiunea să acorzi gradul **${GRAD_LABELS[gradId] || gradId}**.`)
