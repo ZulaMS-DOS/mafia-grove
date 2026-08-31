@@ -11,7 +11,7 @@ const LIDER_ROLE               = '1107100643291828224'
 const CO_LIDER_ROLE            = '1515017621127299303'
 
 // Intents: GUILD_MESSAGES(512) + MESSAGE_CONTENT(32768) + GUILD_MESSAGE_REACTIONS(1024) = 34304
-const INTENTS = 512 | 32768 | 1024
+const INTENTS = 512 | 32768 | 1024 | 2
 
 let ws                = null
 let heartbeatInterval = null
