@@ -118,7 +118,7 @@ export default function GradePage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-white text-sm truncate">{m.username}</div>
-                    <div className="text-xs text-zinc-600">{m.points} Grove Coins</div>
+                    <div className="text-xs text-zinc-600">{m.points} Bratkov Coins</div>
                   </div>
                   <div className="flex flex-wrap gap-1 justify-end shrink-0 max-w-[160px]">
                     {grades.map(g => (
