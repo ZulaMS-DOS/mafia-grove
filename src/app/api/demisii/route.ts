@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/middleware'
 import { notify } from '@/lib/notifications'
 
-const LEADERSHIP_ROLES = ['955126889171804170', '955126890472022066']
+const LEADERSHIP_ROLES = ['1107100643291828224','1107099637644529684']
 
 export async function GET() {
   const { session, error } = await requireAuth()
